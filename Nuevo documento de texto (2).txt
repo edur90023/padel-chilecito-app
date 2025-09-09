@@ -1,0 +1,36 @@
+graph TD
+    subgraph "Frontend (Navegador en localhost:5173)"
+        A[AdminPage] --> B[CreateTournamentForm];
+        A --> C[TournamentDetails];
+        C -- Muestra lista de --> D[Parejas Inscritas];
+    end
+
+    subgraph "Backend (Servidor en localhost:5000)"
+        E[API: /api/auth]
+        F[API: /api/tournaments]
+        G[API: /api/players]
+        H[API: /api/news & /api/ads]
+    end
+
+    subgraph "Base de Datos (MongoDB)"
+        I[Colección 'users']
+        J[Colección 'tournaments']
+        K[Colección 'players']
+        L[Colección 'news' & 'ads']
+    end
+
+    %% Flujos de datos
+    A --"Petición POST para login"--> E;
+    E --"Verifica credenciales"--> I;
+
+    B --"Petición POST para crear torneo"--> F;
+    F --"Guarda/Modifica torneo"--> J;
+    
+    C --"Petición GET para ver detalles"--> F;
+    F --"Obtiene datos del torneo"--> J;
+    
+    A --"Petición POST para crear jugador (próximo paso)"--> G;
+    G --"Guarda jugador"--> K;
+
+    A --"Petición GET para ver noticias/anuncios"--> H;
+    H --"Obtiene datos"--> L;

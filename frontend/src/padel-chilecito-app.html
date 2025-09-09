@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pádel Chilecito - Gestión de Torneos</title>
+    
+    <!-- Scripts y Estilos de CDNs -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+    <style>
+        body {
+            background-color: #111827; /* Gris oscuro casi negro */
+            font-family: 'Inter', sans-serif;
+            color: #d1d5db; /* Gris claro para texto */
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        .loading-spinner {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top: 4px solid #34D399; /* Verde esmeralda */
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { createContext, useState, useEffect, useContext } = React;
+
+        // --- Configuración de Axios ---
+        axios.interceptors.request.use(
+            (config) => {
+                const token = localStorage.getItem('token');
+                if (token) config.headers['Authorization'] = `Bearer ${token}`;
+                config.baseURL = 'http://localhost:5000/api';
+                return config;
+            },
+            (error) => Promise.reject(error)
+        );
+
+        // --- Contexto de Autenticación ---
+        const AuthContext = createContext(null);
+
+        const AuthProvider = ({ children }) => {
+            const [isAdmin, setIsAdmin] = useState(false);
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                const token = localStorage.getItem('token');
+                if (token) setIsAdmin(true);
+                setLoading(false);
+            }, []);
+
+            const login = async (username, password) => {
+                try {
+                    const response = await axios.post('/auth/login', { username, password });
+                    localStorage.setItem('token', response.data.token);
+                    setIsAdmin(true);
+                    return true;
+                } catch (error) {
+                    console.error('Error al iniciar sesión:', error);
+                    setIsAdmin(false);
+                    return false;
+                }
+            };
+
+            const logout = () => {
+                localStorage.removeItem('token');
+                setIsAdmin(false);
+            };
+
+            if (loading) {
+                return <div className="flex justify-center items-center h-screen"><div className="loading-spinner"></div></div>;
+            }
+
+            return (
+                <AuthContext.Provider value={{ isAdmin, login, logout }}>
+                    {children}
+                </AuthContext.Provider>
+            );
+        };
+
+        const useAuth = () => useContext(AuthContext);
+
+        // --- Componentes de la UI ---
+        function LoginPage() {
+            const [username, setUsername] = useState('');
+            const [password, setPassword] = useState('');
+            const [error, setError] = useState('');
+            const [loading, setLoading] = useState(false);
+            const { login } = useAuth();
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+                setError('');
+                const success = await login(username, password);
+                if (!success) {
+                    setError('Credenciales inválidas. Inténtelo de nuevo.');
+                }
+                // No necesitamos navegar, el componente App se re-renderizará
+                setLoading(false);
+            };
+
+            return (
+                <div className="flex items-center justify-center min-h-screen bg-gray-900 p-4">
+                    <div className="w-full max-w-md p-8 space-y-8 bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl shadow-green-500/10 animate-fade-in">
+                        <div className="text-center">
+                            <h2 className="text-4xl font-extrabold text-white">PÁDEL CHILECITO</h2>
+                            <p className="mt-2 text-gray-400">Acceso de Administrador</p>
+                        </div>
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            {error && <p className="text-sm text-center text-red-400 bg-red-900/50 p-3 rounded-lg">{error}</p>}
+                            <div>
+                                <label htmlFor="username" className="text-sm font-medium text-gray-400">Usuario</label>
+                                <input id="username" type="text" value={username} onChange={(e) => setUsername(e.target.value)} required className="w-full px-4 py-3 mt-2 text-gray-200 bg-gray-900 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition" />
+                            </div>
+                            <div>
+                                <label htmlFor="password" className="text-sm font-medium text-gray-400">Contraseña</label>
+                                <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="w-full px-4 py-3 mt-2 text-gray-200 bg-gray-900 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition" />
+                            </div>
+                            <button type="submit" disabled={loading} className="w-full px-4 py-3 font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-green-500 transition-all transform hover:scale-105 disabled:bg-gray-600 disabled:cursor-not-allowed">
+                                {loading ? <div className="w-6 h-6 border-2 border-white border-dashed rounded-full animate-spin mx-auto"></div> : 'Iniciar Sesión'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
+
+        function Admin() {
+            const { logout } = useAuth();
+            const [activeTab, setActiveTab] = useState('tournaments');
+            
+            return (
+                <div className="min-h-screen bg-gray-900 text-gray-300">
+                    <div className="bg-gray-800 border-b border-gray-700">
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
+                            <span className="font-bold text-lg"><i className="fas fa-user-shield mr-2 text-green-400"></i>Modo Administrador</span>
+                            <button onClick={logout} className="bg-red-600 px-4 py-2 rounded-md text-sm font-medium hover:bg-red-700 transition-colors">Cerrar Sesión</button>
+                        </div>
+                    </div>
+                    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+                        <header className="pb-6">
+                                <h1 className="text-4xl font-extrabold text-white">Panel de Control</h1>
+                                <p className="mt-2 text-md text-gray-400">Gestiona torneos, jugadores, noticias y más.</p>
+                        </header>
+
+                        <nav className="flex space-x-2 sm:space-x-4 border-b border-gray-700" aria-label="Tabs">
+                            <button onClick={() => setActiveTab('tournaments')} className={`px-3 py-3 font-medium text-sm rounded-t-lg transition-colors ${activeTab === 'tournaments' ? 'border-b-2 border-green-500 text-white' : 'text-gray-400 hover:text-white'}`}>
+                                <i className="fas fa-trophy mr-2"></i>Torneos
+                            </button>
+                                <button onClick={() => setActiveTab('players')} className={`px-3 py-3 font-medium text-sm rounded-t-lg transition-colors ${activeTab === 'players' ? 'border-b-2 border-green-500 text-white' : 'text-gray-400 hover:text-white'}`}>
+                                <i className="fas fa-users mr-2"></i>Jugadores
+                            </button>
+                        </nav>
+                        
+                        <main className="mt-8">
+                            {activeTab === 'tournaments' && <div className="animate-fade-in"><h3 className="text-2xl font-semibold text-white">Gestión de Torneos</h3></div>}
+                            {activeTab === 'players' && <div className="animate-fade-in"><h3 className="text-2xl font-semibold text-white">Gestión de Jugadores</h3></div>}
+                        </main>
+                    </div>
+                </div>
+            );
+        }
+
+        // --- Aplicación Principal ---
+        function App() {
+            const { isAdmin } = useAuth();
+            return isAdmin ? <Admin /> : <LoginPage />;
+        }
+
+        // --- Renderizar la aplicación ---
+        const container = document.getElementById('root');
+        const root = ReactDOM.createRoot(container);
+        root.render(
+            <AuthProvider>
+                <App />
+            </AuthProvider>
+        );
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,183 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+    @apply bg-dark-primary text-text-secondary font-sans;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Estilo para un scrollbar más moderno */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #1F2937;
+}
+::-webkit-scrollbar-thumb {
+    background: #374151;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #4B5563;
+}
+
+/* --- ESTILOS PARA LA LLAVE GRÁFICA (BRACKET) --- */
+.bracket-container {
+    background-color: #1f2937; /* bg-gray-800 */
+    border-radius: 0.5rem;
+    padding: 1rem; /* Padding un poco más pequeño para móvil */
+    overflow-x: auto; /* Permite scroll horizontal */
+    -webkit-overflow-scrolling: touch; /* Suaviza el scroll en iOS */
+    white-space: nowrap; /* Evita que los elementos de ronda salten de línea */
+}
+
+.bracket-scroll {
+    display: flex;
+    gap: 1.5rem; /* Espacio entre rondas, un poco más compacto */
+    padding-bottom: 0.5rem; /* Espacio para la barra de scroll */
+}
+
+.bracket-round {
+    display: inline-flex; /* Usar inline-flex para que no salte de línea */
+    flex-direction: column;
+    gap: 1.5rem; /* Espacio vertical entre partidos */
+    width: 200px; /* Ancho fijo para cada columna de ronda, ajustado para móvil */
+    flex-shrink: 0; /* Evita que las rondas se encojan */
+    justify-content: space-around; /* Distribuye el espacio verticalmente */
+    vertical-align: top; /* Alinea las rondas en la parte superior */
+}
+
+.bracket-round-title {
+    font-size: 1rem; /* Más pequeño para móvil */
+    font-weight: 700;
+    color: #f9fafb; /* text-white */
+    text-align: center;
+    margin-bottom: 0.5rem; /* Espacio reducido */
+    padding: 0.25rem 0;
+    background-color: #374151; /* Fondo para el título */
+    border-radius: 0.25rem;
+}
+
+.bracket-match {
+    background-color: #374151; /* bg-gray-700 */
+    border-radius: 0.375rem;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); /* Sombra ligera */
+}
+
+.bracket-match-subtitle {
+    font-weight: 600;
+    color: #9ca3af; /* text-gray-400 */
+    text-align: center;
+    font-size: 0.75rem; /* Más pequeño */
+    padding-top: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+/* Conectores de la llave */
+.bracket-match::after {
+    content: '';
+    position: absolute;
+    right: -0.75rem; /* La mitad del gap entre rondas */
+    top: 50%;
+    width: 0.75rem; /* Ancho ajustado */
+    height: 2px;
+    background-color: #4b5563; /* bg-gray-600 */
+    transform: translateY(-50%);
+}
+
+/* Líneas verticales que unen los partidos */
+.bracket-match:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    right: -0.75rem;
+    top: 50%;
+    width: 2px;
+    height: calc(100% + 1.5rem); /* Altura del partido + gap ajustado */
+    background-color: #4b5563; /* bg-gray-600 */
+    transform: translateY(-50%);
+    z-index: -1; /* Para que esté detrás de los partidos */
+}
+
+/* Ocultar conectores para la última ronda */
+.bracket-round:last-child .bracket-match::after,
+.bracket-round:last-child .bracket-match::before {
+    display: none;
+}
+
+.bracket-team {
+    padding: 0.5rem; /* Padding más compacto */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #d1d5db; /* text-gray-300 */
+    border-bottom: 1px solid #4b5563;
+    font-size: 0.85rem; /* Tamaño de fuente ajustado */
+}
+
+.bracket-team:last-child {
+    border-bottom: none;
+}
+
+.bracket-team.winner .team-name {
+    font-weight: 700;
+    color: #34d399; /* text-green-400 */
+}
+
+.bracket-team .team-name {
+    flex-grow: 1;
+    overflow: hidden;
+    text-overflow: ellipsis; /* Añadir puntos suspensivos si el texto es muy largo */
+    white-space: nowrap; /* Evitar que el nombre se rompa en varias líneas */
+    margin-right: 0.5rem; /* Espacio entre nombre y score */
+}
+
+.bracket-team .team-score {
+    font-weight: 600;
+    font-size: 0.85rem;
+    flex-shrink: 0; /* Evita que el score se encoja */
+}
+
+/* Ajustes para pantallas más grandes (desktops) */
+@media (min-width: 768px) {
+    .bracket-container {
+        padding: 1.5rem;
+    }
+    .bracket-scroll {
+        gap: 2.5rem;
+    }
+    .bracket-round {
+        width: 250px;
+        gap: 3rem;
+    }
+    .bracket-round-title {
+        font-size: 1.25rem;
+        margin-bottom: 1rem;
+        padding: 0.5rem 0;
+    }
+    .bracket-match::after {
+        right: -1.25rem;
+        width: 1.25rem;
+    }
+    .bracket-match:not(:last-child)::before {
+        right: -1.25rem;
+        height: calc(100% + 3rem);
+    }
+    .bracket-team {
+        padding: 0.75rem;
+        font-size: 0.9rem;
+    }
+    .bracket-team .team-name {
+        margin-right: 1rem;
+    }
+    .bracket-team .team-score {
+        font-size: 0.9rem;
+    }
+}
