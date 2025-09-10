@@ -30,7 +30,7 @@ const PORT = process.env.PORT || 5000;
 // Configuración de CORS más segura para producción
 const whiteList = [
     'http://localhost:5173', // URL de desarrollo de Vite
-    'https://padel-chilecito-app.vercel.app/' 
+    'https://padel-chilecito-app.vercel.app' 
 ];
 
 const corsOptions = {
