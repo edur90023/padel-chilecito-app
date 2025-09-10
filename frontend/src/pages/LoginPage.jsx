@@ -27,9 +27,11 @@ function LoginPage() {
         <div className="login-page-container flex items-center justify-center min-h-screen p-4">
             <div className="w-full max-w-md p-8 space-y-8 bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl shadow-green-500/10 animate-fade-in">
                 <div className="text-center">
-                    <h2 className="text-4xl font-extrabold text-white">PÁDEL CHILECITO</h2>
-                    <p className="mt-2 text-gray-400">Acceso de Administrador</p>
-                </div>
+                       <h2 className="text-4xl font-extrabold text-white">PÁDEL CHILECITO</h2>
+                       <p className="mt-2 text-gray-400">Acceso de Administrador</p>
+                        {/* Línea de diagnóstico para ver la URL de la API */}
+                       <code className="text-xs text-yellow-400">API URL: {import.meta.env.VITE_API_URL || 'No definida'}</code>
+        </div>
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {error && <p className="text-sm text-center text-red-400 bg-red-900/50 p-3 rounded-lg">{error}</p>}
                     <div>
