@@ -1,12 +1,12 @@
-// server/routes/auth.js
+// server/routes/auth.js (VERSIÓN DE DIAGNÓSTICO)
 
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
-// Ruta para registrar un nuevo administrador
 router.post('/register', async (req, res) => {
+    // (La ruta de registro no se modifica)
     try {
         const { username, password } = req.body;
         const user = new User({ username, password });
@@ -17,24 +17,29 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// Ruta para el inicio de sesión del administrador
+// Ruta de login MODIFICADA para diagnóstico
 router.post('/login', async (req, res) => {
     try {
-        const { username, password } = req.body;
+        const { username } = req.body;
+        console.log(`[DIAGNÓSTICO] Buscando usuario: ${username}`);
         const user = await User.findOne({ username });
 
-        // CAMBIO DE DIAGNÓSTICO: Ignoramos la contraseña temporalmente
-        if (!user) { // Borramos la parte de "|| !(await user.comparePassword(password))"
-            return res.status(401).send({ error: 'Credenciales inválidas' });
+        // --- PRUEBA CLAVE ---
+        // Si el usuario simplemente existe, lo dejamos pasar sin verificar la contraseña.
+        if (!user) {
+            console.log(`[DIAGNÓSTICO] Usuario no encontrado.`);
+            return res.status(401).send({ error: 'Usuario no encontrado' });
         }
+        // --- FIN DE LA PRUEBA ---
 
+        console.log(`[DIAGNÓSTICO] Usuario encontrado. Creando token...`);
         const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
         res.send({ user, token });
 
     } catch (error) {
-        // Añadimos un console.log para ver el error en Render
-        console.error("Error en la ruta /login:", error); 
-        res.status(500).send({ error: 'Error en el servidor' });
+        console.error("[DIAGNÓSTICO] Error 500 en la ruta /login:", error);
+        res.status(500).send({ error: 'Error en el servidor durante el login' });
     }
 });
+
 module.exports = router;
