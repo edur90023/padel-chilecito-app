@@ -1,7 +1,8 @@
-// frontend/src/pages/Gallery.jsx
-import { API_BASE_URL } from '../api/axiosConfig';
+// frontend/src/pages/Gallery.jsx (CORREGIDO)
+
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from '../api/axiosConfig'; // Importar la URL base
 
 function Gallery() {
     const [albums, setAlbums] = useState([]);
@@ -12,7 +13,8 @@ function Gallery() {
     useEffect(() => {
         const fetchAlbums = async () => {
             try {
-                const response = await axios.get('${API_BASE_URL}');
+                // Usar la ruta relativa, Axios se encarga del resto
+                const response = await axios.get('/gallery');
                 setAlbums(response.data);
             } catch (error) {
                 setError("No se pudo cargar la galería.");
@@ -25,6 +27,7 @@ function Gallery() {
     }, []);
 
     const handlePhotoClick = (photoUrl) => {
+        // Usar la URL base para construir la ruta completa de la imagen
         setSelectedPhotoUrl(`${API_BASE_URL}${photoUrl}`);
     };
 
@@ -51,7 +54,7 @@ function Gallery() {
                                 {album.photos.map(photo => (
                                     <div key={photo._id} className="aspect-w-1 aspect-h-1 cursor-pointer group" onClick={() => handlePhotoClick(photo.url)}>
                                         <img
-                                            src={`${API_BASE_URL}${photo.url}`}
+                                            src={`${API_BASE_URL}${photo.url}`} // Usar la URL base aquí también
                                             alt="Foto de la galería"
                                             className="w-full h-full object-cover rounded-lg shadow-md transition-transform duration-300 group-hover:scale-105"
                                         />
@@ -67,15 +70,14 @@ function Gallery() {
                 </div>
             )}
 
-            {/* Modal para ver la foto en grande */}
             {selectedPhotoUrl && (
                 <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50 p-4" onClick={handleCloseModal}>
                     <button className="absolute top-4 right-4 text-white text-4xl font-bold">&times;</button>
-                    <img 
-                        src={selectedPhotoUrl} 
-                        alt="Vista ampliada" 
+                    <img
+                        src={selectedPhotoUrl}
+                        alt="Vista ampliada"
                         className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-                        onClick={e => e.stopPropagation()} // Evita que el clic en la imagen cierre el modal
+                        onClick={e => e.stopPropagation()}
                     />
                 </div>
             )}
