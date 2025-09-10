@@ -1,22 +1,13 @@
-// server/index.js
+// server/index.js (VERSIÓN CORREGIDA)
 
-// --- ¡NUEVO! CAPTURADOR GLOBAL DE ERRORES ---
-// Este código atrapará cualquier error que esté causando que el servidor se detenga silenciosamente.
 process.on('uncaughtException', (error, origin) => {
   console.error('<<<<< ¡¡¡ERROR FATAL NO CAPTURADO!!! >>>>>');
-  console.error('Ha ocurrido un error que ha detenido el proceso de Node.js.');
-  console.error('Origen del error:', origin);
   console.error(error);
-  console.error('<<<<< FIN DEL REPORTE DE ERROR FATAL >>>>>');
 });
 process.on('unhandledRejection', (reason, promise) => {
   console.error('<<<<< ¡¡¡PROMESA RECHAZADA SIN MANEJAR!!! >>>>>');
-  console.error('Una promesa falló y no fue capturada. Razón:');
   console.error(reason);
-  console.error('<<<<< FIN DEL REPORTE DE PROMESA RECHAZADA >>>>>');
 });
-// --- FIN DEL CAPTURADOR GLOBAL DE ERRORES ---
-
 
 const express = require('express');
 const cors = require('cors');
@@ -27,10 +18,10 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Configuración de CORS más segura para producción
+// --- CONFIGURACIÓN DE CORS DEFINITIVA ---
 const whiteList = [
-    'http://localhost:5173', // URL de desarrollo de Vite
-    'https://padel-chilecito-app.vercel.app' 
+    'http://localhost:5173',
+    'https://padel-chilecito-app.vercel.app' // <-- ¡ASEGÚRATE DE QUE ESTA ES TU URL DE VERCEL!
 ];
 
 const corsOptions = {
