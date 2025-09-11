@@ -18,7 +18,80 @@ function isAuthenticated(req, res, next) {
     }
 }
 
-// OBTENER TODOS LOS TORNEOS
+// ... (GET, DELETE, REGISTER y otras rutas se mantienen sin cambios)
+
+// CREAR UN NUEVO TORNEO (Ya modificado para aceptar 'isManual')
+router.post('/', isAuthenticated, async (req, res) => {
+    try {
+        const { name, startDate, organizerPhone, categories, isManual } = req.body;
+        const categoriesArray = categories.split(',')
+            .map(cat => cat.trim())
+            .filter(cat => cat)
+            .map(name => ({
+                name,
+                status: isManual ? 'Configuración Manual' : 'Inscripciones Abiertas',
+                isManual: !!isManual
+            }));
+        if (categoriesArray.length === 0) return res.status(400).json({ error: 'Debe especificar al menos una categoría válida.' });
+        const newTournament = new Tournament({ name, startDate, organizerPhone, categories: categoriesArray, status: 'Activo' });
+        await newTournament.save();
+        res.status(201).json({ message: 'Torneo creado exitosamente.', tournament: newTournament });
+    } catch (error) {
+        res.status(500).json({ error: 'Error al crear el torneo.' });
+    }
+});
+
+
+// --- ¡NUEVA RUTA! ---
+// GUARDAR LA ESTRUCTURA MANUAL DE ZONAS Y EQUIPOS
+router.post('/:tournamentId/category/:categoryId/save-manual-structure', isAuthenticated, async (req, res) => {
+    try {
+        const { tournamentId, categoryId } = req.params;
+        const { zones } = req.body; // Esperamos recibir un array de zonas con sus equipos
+
+        if (!zones || !Array.isArray(zones)) {
+            return res.status(400).json({ error: 'Formato de zonas inválido.' });
+        }
+
+        const tournament = await Tournament.findById(tournamentId);
+        if (!tournament) return res.status(404).json({ error: 'Torneo no encontrado.' });
+        
+        const category = tournament.categories.id(categoryId);
+        if (!category) return res.status(404).json({ error: 'Categoría no encontrada.' });
+        if (!category.isManual) return res.status(400).json({ error: 'Esta categoría no está configurada para gestión manual.' });
+
+        // Transformamos los equipos de texto a objetos y generamos los partidos
+        const processedZones = zones.map(zoneData => {
+            const teams = zoneData.teams.map(teamName => ({
+                _id: new mongoose.Types.ObjectId(),
+                teamName: teamName,
+                players: [{ playerName: 'Jugador 1' }, { playerName: 'Jugador 2' }] // Relleno genérico
+            }));
+            
+            const matches = TournamentManager.generateZoneMatches(teams);
+            
+            return {
+                zoneName: zoneData.zoneName,
+                teams: teams,
+                matches: matches
+            };
+        });
+
+        category.zones = processedZones;
+        category.status = 'Zonas Sorteadas';
+        
+        const updatedTournament = await tournament.save();
+        res.status(200).json({ message: 'Estructura manual guardada y partidos generados.', tournament: updatedTournament });
+
+    } catch (error) {
+        console.error("Error guardando estructura manual:", error);
+        res.status(500).json({ error: 'Error en el servidor al guardar la estructura.', details: error.message });
+    }
+});
+
+
+// ... (El resto de las rutas como /preview-zones, /draw-zones, etc., se mantienen igual)
+// ... (El código completo de las demás rutas que no se modifican)
 router.get('/', async (req, res) => {
     try {
         const tournaments = await Tournament.find({}).sort({ startDate: -1 });
@@ -27,8 +100,6 @@ router.get('/', async (req, res) => {
         res.status(500).json({ error: 'Error al obtener los torneos.' });
     }
 });
-
-// OBTENER UN TORNEO POR ID
 router.get('/:id', async (req, res) => {
     try {
         const tournament = await Tournament.findById(req.params.id);
@@ -38,8 +109,6 @@ router.get('/:id', async (req, res) => {
         res.status(500).json({ error: 'Error al obtener el torneo.' });
     }
 });
-
-// OBTENER EL ÚLTIMO TORNEO CON GANADORES
 router.get('/latest-finished', async (req, res) => {
     try {
         const latestFinishedTournament = await Tournament.findOne({ status: 'Finalizado' })
@@ -57,41 +126,6 @@ router.get('/latest-finished', async (req, res) => {
         res.status(500).json({ message: 'Error interno del servidor.' });
     }
 });
-
-// CREAR UN NUEVO TORNEO
-router.post('/', isAuthenticated, async (req, res) => {
-    try {
-        const { name, startDate, organizerPhone, categories, isManual } = req.body;
-        
-        const categoriesArray = categories.split(',')
-            .map(cat => cat.trim())
-            .filter(cat => cat)
-            .map(name => ({ 
-                name, 
-                status: isManual ? 'Configuración Manual' : 'Inscripciones Abiertas',
-                isManual: !!isManual 
-            }));
-
-        if (categoriesArray.length === 0) {
-            return res.status(400).json({ error: 'Debe especificar al menos una categoría válida.' });
-        }
-        
-        const newTournament = new Tournament({ 
-            name, 
-            startDate, 
-            organizerPhone, 
-            categories: categoriesArray, 
-            status: 'Activo' 
-        });
-        
-        await newTournament.save();
-        res.status(201).json({ message: 'Torneo creado exitosamente.', tournament: newTournament });
-    } catch (error) {
-        res.status(500).json({ error: 'Error al crear el torneo.' });
-    }
-});
-
-// ELIMINAR UN TORNEO
 router.delete('/:id', isAuthenticated, async (req, res) => {
     try {
         const deletedTournament = await Tournament.findByIdAndDelete(req.params.id);
@@ -101,8 +135,6 @@ router.delete('/:id', isAuthenticated, async (req, res) => {
         res.status(500).json({ error: 'Error al eliminar el torneo.' });
     }
 });
-
-// REGISTRAR PAREJA A UN TORNEO
 router.post('/:tournamentId/register', async (req, res) => {
     try {
         const { tournamentId } = req.params;
@@ -122,8 +154,6 @@ router.post('/:tournamentId/register', async (req, res) => {
         res.status(500).json({ error: 'Error en el servidor al inscribir.' });
     }
 });
-
-// RUTA DE PREVISUALIZACIÓN DE ZONAS
 router.post('/:tournamentId/category/:categoryId/preview-zones', isAuthenticated, async (req, res) => {
     try {
         const { tournamentId, categoryId } = req.params;
@@ -140,8 +170,6 @@ router.post('/:tournamentId/category/:categoryId/preview-zones', isAuthenticated
         res.status(500).json({ error: 'Error al previsualizar las zonas.', details: error.message });
     }
 });
-
-// CERRAR INSCRIPCIONES Y GENERAR ZONAS
 router.post('/:tournamentId/category/:categoryId/draw-zones', isAuthenticated, async (req, res) => {
     try {
         const { tournamentId, categoryId } = req.params;
@@ -161,8 +189,6 @@ router.post('/:tournamentId/category/:categoryId/draw-zones', isAuthenticated, a
         res.status(500).json({ error: 'Error al generar las zonas.', details: error.message });
     }
 });
-
-// CERRAR TODAS LAS INSCRIPCIONES
 router.post('/:tournamentId/close-all-registrations', isAuthenticated, async (req, res) => {
     try {
         const tournament = await Tournament.findById(req.params.tournamentId);
@@ -176,8 +202,6 @@ router.post('/:tournamentId/close-all-registrations', isAuthenticated, async (re
         res.status(500).json({ error: "Error al cerrar las inscripciones." });
     }
 });
-
-// ELIMINAR EQUIPO INSCRITO
 router.delete('/:tournamentId/category/:categoryId/team/:teamId', isAuthenticated, async (req, res) => {
     try {
         const { tournamentId, categoryId, teamId } = req.params;
@@ -190,8 +214,6 @@ router.delete('/:tournamentId/category/:categoryId/team/:teamId', isAuthenticate
         res.status(500).json({ error: "Error al eliminar la pareja" });
     }
 });
-
-// MOVER EQUIPO DE CATEGORÍA
 router.post('/:tournamentId/move-team', isAuthenticated, async (req, res) => {
     try {
         const { tournamentId } = req.params;
@@ -208,8 +230,6 @@ router.post('/:tournamentId/move-team', isAuthenticated, async (req, res) => {
         res.status(500).json({ error: "Error al mover la pareja" });
     }
 });
-
-// ACTUALIZAR RESULTADO DE UN PARTIDO
 router.put('/:tournamentId/category/:categoryId/match/:matchId', isAuthenticated, async (req, res) => {
     try {
         const { tournamentId, categoryId, matchId } = req.params;
@@ -234,8 +254,6 @@ router.put('/:tournamentId/category/:categoryId/match/:matchId', isAuthenticated
         res.status(500).json({ error: 'Error al actualizar resultado.', details: error.message });
     }
 });
-
-// GENERACIÓN DE PLAYOFFS
 router.post('/:tournamentId/category/:categoryId/generate-playoffs', isAuthenticated, async (req, res) => {
     try {
         const { tournamentId, categoryId } = req.params;
@@ -316,8 +334,6 @@ router.post('/:tournamentId/category/:categoryId/generate-playoffs', isAuthentic
         res.status(500).json({ error: 'Error al generar la llave de playoffs.', details: error.message });
     }
 });
-
-// AVANZAR GANADORES DE PLAYOFFS
 router.post('/:tournamentId/category/:categoryId/advance-playoffs', isAuthenticated, async (req, res) => {
     try {
         const { tournamentId, categoryId } = req.params;
@@ -333,8 +349,6 @@ router.post('/:tournamentId/category/:categoryId/advance-playoffs', isAuthentica
         res.status(500).json({ error: "Error en el servidor al avanzar playoffs.", details: error.message });
     }
 });
-
-// AÑADIR EQUIPO MANUALMENTE
 router.post('/:tournamentId/category/:categoryId/add-team', isAuthenticated, async (req, res) => {
     try {
         const { tournamentId, categoryId } = req.params;
@@ -354,8 +368,6 @@ router.post('/:tournamentId/category/:categoryId/add-team', isAuthenticated, asy
         res.status(500).json({ error: 'Error en el servidor al añadir la pareja.' });
     }
 });
-
-// ASIGNAR GANADORES Y FINALIZAR CATEGORÍA
 router.post('/:tournamentId/category/:categoryId/finish', isAuthenticated, async (req, res) => {
     try {
         const { finishers } = req.body;

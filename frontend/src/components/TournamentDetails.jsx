@@ -1,7 +1,117 @@
-// frontend/src/components/TournamentDetails.jsx
-
 import React, { useState, useMemo, useEffect } from 'react';
 import axios from 'axios';
+
+// --- Sub-componente para la Carga Manual ---
+function ManualSetupManager({ category, onAction }) {
+    const [zones, setZones] = useState([{ id: Date.now(), zoneName: 'Zona A', teams: [''] }]);
+
+    const addZone = () => {
+        const nextLetter = String.fromCharCode(65 + zones.length);
+        setZones([...zones, { id: Date.now(), zoneName: `Zona ${nextLetter}`, teams: [''] }]);
+    };
+
+    const removeZone = (zoneId) => {
+        if (zones.length > 1) {
+            setZones(zones.filter(z => z.id !== zoneId));
+        }
+    };
+
+    const handleZoneNameChange = (zoneId, newName) => {
+        setZones(zones.map(z => z.id === zoneId ? { ...z, zoneName: newName } : z));
+    };
+
+    const handleTeamChange = (zoneId, teamIndex, newName) => {
+        setZones(zones.map(z => {
+            if (z.id === zoneId) {
+                const newTeams = [...z.teams];
+                newTeams[teamIndex] = newName;
+                return { ...z, teams: newTeams };
+            }
+            return z;
+        }));
+    };
+
+    const addTeamToZone = (zoneId) => {
+        setZones(zones.map(z => {
+            if (z.id === zoneId) {
+                return { ...z, teams: [...z.teams, ''] };
+            }
+            return z;
+        }));
+    };
+    
+    const removeTeamFromZone = (zoneId, teamIndex) => {
+        setZones(zones.map(z => {
+            if (z.id === zoneId && z.teams.length > 1) {
+                return { ...z, teams: z.teams.filter((_, i) => i !== teamIndex) };
+            }
+            return z;
+        }));
+    };
+
+    const handleSaveStructure = () => {
+        const finalZones = zones
+            .map(z => ({
+                ...z,
+                teams: z.teams.filter(t => t.trim() !== '')
+            }))
+            .filter(z => z.zoneName.trim() !== '' && z.teams.length > 0);
+        
+        if (finalZones.length === 0) {
+            alert("Debes añadir al menos una zona y un equipo.");
+            return;
+        }
+
+        if (window.confirm("¿Estás seguro de guardar esta estructura? Se generarán los partidos y no podrás volver a editarla.")) {
+            onAction('save-manual-structure', category._id, { zones: finalZones });
+        }
+    };
+
+    return (
+        <div className="bg-gray-900/50 p-6 rounded-lg border border-yellow-500">
+            <h3 className="text-xl font-bold text-yellow-400 mb-4">Configuración Manual de la Categoría</h3>
+            <p className="text-gray-400 mb-6 text-sm">
+                Define las zonas y añade las parejas manualmente. Una vez guardada la estructura, se crearán los partidos y podrás empezar a cargar los resultados.
+            </p>
+            
+            <div className="space-y-6">
+                {zones.map(zone => (
+                    <div key={zone.id} className="bg-gray-800 p-4 rounded-md">
+                        <div className="flex justify-between items-center mb-3">
+                            <input 
+                                value={zone.zoneName}
+                                onChange={(e) => handleZoneNameChange(zone.id, e.target.value)}
+                                className="font-semibold text-lg bg-transparent text-white border-b border-gray-600 focus:outline-none focus:border-green-500"
+                            />
+                            <button onClick={() => removeZone(zone.id)} className="text-red-500 hover:text-red-400 text-xs">Eliminar Zona</button>
+                        </div>
+                        <div className="space-y-2">
+                            {zone.teams.map((team, index) => (
+                                <div key={index} className="flex items-center gap-2">
+                                    <input
+                                        type="text"
+                                        value={team}
+                                        onChange={(e) => handleTeamChange(zone.id, index, e.target.value)}
+                                        placeholder={`Nombre Pareja ${index + 1}`}
+                                        className="flex-grow p-2 bg-gray-700 rounded-md text-sm text-white"
+                                    />
+                                    <button onClick={() => removeTeamFromZone(zone.id, index)} className="text-gray-500 hover:text-white">&times;</button>
+                                </div>
+                            ))}
+                        </div>
+                        <button onClick={() => addTeamToZone(zone.id)} className="mt-3 text-green-400 text-sm font-semibold hover:text-green-300">+ Añadir Pareja</button>
+                    </div>
+                ))}
+            </div>
+            
+            <button onClick={addZone} className="mt-6 w-full bg-blue-600/50 text-blue-300 font-semibold py-2 rounded-md hover:bg-blue-600/80 transition">+ Añadir Nueva Zona</button>
+            <button onClick={handleSaveStructure} className="mt-4 w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition">
+                Guardar Estructura y Generar Partidos
+            </button>
+        </div>
+    );
+}
+
 
 // --- Sub-componente para la Previsualización de Zonas ---
 function ZonesPreview({ zones, onConfirm, onCancel }) {
@@ -190,7 +300,6 @@ const ZoneStandings = ({ zone }) => {
                 stats[t._id.toString()] = { teamName: t.teamName, p: 0, w: 0, l: 0, sf: 0, sc: 0, gf: 0, gc: 0, pts: 0 };
             }
         });
-
         zone.matches.forEach(m => {
             if (m.status !== 'Finalizado' || !m.teamA?._id || !m.teamB?._id) return;
             const teamAId = m.teamA._id.toString();
@@ -198,8 +307,7 @@ const ZoneStandings = ({ zone }) => {
             if (!stats[teamAId] || !stats[teamBId]) return;
             const statsA = stats[teamAId];
             const statsB = stats[teamBId];
-            statsA.p++;
-            statsB.p++;
+            statsA.p++; statsB.p++;
             let setsA = 0, setsB = 0;
             m.scoreA.forEach((s, i) => { if (s > m.scoreB[i]) setsA++; else setsB++; });
             statsA.sf += setsA; statsA.sc += setsB;
@@ -216,7 +324,6 @@ const ZoneStandings = ({ zone }) => {
                 statsA.l++; statsA.pts += 1;
             }
         });
-
         return Object.values(stats).sort((a, b) => {
             if (b.pts !== a.pts) return b.pts - a.pts;
             const diffA = a.sf - a.sc; const diffB = b.sf - b.sc;
@@ -335,6 +442,10 @@ function CategoryManager({ category, tournament, onAction }) {
         }
     }, [tournament.previewData, category._id]);
 
+    if (category.isManual && category.status === 'Configuración Manual') {
+        return <ManualSetupManager category={category} onAction={onAction} />;
+    }
+
     const showRegistrationManagement = ['Inscripciones Abiertas', 'Inscripciones Cerradas'].includes(category.status);
 
     return (
@@ -348,7 +459,7 @@ function CategoryManager({ category, tournament, onAction }) {
             )}
             <div className="mb-8 bg-gray-800/50 rounded-lg shadow-lg">
                 <div className="flex justify-between items-center bg-gray-900 p-4 rounded-t-lg">
-                    <h3 className="text-2xl font-semibold text-green-400">{category.name} ({category.registeredPlayers.length} inscritos)</h3>
+                    <h3 className="text-2xl font-semibold text-green-400">{category.name} ({category.isManual ? `${category.zones.reduce((acc, z) => acc + z.teams.length, 0)} parejas` : `${category.registeredPlayers.length} inscritos`})</h3>
                     <span className="text-gray-400 font-semibold bg-gray-700 px-3 py-1 rounded-full text-sm">{category.status}</span>
                 </div>
                 <div className="p-4 space-y-4">
@@ -407,7 +518,7 @@ function TournamentDetails({ tournament, onBack }) {
 
     const handleAction = async (action, categoryId, data = {}) => {
         setLoading(true);
-        setError(null);
+setError(null);
         try {
             let response;
             const url = `/tournaments/${currentTournament._id}`;
@@ -418,8 +529,11 @@ function TournamentDetails({ tournament, onBack }) {
                 setLoading(false);
                 return; 
             }
-
-            if (action === 'update-match') response = await axios.put(`${url}/category/${categoryId}/match/${data.matchId}`, data);
+            
+            if (action === 'save-manual-structure') {
+                response = await axios.post(`${url}/category/${categoryId}/save-manual-structure`, data);
+            }
+            else if (action === 'update-match') response = await axios.put(`${url}/category/${categoryId}/match/${data.matchId}`, data);
             else if (action === 'delete-team') response = await axios.delete(`${url}/category/${categoryId}/team/${data.teamId}`);
             else if (action === 'move-team') response = await axios.post(`${url}/move-team`, { teamId: data.teamId, currentCategoryId: categoryId, newCategoryId: data.newCategoryId });
             else if (action === 'close-all-registrations') response = await axios.post(`${url}/close-all-registrations`);
@@ -431,6 +545,11 @@ function TournamentDetails({ tournament, onBack }) {
             if(response.data.tournament) {
                 const newTournament = { ...response.data.tournament, previewData: null };
                 setCurrentTournament(newTournament);
+                // Si la categoría activa fue modificada, la volvemos a seleccionar para que la UI se refresque
+                const updatedCategory = newTournament.categories.find(c => c._id === selectedCategoryId);
+                if (!updatedCategory) {
+                    setSelectedCategoryId(newTournament.categories[0]?._id || null);
+                }
             }
         } catch (err) {
             setError(`Error: ${err.response?.data?.error || err.message}`);
