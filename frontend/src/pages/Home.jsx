@@ -1,5 +1,3 @@
-// frontend/src/pages/Home.jsx
-import { API_BASE_URL } from '../api/axiosConfig';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
@@ -7,8 +5,7 @@ const NewsCard = ({ post }) => (
     <div className="bg-dark-secondary rounded-lg shadow-lg overflow-hidden transform hover:animate-lift transition-transform duration-300">
         {post.imageUrl && (
             <div className="overflow-hidden h-48">
-                {/* CORRECCIÓN: Se añade la URL base del servidor a la imagen */}
-                <img src={`${API_BASE_URL}${post.imageUrl}`} alt={post.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                <img src={post.imageUrl} alt={post.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
             </div>
         )}
         <div className="p-6">
@@ -21,8 +18,7 @@ const NewsCard = ({ post }) => (
 
 const AdBanner = ({ ad }) => (
     <a href={ad.linkUrl} target="_blank" rel="noopener noreferrer" className="block rounded-lg overflow-hidden shadow-md group">
-        {/* CORRECCIÓN: Se añade la URL base del servidor al anuncio */}
-        <img src={`${API_BASE_URL}${ad.imageUrl}`} alt="Anuncio" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+        <img src={ad.imageUrl} alt="Anuncio" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
     </a>
 );
 
@@ -35,16 +31,13 @@ function Home() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // Usamos rutas relativas aquí, Axios se encarga del resto
                 const [newsResponse, adsResponse] = await Promise.all([
                     axios.get('/news'),
                     axios.get('/ads')
                 ]);
                 setPosts(newsResponse.data);
-                // Filtramos solo los anuncios activos
                 setAds(adsResponse.data.filter(ad => ad.isActive));
             } catch (err) {
-                console.error("Error al obtener datos:", err);
                 setError("No se pudieron cargar los datos de la página principal.");
             } finally {
                 setLoading(false);
@@ -53,13 +46,8 @@ function Home() {
         fetchData();
     }, []);
 
-    if (loading) {
-        return <div className="loading-spinner mx-auto mt-10"></div>;
-    }
-
-    if (error) {
-        return <div className="text-red-400 text-center mt-10">{error}</div>;
-    }
+    if (loading) return <div className="loading-spinner mx-auto mt-10"></div>;
+    if (error) return <div className="text-red-400 text-center mt-10">{error}</div>;
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in">
@@ -71,11 +59,10 @@ function Home() {
                     </div>
                 ) : (
                     <div className="bg-dark-secondary p-8 rounded-lg text-center">
-                        <p className="text-text-secondary">No hay noticias para mostrar en este momento.</p>
+                        <p className="text-text-secondary">No hay noticias para mostrar.</p>
                     </div>
                 )}
             </section>
-
             {ads.length > 0 && (
                 <aside className="lg:col-span-4">
                     <div className="sticky top-24">

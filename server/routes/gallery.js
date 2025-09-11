@@ -3,39 +3,37 @@
 const express = require('express');
 const router = express.Router();
 const Gallery = require('../models/Gallery');
-const multer = require('multer');
-const path = require('path');
+const upload = require('../config/cloudinary'); // <-- ¡CAMBIO! Usamos la nueva configuración
+const jwt = require('jsonwebtoken');
 
-// Configuración de Multer para la subida de archivos
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        // Corregido: Apunta a la carpeta 'uploads' en la raíz del proyecto
-        cb(null, path.join(__dirname, '../../uploads'));
-    },
-    filename: (req, file, cb) => {
-        cb(null, 'gallery-' + Date.now() + path.extname(file.originalname));
+// ... (El middleware isAuthenticated se mantiene igual)
+function isAuthenticated(req, res, next) {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ error: 'No autorizado' });
+    try {
+        req.user = jwt.verify(token, process.env.JWT_SECRET);
+        next();
+    } catch (error) {
+        res.status(401).json({ error: 'Token inválido' });
     }
-});
+}
 
-const upload = multer({ storage: storage });
 
-// GET /api/gallery - Obtener todos los álbumes y fotos
+// GET /api/gallery - (Sin cambios)
 router.get('/', async (req, res) => {
     try {
-        const albums = await Gallery.find({});
+        const albums = await Gallery.find({}).sort({ _id: -1 });
         res.status(200).json(albums);
     } catch (error) {
         res.status(500).json({ error: 'Error al obtener la galería.' });
     }
 });
 
-// POST /api/gallery/albums - Crear un nuevo álbum
-router.post('/albums', async (req, res) => {
+// POST /api/gallery/albums - (Sin cambios)
+router.post('/albums', isAuthenticated, async (req, res) => {
     try {
         const { albumName } = req.body;
-        if (!albumName) {
-            return res.status(400).json({ error: 'El nombre del álbum es requerido.' });
-        }
+        if (!albumName) return res.status(400).json({ error: 'El nombre del álbum es requerido.' });
         const newAlbum = new Gallery({ albumName });
         await newAlbum.save();
         res.status(201).json(newAlbum);
@@ -44,10 +42,10 @@ router.post('/albums', async (req, res) => {
     }
 });
 
-// POST /api/gallery/:albumId/photos - Subir una nueva foto a un álbum
-router.post('/:albumId/photos', upload.single('photo'), async (req, res) => {
+// POST /api/gallery/:albumId/photos - Subir una o varias fotos a un álbum
+router.post('/:albumId/photos', isAuthenticated, upload.array('photos', 10), async (req, res) => {
     try {
-        if (!req.file) {
+        if (!req.files || req.files.length === 0) {
             return res.status(400).json({ error: 'No se ha subido ningún archivo.' });
         }
         
@@ -56,14 +54,39 @@ router.post('/:albumId/photos', upload.single('photo'), async (req, res) => {
             return res.status(404).json({ error: 'Álbum no encontrado.' });
         }
         
-        const photoUrl = `/uploads/${req.file.filename}`;
-        album.photos.push({ url: photoUrl });
+        // ¡CAMBIO! Ahora guardamos la URL segura que nos da Cloudinary
+        const newPhotos = req.files.map(file => ({ url: file.path }));
+        album.photos.push(...newPhotos);
         await album.save();
 
-        res.status(201).json({ message: 'Foto subida exitosamente.', photo: album.photos[album.photos.length - 1] });
+        res.status(201).json({ message: 'Fotos subidas exitosamente.', album });
     } catch (error) {
-        console.error('Error al subir la foto:', error);
-        res.status(500).json({ error: 'Error al subir la foto.' });
+        res.status(500).json({ error: 'Error al subir las fotos.' });
+    }
+});
+
+
+// DELETE /api/gallery/albums/:albumId - (Sin cambios)
+router.delete('/albums/:albumId', isAuthenticated, async (req, res) => {
+    try {
+        const deletedAlbum = await Gallery.findByIdAndDelete(req.params.albumId);
+        if (!deletedAlbum) return res.status(404).json({ error: 'Álbum no encontrado.' });
+        res.status(200).json({ message: 'Álbum eliminado exitosamente.' });
+    } catch (error) {
+        res.status(500).json({ error: 'Error al eliminar el álbum.' });
+    }
+});
+
+// DELETE /api/gallery/albums/:albumId/photos/:photoId - (Sin cambios)
+router.delete('/albums/:albumId/photos/:photoId', isAuthenticated, async (req, res) => {
+    try {
+        const album = await Gallery.findById(req.params.albumId);
+        if (!album) return res.status(404).json({ error: 'Álbum no encontrado.' });
+        album.photos.pull({ _id: req.params.photoId });
+        await album.save();
+        res.status(200).json({ message: 'Foto eliminada exitosamente.', album });
+    } catch (error) {
+        res.status(500).json({ error: 'Error al eliminar la foto.' });
     }
 });
 
