@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-// Componente del Formulario para crear un nuevo anuncio
+// --- Sub-componente del Formulario ---
 function PostForm({ onPostCreated }) {
     const [formData, setFormData] = useState({
         postType: 'Busco Compañero',
@@ -50,11 +50,13 @@ function PostForm({ onPostCreated }) {
                 <select name="postType" value={formData.postType} onChange={handleChange} className="w-full p-2 bg-gray-700 rounded-md">
                     <option>Busco Compañero</option>
                     <option>Ofrezco Servicio</option>
+                    {/* --- ¡OPCIÓN AÑADIDA! --- */}
+                    <option>Venta / Permuta</option>
                 </select>
             </div>
-            <input type="text" name="title" value={formData.title} onChange={handleChange} placeholder="Título (ej: Busco compañero para 5ta)" required className="w-full p-2 bg-gray-700 rounded-md" />
-            <textarea name="description" value={formData.description} onChange={handleChange} placeholder="Descripción (ej: Juego de drive, disponible por las tardes...)" required rows="4" className="w-full p-2 bg-gray-700 rounded-md"></textarea>
-            <input type="text" name="contactInfo" value={formData.contactInfo} onChange={handleChange} placeholder="Información de Contacto (WhatsApp, Instagram, etc.)" required className="w-full p-2 bg-gray-700 rounded-md" />
+            <input type="text" name="title" value={formData.title} onChange={handleChange} placeholder="Título (ej: Vendo paleta Head Delta)" required className="w-full p-2 bg-gray-700 rounded-md" />
+            <textarea name="description" value={formData.description} onChange={handleChange} placeholder="Descripción (ej: 3 meses de uso, excelente estado...)" required rows="4" className="w-full p-2 bg-gray-700 rounded-md"></textarea>
+            <input type="text" name="contactInfo" value={formData.contactInfo} onChange={handleChange} placeholder="Información de Contacto (WhatsApp, etc.)" required className="w-full p-2 bg-gray-700 rounded-md" />
             <input type="text" name="authorName" value={formData.authorName} onChange={handleChange} placeholder="Tu Nombre (Opcional)" className="w-full p-2 bg-gray-700 rounded-md" />
             <button type="submit" disabled={loading} className="w-full bg-green-600 font-bold py-3 rounded-lg hover:bg-green-700 transition disabled:bg-gray-600">
                 {loading ? 'Publicando...' : 'Publicar Anuncio'}
@@ -63,7 +65,7 @@ function PostForm({ onPostCreated }) {
     );
 }
 
-// Componente Principal de la Página (CON EL ORDEN CORREGIDO)
+// --- Componente Principal de la Página ---
 function CommunityPage() {
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -85,6 +87,20 @@ function CommunityPage() {
         fetchPosts();
     }, []);
 
+    // --- ¡NUEVA LÓGICA DE ESTILOS! ---
+    const getPostStyle = (postType) => {
+        switch (postType) {
+            case 'Busco Compañero':
+                return 'bg-blue-200 text-blue-800';
+            case 'Ofrezco Servicio':
+                return 'bg-yellow-200 text-yellow-800';
+            case 'Venta / Permuta':
+                return 'bg-purple-200 text-purple-800';
+            default:
+                return 'bg-gray-200 text-gray-800';
+        }
+    };
+
     return (
         <div className="max-w-4xl mx-auto">
             <h2 className="text-3xl font-extrabold text-white text-center mb-8">Comunidad y Clasificados</h2>
@@ -96,7 +112,7 @@ function CommunityPage() {
                 <div className="space-y-6">
                     {posts.map(post => (
                         <div key={post._id} className="bg-gray-800 p-5 rounded-lg shadow-lg border-l-4 border-green-500">
-                            <span className={`text-xs font-bold uppercase py-1 px-2 rounded-full mb-2 inline-block ${post.postType === 'Busco Compañero' ? 'bg-blue-200 text-blue-800' : 'bg-yellow-200 text-yellow-800'}`}>
+                            <span className={`text-xs font-bold uppercase py-1 px-2 rounded-full mb-2 inline-block ${getPostStyle(post.postType)}`}>
                                 {post.postType}
                             </span>
                             <h3 className="text-xl font-bold text-white">{post.title}</h3>
@@ -111,7 +127,6 @@ function CommunityPage() {
                 </div>
             )}
 
-            {/* --- El formulario ahora se renderiza al final --- */}
             <PostForm onPostCreated={fetchPosts} />
         </div>
     );

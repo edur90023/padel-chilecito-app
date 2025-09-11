@@ -5,7 +5,8 @@ const mongoose = require('mongoose');
 const communityPostSchema = new mongoose.Schema({
     postType: {
         type: String,
-        enum: ['Busco Compañero', 'Ofrezco Servicio'],
+        // --- ¡CAMBIO AQUÍ! ---
+        enum: ['Busco Compañero', 'Ofrezco Servicio', 'Venta / Permuta'],
         required: true,
     },
     title: {
@@ -25,10 +26,9 @@ const communityPostSchema = new mongoose.Schema({
         type: String,
         required: false,
     },
-    // --- ¡CAMPO AÑADIDO! ---
     isActive: {
         type: Boolean,
-        default: true, // Por defecto, los nuevos anuncios están activos
+        default: true,
     },
     createdAt: {
         type: Date,
