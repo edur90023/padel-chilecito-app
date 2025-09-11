@@ -4,14 +4,15 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import TournamentManagement from '../pages/AdminPage';
-import PlayerManagement from './PlayerManagement'; 
 import NewsManagement from './NewsManagement';
 import AdManagement from './AdManagement';
 import RankingManagement from './RankingManagement';
 import CommunityManagement from './CommunityManagement';
+import GalleryManagement from './GalleryManagement'; // <-- ¡IMPORTANTE! AÑADIR IMPORTACIÓN
 
-// --- Componente para la Herramienta de Simulación y Reseteo ---
+// Componente para la Herramienta de Simulación y Reseteo (sin cambios)
 function SimulationToolsTab() {
+    // ... (el código de este componente se mantiene igual)
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
@@ -145,7 +146,6 @@ function SimulationToolsTab() {
     );
 }
 
-
 function Admin() {
     const { logout } = useAuth();
     const [activeTab, setActiveTab] = useState('tournaments');
@@ -162,11 +162,13 @@ function Admin() {
             <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
                 <header className="pb-6">
                     <h1 className="text-4xl font-extrabold text-white">Panel de Control</h1>
-                    <p className="mt-2 text-md text-gray-400">Gestiona torneos, jugadores, noticias y más.</p>
+                    <p className="mt-2 text-md text-gray-400">Gestiona torneos, noticias, anuncios y más.</p>
                 </header>
 
                 <nav className="flex flex-wrap border-b border-gray-700 mb-8">
                     <button onClick={() => setActiveTab('tournaments')} className={`px-3 py-3 font-medium text-sm rounded-t-lg transition-colors ${activeTab === 'tournaments' ? 'border-b-2 border-green-500 text-white' : 'text-gray-400'}`}><i className="fas fa-trophy mr-2"></i>Torneos</button>
+                    {/* --- ¡PESTAÑA AÑADIDA! --- */}
+                    <button onClick={() => setActiveTab('gallery')} className={`px-3 py-3 font-medium text-sm rounded-t-lg transition-colors ${activeTab === 'gallery' ? 'border-b-2 border-green-500 text-white' : 'text-gray-400'}`}><i className="fas fa-images mr-2"></i>Galería</button>
                     <button onClick={() => setActiveTab('community')} className={`px-3 py-3 font-medium text-sm rounded-t-lg transition-colors ${activeTab === 'community' ? 'border-b-2 border-green-500 text-white' : 'text-gray-400'}`}><i className="fas fa-bullhorn mr-2"></i>Comunidad</button>
                     <button onClick={() => setActiveTab('ranking')} className={`px-3 py-3 font-medium text-sm rounded-t-lg transition-colors ${activeTab === 'ranking' ? 'border-b-2 border-green-500 text-white' : 'text-gray-400'}`}><i className="fas fa-star mr-2"></i>Ranking</button>
                     <button onClick={() => setActiveTab('news')} className={`px-3 py-3 font-medium text-sm rounded-t-lg transition-colors ${activeTab === 'news' ? 'border-b-2 border-green-500 text-white' : 'text-gray-400'}`}><i className="fas fa-newspaper mr-2"></i>Noticias</button>
@@ -176,6 +178,8 @@ function Admin() {
                 
                 <main>
                     {activeTab === 'tournaments' && <TournamentManagement />}
+                    {/* --- ¡LÓGICA AÑADIDA! --- */}
+                    {activeTab === 'gallery' && <GalleryManagement />}
                     {activeTab === 'community' && <CommunityManagement />}
                     {activeTab === 'ranking' && <RankingManagement />}
                     {activeTab === 'news' && <NewsManagement />}
