@@ -15,6 +15,7 @@ const getMatchWinner = (match) => {
     return setsA >= Math.ceil(match.scoreA.length / 2) ? 'A' : 'B';
 };
 
+// --- ¡COMPONENTE MEJORADO! ---
 const MatchDisplay = ({ match }) => {
     const [showDetails, setShowDetails] = useState(false);
     const winner = getMatchWinner(match);
@@ -22,37 +23,44 @@ const MatchDisplay = ({ match }) => {
     const hasDetails = match.matchTime || match.matchPlace;
 
     return (
-        <div className="relative">
+        <div className="relative group">
             <button
                 onClick={() => hasDetails && setShowDetails(!showDetails)}
                 className={`w-full bg-gray-900 p-3 rounded-md flex items-center justify-between text-sm transition-all duration-300 ${hasDetails ? 'cursor-pointer hover:bg-gray-700' : 'cursor-default'}`}
             >
-                <div className={`text-left w-2/5 font-medium truncate ${winner === 'A' ? 'text-primary' : 'text-text-primary'}`}>
-                    {match.teamA.teamName}
+                {/* Columna Equipo A */}
+                <div className={`w-2/5 text-center ${winner === 'A' ? 'font-bold text-primary' : 'text-text-primary'}`}>
+                    <p className="truncate">{match.teamA.teamName}</p>
+                    <p className="text-xs text-gray-400 mt-1">{match.status === 'Finalizado' ? formatScore(match.scoreA) : ' '}</p>
                 </div>
-                <div className="font-bold text-base text-center">
-                    {match.status === 'Finalizado' ? formatScore(match.scoreA) : '-'}
-                    <span className="text-gray-500 mx-2">vs</span>
-                    {match.status === 'Finalizado' ? formatScore(match.scoreB) : '-'}
+
+                {/* Columna VS */}
+                <div className="w-1/5 text-center font-bold text-gray-500">
+                    VS
                 </div>
-                <div className={`text-right w-2/5 font-medium truncate ${winner === 'B' ? 'text-primary' : 'text-text-primary'}`}>
-                    {match.teamB.teamName}
+
+                {/* Columna Equipo B */}
+                <div className={`w-2/5 text-center ${winner === 'B' ? 'font-bold text-primary' : 'text-text-primary'}`}>
+                    <p className="truncate">{match.teamB.teamName}</p>
+                    <p className="text-xs text-gray-400 mt-1">{match.status === 'Finalizado' ? formatScore(match.scoreB) : ' '}</p>
                 </div>
+                
+                {hasDetails && <i className="fas fa-clock text-blue-400 absolute right-2 top-1/2 -translate-y-1/2 transform transition-colors group-hover:text-blue-300"></i>}
             </button>
 
             {showDetails && hasDetails && (
                  <div
                      className="absolute z-10 top-full left-1/2 -translate-x-1/2 mt-2 w-64 bg-gray-900 border border-primary rounded-lg shadow-lg p-4 text-center animate-fade-in"
-                     onClick={() => setShowDetails(false)}
+                     onClick={(e) => { e.stopPropagation(); setShowDetails(false); }}
                  >
                      {match.matchPlace && <p className="font-bold text-text-primary text-lg">{match.matchPlace}</p>}
                      {match.matchTime && <p className="text-primary text-base">{match.matchTime}</p>}
+                     <button onClick={() => setShowDetails(false)} className="absolute top-1 right-2 text-gray-400 hover:text-white">&times;</button>
                  </div>
             )}
         </div>
     );
 };
-
 
 const ZoneStandings = ({ zone }) => {
     const sortedStandings = useMemo(() => {
@@ -283,10 +291,7 @@ function TournamentPublicView() {
                 <div key={category._id} className="mb-10">
                     <h2 className="text-3xl font-bold text-primary border-b-2 border-primary pb-2 mb-6">Categoría: {category.name}</h2>
 
-                    {/* Mostrar siempre los ganadores si existen */}
                     <WinnersDisplay finishers={category.finishers} />
-
-                    {/* Mostrar siempre las zonas y playoffs */}
                     <PlayoffBracket rounds={category.playoffRounds} />
 
                     {category.zones && category.zones.length > 0 && (

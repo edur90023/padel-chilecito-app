@@ -52,7 +52,7 @@ app.use('/api/gallery', require('./routes/gallery'));
 app.use('/api/ranking', require('./routes/ranking'));
 app.use('/api/seed', require('./routes/seed'));
 app.use('/api/community', require('./routes/community'));
-
+app.use('/api/livestream', require('./routes/livestream'));
 app.listen(PORT, () => {
   console.log(`Servidor escuchando en el puerto ${PORT}`);
 });

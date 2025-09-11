@@ -1,3 +1,5 @@
+// frontend/src/components/RegistrationForm.jsx
+
 import React, { useState } from 'react';
 import axios from 'axios';
 
@@ -41,6 +43,8 @@ function RegistrationForm({ tournament, onClose }) {
             };
             await axios.post(`/tournaments/${tournament._id}/register`, dataToSend);
             setSuccess("¡Inscripción completada con éxito!");
+            // Limpiamos el formulario después de una inscripción exitosa
+            setFormData({ player1Name: '', player1Phone: '', player2Name: '', player2Phone: '' });
             setTimeout(() => {
                 onClose(); 
             }, 2000);
@@ -53,8 +57,11 @@ function RegistrationForm({ tournament, onClose }) {
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 animate-fade-in p-4">
-            <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md relative">
+        // --- ¡CORRECCIÓN CLAVE! ---
+        // Se cambió 'items-center' por 'items-start' para alinear arriba en móviles.
+        // Se añadió 'overflow-y-auto' para permitir el scroll vertical.
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-start overflow-y-auto z-50 animate-fade-in p-4 pt-12">
+            <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md relative mb-8">
                 <button className="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl" onClick={onClose}>&times;</button>
                 <h3 className="text-2xl font-bold text-white mb-6 text-center">Inscribirse en {tournament.name}</h3>
                 
