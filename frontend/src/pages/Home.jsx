@@ -20,7 +20,7 @@ const NewsCard = ({ post }) => (
 
 const AdBanner = ({ ad }) => (
     <a href={ad.linkUrl} target="_blank" rel="noopener noreferrer" className="block rounded-lg overflow-hidden shadow-md group">
-        <img src={`${API_BASE_URL}${post.imageUrl}`} alt={post.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+        <img src={`${API_BASE_URL}${ad.imageUrl}`} alt={ad.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
     </a>
 );
 
@@ -34,8 +34,8 @@ function Home() {
         const fetchData = async () => {
             try {
                 const [newsResponse, adsResponse] = await Promise.all([
-                    axios.get('http://localhost:5000/api/news'),
-                    axios.get('http://localhost:5000/api/ads')
+                    axios.get('/news'),
+                    axios.get('/ads')
                 ]);
                 setPosts(newsResponse.data);
                 setAds(adsResponse.data);

@@ -12,7 +12,7 @@ process.on('unhandledRejection', (reason, promise) => {
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
-const path = require('path');
+const path =require('path');
 require('dotenv').config();
 
 const app = express();
