@@ -25,17 +25,16 @@ function CreateTournamentForm({ onTournamentCreated, onClose }) {
         setSuccess('');
 
         try {
-            // El backend ahora maneja el string de categorías de forma segura
+            // ¡CORRECCIÓN CLAVE! La ruta correcta es '/tournaments', no '/tournaments/create'
             await axios.post('/tournaments', formData);
             setSuccess(`Torneo "${formData.name}" creado exitosamente.`);
 
-            // Limpiamos el formulario para la próxima vez
             setFormData({ name: '', startDate: '', organizerPhone: '', categories: '' });
 
-            // Después de 1.5 segundos, llamamos a la función para cerrar y refrescar
+            // MEJORA: Después de 1.5 segundos, se cierra el formulario y se actualiza la lista.
             setTimeout(() => {
                 if (onTournamentCreated) {
-                    onTournamentCreated(); // ¡Esta es la llamada clave que faltaba!
+                    onTournamentCreated();
                 }
             }, 1500);
 

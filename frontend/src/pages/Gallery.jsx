@@ -1,8 +1,8 @@
-// frontend/src/pages/Gallery.jsx (CORREGIDO)
+// frontend/src/pages/Gallery.jsx
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { API_BASE_URL } from '../api/axiosConfig'; // Importar la URL base
+import { API_BASE_URL } from '../api/axiosConfig';
 
 function Gallery() {
     const [albums, setAlbums] = useState([]);
@@ -13,7 +13,6 @@ function Gallery() {
     useEffect(() => {
         const fetchAlbums = async () => {
             try {
-                // Usar la ruta relativa, Axios se encarga del resto
                 const response = await axios.get('/gallery');
                 setAlbums(response.data);
             } catch (error) {
@@ -27,7 +26,7 @@ function Gallery() {
     }, []);
 
     const handlePhotoClick = (photoUrl) => {
-        // Usar la URL base para construir la ruta completa de la imagen
+        // CORRECCIÓN: Construir la URL completa de la imagen para el modal
         setSelectedPhotoUrl(`${API_BASE_URL}${photoUrl}`);
     };
 
@@ -54,7 +53,8 @@ function Gallery() {
                                 {album.photos.map(photo => (
                                     <div key={photo._id} className="aspect-w-1 aspect-h-1 cursor-pointer group" onClick={() => handlePhotoClick(photo.url)}>
                                         <img
-                                            src={`${API_BASE_URL}${photo.url}`} // Usar la URL base aquí también
+                                            // CORRECCIÓN: Construir la URL completa de la imagen
+                                            src={`${API_BASE_URL}${photo.url}`}
                                             alt="Foto de la galería"
                                             className="w-full h-full object-cover rounded-lg shadow-md transition-transform duration-300 group-hover:scale-105"
                                         />

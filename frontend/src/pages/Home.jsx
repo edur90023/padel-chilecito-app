@@ -7,6 +7,7 @@ const NewsCard = ({ post }) => (
     <div className="bg-dark-secondary rounded-lg shadow-lg overflow-hidden transform hover:animate-lift transition-transform duration-300">
         {post.imageUrl && (
             <div className="overflow-hidden h-48">
+                {/* CORRECCIÓN: Se añade la URL base del servidor a la imagen */}
                 <img src={`${API_BASE_URL}${post.imageUrl}`} alt={post.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
             </div>
         )}
@@ -20,7 +21,8 @@ const NewsCard = ({ post }) => (
 
 const AdBanner = ({ ad }) => (
     <a href={ad.linkUrl} target="_blank" rel="noopener noreferrer" className="block rounded-lg overflow-hidden shadow-md group">
-        <img src={`${API_BASE_URL}${post.imageUrl}`} alt={post.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+        {/* CORRECCIÓN: Se añade la URL base del servidor al anuncio */}
+        <img src={`${API_BASE_URL}${ad.imageUrl}`} alt="Anuncio" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
     </a>
 );
 
@@ -33,12 +35,14 @@ function Home() {
     useEffect(() => {
         const fetchData = async () => {
             try {
+                // Usamos rutas relativas aquí, Axios se encarga del resto
                 const [newsResponse, adsResponse] = await Promise.all([
-                    axios.get('http://localhost:5000/api/news'),
-                    axios.get('http://localhost:5000/api/ads')
+                    axios.get('/news'),
+                    axios.get('/ads')
                 ]);
                 setPosts(newsResponse.data);
-                setAds(adsResponse.data);
+                // Filtramos solo los anuncios activos
+                setAds(adsResponse.data.filter(ad => ad.isActive));
             } catch (err) {
                 console.error("Error al obtener datos:", err);
                 setError("No se pudieron cargar los datos de la página principal.");
