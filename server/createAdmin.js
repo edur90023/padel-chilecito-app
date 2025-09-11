@@ -5,8 +5,8 @@ const User = require('./models/User');
 require('dotenv').config();
 console.log("Intentando conectar con esta URI:", process.env.MONGODB_URI);
 // Vuelve a escribir aquí el usuario y la contraseña que quieres usar
-const ADMIN_USERNAME = "admin";
-const ADMIN_PASSWORD = "admin";
+const ADMIN_USERNAME = "PadelCHI";
+const ADMIN_PASSWORD = "Padel_CHI2025";
 
 if (ADMIN_USERNAME === "tu-usuario-admin" || ADMIN_PASSWORD === "tu-contraseña-muy-segura") {
     console.error("Por favor, modifica el nombre de usuario y la contraseña en el script antes de ejecutarlo.");
