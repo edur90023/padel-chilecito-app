@@ -2,15 +2,15 @@
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useAuth } from '../context/AuthContext'; // Para obtener el token
+import { useAuth } from '../context/AuthContext';
 
 function NewsForm({ onNewsCreated, onClose, initialData = null }) {
-    const { token } = useAuth();
+    const { token } = useAuth(); // Token se obtiene del contexto, no es necesario pasarlo a Axios manualmente
     const [formData, setFormData] = useState({
         title: '',
         content: '',
-        imageUrl: '', // Para URL externa
-        imageFile: null, // Para archivo local
+        imageUrl: '',
+        imageFile: null,
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -21,7 +21,7 @@ function NewsForm({ onNewsCreated, onClose, initialData = null }) {
             setFormData({
                 title: initialData.title,
                 content: initialData.content,
-                imageUrl: initialData.imageUrl.startsWith('/uploads') ? '' : initialData.imageUrl, // Limpiar si es local
+                imageUrl: initialData.imageUrl.startsWith('/uploads') ? '' : initialData.imageUrl,
                 imageFile: null,
             });
         }
@@ -33,7 +33,7 @@ function NewsForm({ onNewsCreated, onClose, initialData = null }) {
     };
 
     const handleFileChange = (e) => {
-        setFormData({ ...formData, imageFile: e.target.files[0], imageUrl: '' }); // Limpiar URL si se sube archivo
+        setFormData({ ...formData, imageFile: e.target.files[0], imageUrl: '' });
     };
 
     const handleSubmit = async (e) => {
@@ -42,13 +42,6 @@ function NewsForm({ onNewsCreated, onClose, initialData = null }) {
         setError('');
         setSuccess('');
 
-        const config = {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'multipart/form-data', // Importante para enviar archivos
-            },
-        };
-
         const data = new FormData();
         data.append('title', formData.title);
         data.append('content', formData.content);
@@ -56,26 +49,27 @@ function NewsForm({ onNewsCreated, onClose, initialData = null }) {
             data.append('imageUrl', formData.imageUrl);
         }
         if (formData.imageFile) {
-            data.append('image', formData.imageFile); // 'image' debe coincidir con uploadNews.single('image')
+            data.append('image', formData.imageFile);
         }
 
         try {
             if (initialData) {
-                await axios.put(`http://localhost:5000/api/news/${initialData._id}`, data, config);
+                // ¡CORRECCIÓN! Se usa la ruta relativa.
+                await axios.put(`/news/${initialData._id}`, data);
                 setSuccess('Noticia actualizada exitosamente.');
             } else {
-                await axios.post('http://localhost:5000/api/news', data, config);
+                // ¡CORRECCIÓN! Se usa la ruta relativa.
+                await axios.post('/news', data);
                 setSuccess('Noticia creada exitosamente.');
             }
             
-            // Limpiar formulario después de éxito
             setFormData({ title: '', content: '', imageUrl: '', imageFile: null });
             setTimeout(() => {
-                onNewsCreated(); // Llama a la función para refrescar la lista
-                onClose(); // Cerrar el formulario si es un modal
+                onNewsCreated();
+                onClose();
             }, 1500);
         } catch (err) {
-            setError(err.response?.data?.error || 'Error al guardar la noticia. Por favor, inténtelo de nuevo.');
+            setError(err.response?.data?.error || 'Error al guardar la noticia.');
             console.error('Error al guardar la noticia:', err);
         } finally {
             setLoading(false);

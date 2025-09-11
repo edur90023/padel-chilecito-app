@@ -2,13 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useAuth } from '../context/AuthContext'; // Para obtener el token
 
 function AdForm({ onAdCreated, onClose, initialData = null }) {
-    const { token } = useAuth();
     const [formData, setFormData] = useState({
-        imageUrl: '', // Para URL externa
-        imageFile: null, // Para archivo local
+        imageUrl: '',
+        imageFile: null,
         linkUrl: '',
         isActive: true,
         placement: 'home_sidebar',
@@ -20,7 +18,7 @@ function AdForm({ onAdCreated, onClose, initialData = null }) {
     useEffect(() => {
         if (initialData) {
             setFormData({
-                imageUrl: initialData.imageUrl.startsWith('/uploads') ? '' : initialData.imageUrl, // Limpiar si es local
+                imageUrl: initialData.imageUrl.startsWith('/uploads') ? '' : initialData.imageUrl,
                 imageFile: null,
                 linkUrl: initialData.linkUrl || '',
                 isActive: initialData.isActive,
@@ -35,7 +33,7 @@ function AdForm({ onAdCreated, onClose, initialData = null }) {
     };
 
     const handleFileChange = (e) => {
-        setFormData({ ...formData, imageFile: e.target.files[0], imageUrl: '' }); // Limpiar URL si se sube archivo
+        setFormData({ ...formData, imageFile: e.target.files[0], imageUrl: '' });
     };
 
     const handleSubmit = async (e) => {
@@ -43,13 +41,6 @@ function AdForm({ onAdCreated, onClose, initialData = null }) {
         setLoading(true);
         setError('');
         setSuccess('');
-
-        const config = {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'multipart/form-data', // Importante para enviar archivos
-            },
-        };
 
         const data = new FormData();
         data.append('linkUrl', formData.linkUrl);
@@ -60,10 +51,9 @@ function AdForm({ onAdCreated, onClose, initialData = null }) {
             data.append('imageUrl', formData.imageUrl);
         }
         if (formData.imageFile) {
-            data.append('image', formData.imageFile); // 'image' debe coincidir con uploadAd.single('image')
+            data.append('image', formData.imageFile);
         }
 
-        // Si no hay imagen ni URL ni archivo, no permitir
         if (!formData.imageUrl && !formData.imageFile && !initialData?.imageUrl) {
             setError('Debe proporcionar una URL de imagen o subir un archivo.');
             setLoading(false);
@@ -72,21 +62,22 @@ function AdForm({ onAdCreated, onClose, initialData = null }) {
 
         try {
             if (initialData) {
-                await axios.put(`http://localhost:5000/api/ads/${initialData._id}`, data, config);
+                // ¡CORRECCIÓN! Se usa la ruta relativa.
+                await axios.put(`/ads/${initialData._id}`, data);
                 setSuccess('Anuncio actualizado exitosamente.');
             } else {
-                await axios.post('http://localhost:5000/api/ads', data, config);
+                // ¡CORRECCIÓN! Se usa la ruta relativa.
+                await axios.post('/ads', data);
                 setSuccess('Anuncio creado exitosamente.');
             }
             
-            // Limpiar formulario después de éxito
             setFormData({ imageUrl: '', imageFile: null, linkUrl: '', isActive: true, placement: 'home_sidebar' });
             setTimeout(() => {
-                onAdCreated(); // Llama a la función para refrescar la lista
-                onClose(); // Cerrar el formulario si es un modal
+                onAdCreated();
+                onClose();
             }, 1500);
         } catch (err) {
-            setError(err.response?.data?.error || 'Error al guardar el anuncio. Por favor, inténtelo de nuevo.');
+            setError(err.response?.data?.error || 'Error al guardar el anuncio.');
             console.error('Error al guardar el anuncio:', err);
         } finally {
             setLoading(false);

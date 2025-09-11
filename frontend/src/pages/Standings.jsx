@@ -1,3 +1,5 @@
+// frontend/src/pages/Standings.jsx
+
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 
@@ -10,8 +12,8 @@ function Standings() {
     useEffect(() => {
         const fetchRanking = async () => {
             try {
-                // Apunta a la nueva ruta del ranking
-                const response = await axios.get('http://localhost:5000/api/ranking');
+                // ¡CORRECCIÓN! Se usa la ruta relativa para que Axios use la URL base configurada.
+                const response = await axios.get('/ranking');
                 setRanking(response.data);
             } catch (err) {
                 setError("No se pudo cargar el ranking.");
@@ -26,7 +28,6 @@ function Standings() {
 
     const categories = useMemo(() => {
         if (ranking.length === 0) return [];
-        // Crea una lista de categorías únicas y la devuelve
         return ['Todas', ...Array.from(new Set(ranking.map(team => team.category)))];
     }, [ranking]);
 
@@ -44,7 +45,6 @@ function Standings() {
         <div className="max-w-4xl mx-auto">
             <h2 className="text-3xl font-extrabold text-white text-center mb-8">Ranking Oficial de Parejas</h2>
 
-            {/* Filtros de Categoría */}
             <div className="flex flex-wrap justify-center gap-2 mb-8">
                 {categories.map(category => (
                     <button
