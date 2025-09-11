@@ -11,7 +11,6 @@ function isAuthenticated(req, res, next) {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ error: 'No autorizado' });
     try {
-        // ¡CORRECCIÓN DE SEGURIDAD! Ahora usa la variable de entorno.
         req.user = jwt.verify(token, process.env.JWT_SECRET);
         next();
     } catch (error) {
@@ -62,10 +61,29 @@ router.get('/latest-finished', async (req, res) => {
 // CREAR UN NUEVO TORNEO
 router.post('/', isAuthenticated, async (req, res) => {
     try {
-        const { name, startDate, organizerPhone, categories } = req.body;
-        const categoriesArray = categories.split(',').map(cat => cat.trim()).filter(cat => cat).map(name => ({ name, status: 'Inscripciones Abiertas' }));
-        if (categoriesArray.length === 0) return res.status(400).json({ error: 'Debe especificar al menos una categoría válida.' });
-        const newTournament = new Tournament({ name, startDate, organizerPhone, categories: categoriesArray, status: 'Activo' });
+        const { name, startDate, organizerPhone, categories, isManual } = req.body;
+        
+        const categoriesArray = categories.split(',')
+            .map(cat => cat.trim())
+            .filter(cat => cat)
+            .map(name => ({ 
+                name, 
+                status: isManual ? 'Configuración Manual' : 'Inscripciones Abiertas',
+                isManual: !!isManual 
+            }));
+
+        if (categoriesArray.length === 0) {
+            return res.status(400).json({ error: 'Debe especificar al menos una categoría válida.' });
+        }
+        
+        const newTournament = new Tournament({ 
+            name, 
+            startDate, 
+            organizerPhone, 
+            categories: categoriesArray, 
+            status: 'Activo' 
+        });
+        
         await newTournament.save();
         res.status(201).json({ message: 'Torneo creado exitosamente.', tournament: newTournament });
     } catch (error) {

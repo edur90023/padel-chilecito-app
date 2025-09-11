@@ -13,8 +13,8 @@ const teamSchema = new mongoose.Schema({
 });
 
 const matchSchema = new mongoose.Schema({
-    teamA: { type: teamSchema, required: true },
-    teamB: { type: teamSchema, required: true },
+    teamA: { type: teamSchema },
+    teamB: { type: teamSchema },
     scoreA: [{ type: Number }],
     scoreB: [{ type: Number }],
     status: {
@@ -22,9 +22,8 @@ const matchSchema = new mongoose.Schema({
         enum: ['Pendiente', 'En Juego', 'Finalizado'],
         default: 'Pendiente'
     },
-    // --- CAMPOS NUEVOS AÑADIDOS ---
-    matchTime: { type: String, default: '' }, // Para guardar la hora del partido
-    matchPlace: { type: String, default: '' }  // Para guardar el lugar o cancha
+    matchTime: { type: String, default: '' },
+    matchPlace: { type: String, default: '' }
 });
 
 const playoffRoundSchema = new mongoose.Schema({
@@ -48,8 +47,13 @@ const categorySchema = new mongoose.Schema({
     name: { type: String, required: true },
     status: {
         type: String,
-        enum: ['Inscripciones Abiertas', 'Inscripciones Cerradas', 'Zonas Sorteadas', 'En Juego', 'Finalizado'],
+        enum: ['Inscripciones Abiertas', 'Inscripciones Cerradas', 'Zonas Sorteadas', 'En Juego', 'Finalizado', 'Configuración Manual'], // <-- ¡NUEVO ESTADO!
         default: 'Inscripciones Abiertas'
+    },
+    // --- ¡NUEVO CAMPO! ---
+    isManual: {
+        type: Boolean,
+        default: false
     },
     registeredPlayers: { type: [teamSchema], default: [] },
     zones: [zoneSchema],

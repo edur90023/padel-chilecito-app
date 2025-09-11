@@ -4,46 +4,45 @@ import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 
 function Standings() {
-    const [ranking, setRanking] = useState([]);
+    const [players, setPlayers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [selectedCategory, setSelectedCategory] = useState('Todas');
 
     useEffect(() => {
-        const fetchRanking = async () => {
+        const fetchPlayers = async () => {
             try {
-                // ¡CORRECCIÓN! Se usa la ruta relativa para que Axios use la URL base configurada.
-                const response = await axios.get('/ranking');
-                setRanking(response.data);
+                // Ahora obtenemos los jugadores, que ya vienen ordenados por puntos
+                const response = await axios.get('/players');
+                setPlayers(response.data);
             } catch (err) {
                 setError("No se pudo cargar el ranking.");
-                console.error(err);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchRanking();
+        fetchPlayers();
     }, []);
 
     const categories = useMemo(() => {
-        if (ranking.length === 0) return [];
-        return ['Todas', ...Array.from(new Set(ranking.map(team => team.category)))];
-    }, [ranking]);
+        if (players.length === 0) return [];
+        return ['Todas', ...Array.from(new Set(players.map(player => player.category)))];
+    }, [players]);
 
     const filteredRanking = useMemo(() => {
         if (selectedCategory === 'Todas') {
-            return ranking;
+            return players;
         }
-        return ranking.filter(team => team.category === selectedCategory);
-    }, [ranking, selectedCategory]);
+        return players.filter(player => player.category === selectedCategory);
+    }, [players, selectedCategory]);
 
     if (loading) return <div className="loading-spinner mx-auto mt-10"></div>;
     if (error) return <p className="text-red-400 text-center mt-10">{error}</p>;
 
     return (
         <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl font-extrabold text-white text-center mb-8">Ranking Oficial de Parejas</h2>
+            <h2 className="text-3xl font-extrabold text-white text-center mb-8">Ranking Oficial de Jugadores</h2>
 
             <div className="flex flex-wrap justify-center gap-2 mb-8">
                 {categories.map(category => (
@@ -66,21 +65,21 @@ function Standings() {
                     <thead className="bg-gray-700">
                         <tr>
                             <th className="p-4 font-semibold text-sm text-gray-300 uppercase tracking-wider">Pos.</th>
-                            <th className="p-4 font-semibold text-sm text-gray-300 uppercase tracking-wider">Pareja</th>
+                            <th className="p-4 font-semibold text-sm text-gray-300 uppercase tracking-wider">Jugador</th>
                             <th className="p-4 font-semibold text-sm text-gray-300 uppercase tracking-wider">Categoría</th>
                             <th className="p-4 font-semibold text-sm text-gray-300 uppercase tracking-wider text-right">Puntos</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-700">
-                        {filteredRanking.map((team, index) => (
-                            <tr key={team._id} className="hover:bg-gray-700/50">
+                        {filteredRanking.map((player, index) => (
+                            <tr key={player._id} className="hover:bg-gray-700/50">
                                 <td className="p-4 font-bold text-lg">{index + 1}</td>
                                 <td className="p-4">
-                                    <p className="font-medium text-white">{team.teamName}</p>
-                                    <p className="text-sm text-gray-400">{`${team.player1Name} / ${team.player2Name}`}</p>
+                                    <p className="font-medium text-white">{`${player.firstName} ${player.lastName}`}</p>
+                                    <p className="text-sm text-gray-400">DNI: {player.dni}</p>
                                 </td>
-                                <td className="p-4 text-gray-400">{team.category}</td>
-                                <td className="p-4 font-bold text-green-400 text-right">{team.points}</td>
+                                <td className="p-4 text-gray-400">{player.category}</td>
+                                <td className="p-4 font-bold text-green-400 text-right">{player.points}</td>
                             </tr>
                         ))}
                     </tbody>

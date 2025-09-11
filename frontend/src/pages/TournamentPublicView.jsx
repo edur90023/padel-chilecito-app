@@ -15,7 +15,6 @@ const getMatchWinner = (match) => {
     return setsA >= Math.ceil(match.scoreA.length / 2) ? 'A' : 'B';
 };
 
-// --- ¡COMPONENTE MEJORADO! ---
 const MatchDisplay = ({ match }) => {
     const [showDetails, setShowDetails] = useState(false);
     const winner = getMatchWinner(match);
@@ -28,26 +27,19 @@ const MatchDisplay = ({ match }) => {
                 onClick={() => hasDetails && setShowDetails(!showDetails)}
                 className={`w-full bg-gray-900 p-3 rounded-md flex items-center justify-between text-sm transition-all duration-300 ${hasDetails ? 'cursor-pointer hover:bg-gray-700' : 'cursor-default'}`}
             >
-                {/* Columna Equipo A */}
                 <div className={`w-2/5 text-center ${winner === 'A' ? 'font-bold text-primary' : 'text-text-primary'}`}>
                     <p className="truncate">{match.teamA.teamName}</p>
                     <p className="text-xs text-gray-400 mt-1">{match.status === 'Finalizado' ? formatScore(match.scoreA) : ' '}</p>
                 </div>
-
-                {/* Columna VS */}
                 <div className="w-1/5 text-center font-bold text-gray-500">
                     VS
                 </div>
-
-                {/* Columna Equipo B */}
                 <div className={`w-2/5 text-center ${winner === 'B' ? 'font-bold text-primary' : 'text-text-primary'}`}>
                     <p className="truncate">{match.teamB.teamName}</p>
                     <p className="text-xs text-gray-400 mt-1">{match.status === 'Finalizado' ? formatScore(match.scoreB) : ' '}</p>
                 </div>
-                
                 {hasDetails && <i className="fas fa-clock text-blue-400 absolute right-2 top-1/2 -translate-y-1/2 transform transition-colors group-hover:text-blue-300"></i>}
             </button>
-
             {showDetails && hasDetails && (
                  <div
                      className="absolute z-10 top-full left-1/2 -translate-x-1/2 mt-2 w-64 bg-gray-900 border border-primary rounded-lg shadow-lg p-4 text-center animate-fade-in"
@@ -258,12 +250,16 @@ function TournamentPublicView() {
     const [tournament, setTournament] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [selectedCategory, setSelectedCategory] = useState(null);
 
     useEffect(() => {
         const fetchTournament = async () => {
             try {
                 const response = await axios.get(`/tournaments/${id}`);
                 setTournament(response.data);
+                if (response.data && response.data.categories.length > 0) {
+                    setSelectedCategory(response.data.categories[0]);
+                }
             } catch (err) {
                 setError('No se pudo cargar la información del torneo.');
             } finally {
@@ -287,18 +283,27 @@ function TournamentPublicView() {
                 <p className="text-text-secondary mt-2">Fecha: {new Date(tournament.startDate).toLocaleDateString()} - Estado: <span className="font-semibold">{tournament.status}</span></p>
             </div>
 
-            {tournament.categories.map(category => (
-                <div key={category._id} className="mb-10">
-                    <h2 className="text-3xl font-bold text-primary border-b-2 border-primary pb-2 mb-6">Categoría: {category.name}</h2>
+            <div className="flex flex-wrap border-b border-gray-700 mb-6">
+                {tournament.categories.map(category => (
+                    <button
+                        key={category._id}
+                        onClick={() => setSelectedCategory(category)}
+                        className={`px-4 py-3 font-medium text-sm transition-colors ${selectedCategory?._id === category._id ? 'border-b-2 border-green-500 text-white' : 'text-gray-400 hover:text-white'}`}
+                    >
+                        {category.name}
+                    </button>
+                ))}
+            </div>
 
-                    <WinnersDisplay finishers={category.finishers} />
-                    <PlayoffBracket rounds={category.playoffRounds} />
-
-                    {category.zones && category.zones.length > 0 && (
+            {selectedCategory && (
+                <div key={selectedCategory._id}>
+                    <WinnersDisplay finishers={selectedCategory.finishers} />
+                    <PlayoffBracket rounds={selectedCategory.playoffRounds} />
+                    {selectedCategory.zones && selectedCategory.zones.length > 0 && (
                         <div className="mt-10">
                             <h3 className="text-2xl font-semibold text-text-primary mb-4">Fase de Zonas</h3>
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                {category.zones.map(zone => (
+                                {selectedCategory.zones.map(zone => (
                                     <div key={zone._id} className="bg-dark-secondary p-5 rounded-lg">
                                         <h4 className="text-xl font-semibold text-text-primary mb-4">{zone.zoneName}</h4>
                                         <div className="space-y-2">{zone.matches.map((match, idx) => <MatchDisplay key={match._id || idx} match={match} />)}</div>
@@ -309,7 +314,7 @@ function TournamentPublicView() {
                         </div>
                     )}
                 </div>
-            ))}
+            )}
         </div>
     );
 }

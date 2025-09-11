@@ -9,7 +9,7 @@ function ZonesPreview({ zones, onConfirm, onCancel }) {
         <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4 animate-fade-in">
             <div className="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
                 <h3 className="text-2xl font-bold text-white mb-4">Previsualización del Sorteo de Zonas</h3>
-                <p className="text-gray-400 mb-6">Así es como se distribuirán las parejas. Si estás de acuerdo, confirma para guardar los cambios. De lo contrario, puedes cancelar.</p>
+                <p className="text-gray-400 mb-6">Así es como se distribuirán las parejas. Si estás de acuerdo, confirma para guardar los cambios.</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {zones.map(zone => (
                         <div key={zone.zoneName} className="bg-gray-900 p-4 rounded-lg">
@@ -153,12 +153,10 @@ function MatchEditor({ tournamentId, categoryId, match, onAction }) {
     return (
         <div className="p-4 bg-gray-900 rounded-lg my-2 space-y-3 animate-fade-in border border-blue-500">
              <p className="text-sm font-semibold text-center text-gray-300">{match.teamA.teamName} vs {match.teamB.teamName}</p>
-             
              <div className="grid grid-cols-2 gap-3">
                 <input type="text" value={time} onChange={(e) => setTime(e.target.value)} placeholder="Hora (ej: 21:00hs)" className="w-full p-2 bg-gray-700 rounded-md text-center text-white" />
                 <input type="text" value={place} onChange={(e) => setPlace(e.target.value)} placeholder="Lugar / Cancha" className="w-full p-2 bg-gray-700 rounded-md text-center text-white" />
              </div>
-
              <div>
                 <label className="text-xs text-gray-400 block mb-1 text-center">Estado del Partido</label>
                 <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full p-2 bg-gray-700 rounded-md text-center text-white">
@@ -167,7 +165,6 @@ function MatchEditor({ tournamentId, categoryId, match, onAction }) {
                     <option value="Finalizado">Finalizado</option>
                 </select>
             </div>
-
              {[1, 2, 3].map((setNumber, index) => (
                  <div key={setNumber} className="flex items-center justify-center gap-2">
                     <label className="text-xs text-gray-400 w-12">Set {setNumber}:</label>
@@ -196,28 +193,21 @@ const ZoneStandings = ({ zone }) => {
 
         zone.matches.forEach(m => {
             if (m.status !== 'Finalizado' || !m.teamA?._id || !m.teamB?._id) return;
-            
             const teamAId = m.teamA._id.toString();
             const teamBId = m.teamB._id.toString();
-            
             if (!stats[teamAId] || !stats[teamBId]) return;
-
             const statsA = stats[teamAId];
             const statsB = stats[teamBId];
-            
             statsA.p++;
             statsB.p++;
-
             let setsA = 0, setsB = 0;
             m.scoreA.forEach((s, i) => { if (s > m.scoreB[i]) setsA++; else setsB++; });
-            
             statsA.sf += setsA; statsA.sc += setsB;
             statsB.sf += setsB; statsB.sc += setsA;
             statsA.gf += m.scoreA.reduce((a, b) => a + b, 0);
             statsA.gc += m.scoreB.reduce((a, b) => a + b, 0);
             statsB.gf += m.scoreB.reduce((a, b) => a + b, 0);
             statsB.gc += m.scoreA.reduce((a, b) => a + b, 0);
-            
             if (setsA > setsB) {
                 statsA.w++; statsA.pts += 2;
                 statsB.l++; statsB.pts += 1;
@@ -385,7 +375,7 @@ function CategoryManager({ category, tournament, onAction }) {
                                 <ZoneStandings zone={zone} />
                             </div>
                         ))
-                    ) : ( !showRegistrationManagement && <p className="text-gray-400">Aún no se han sorteado las zonas para esta categoría.</p>)}
+                    ) : ( !showRegistrationManagement && <p className="text-gray-400">Aún no se han sorteado las zonas.</p>)}
                     
                     {category.playoffRounds && category.playoffRounds.length > 0 && (
                         <div className="mt-6">
@@ -411,6 +401,7 @@ function TournamentDetails({ tournament, onBack }) {
     const [currentTournament, setCurrentTournament] = useState(tournament);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [selectedCategoryId, setSelectedCategoryId] = useState(tournament.categories[0]?._id || null);
 
     const hasAnyOpenRegistration = useMemo(() => currentTournament.categories.some(cat => cat.status === 'Inscripciones Abiertas'), [currentTournament]);
 
@@ -452,18 +443,40 @@ function TournamentDetails({ tournament, onBack }) {
         <div className="animate-fade-in">
             <button onClick={onBack} className="mb-6 bg-gray-700 text-white px-4 py-2 rounded-md font-medium hover:bg-gray-600 transition">Volver</button>
             <div className="bg-gray-800 p-6 rounded-lg shadow-xl">
-                <div className="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
+                <div className="flex justify-between items-center mb-4 border-b border-gray-700 pb-4">
                     <div>
                         <h2 className="text-3xl font-bold text-white">{currentTournament.name}</h2>
                         <p className="text-gray-400">Estado General: <span className="font-semibold">{currentTournament.status}</span></p>
                     </div>
                     {hasAnyOpenRegistration && (
-                         <button onClick={() => { if(window.confirm('¿Seguro?')) { handleAction('close-all-registrations'); } }} className="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition">Cerrar Todas las Inscripciones</button>
+                         <button onClick={() => { if(window.confirm('¿Seguro?')) { handleAction('close-all-registrations'); } }} className="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition">Cerrar Inscripciones</button>
                     )}
                 </div>
                 {loading && <div className="text-center my-4 text-blue-400">Procesando...</div>}
                 {error && <p className="bg-red-900/50 text-red-400 p-3 rounded-lg mb-4">{error}</p>}
-                {currentTournament.categories.map(category => <CategoryManager key={category._id} category={category} tournament={currentTournament} onAction={handleAction} />)}
+                
+                <div className="flex flex-wrap border-b border-gray-700 mb-6">
+                    {currentTournament.categories.map(category => (
+                        <button
+                            key={category._id}
+                            onClick={() => setSelectedCategoryId(category._id)}
+                            className={`px-4 py-3 font-medium text-sm transition-colors ${selectedCategoryId === category._id ? 'border-b-2 border-green-500 text-white' : 'text-gray-400 hover:text-white'}`}
+                        >
+                            {category.name}
+                        </button>
+                    ))}
+                </div>
+
+                {currentTournament.categories
+                    .filter(category => category._id === selectedCategoryId)
+                    .map(category => (
+                        <CategoryManager 
+                            key={category._id}
+                            category={category}
+                            tournament={currentTournament}
+                            onAction={handleAction}
+                        />
+                ))}
             </div>
         </div>
     );
