@@ -2,19 +2,20 @@
 import { API_BASE_URL } from '../api/axiosConfig';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import AdForm from './AdForm'; // El formulario que ya tienes
+import AdForm from './AdForm';
 
 function AdManagement() {
     const [ads, setAds] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [showForm, setShowForm] = useState(false);
-    const [editingAd, setEditingAd] = useState(null); // Para editar un anuncio existente
+    const [editingAd, setEditingAd] = useState(null);
 
     const fetchAds = async () => {
         try {
             setLoading(true);
-            const response = await axios.get('${API_BASE_URL}/api/ads');
+            // ¡CORRECCIÓN! Se usa la ruta relativa.
+            const response = await axios.get('/ads');
             setAds(response.data);
             setError(null);
         } catch (err) {
@@ -30,9 +31,9 @@ function AdManagement() {
     }, []);
 
     const handleAdActionComplete = () => {
-        fetchAds(); // Recargar la lista
-        setShowForm(false); // Ocultar formulario
-        setEditingAd(null); // Limpiar anuncio en edición
+        fetchAds();
+        setShowForm(false);
+        setEditingAd(null);
     };
 
     const handleEdit = (ad) => {
@@ -43,8 +44,9 @@ function AdManagement() {
     const handleDelete = async (adId) => {
         if (!window.confirm('¿Estás seguro de que quieres eliminar este anuncio?')) return;
         try {
-            await axios.delete(`${API_BASE_URL}/api/ads/${adId}`);
-            handleAdActionComplete(); // Recargar y limpiar
+            // ¡CORRECCIÓN! Se usa la ruta relativa.
+            await axios.delete(`/ads/${adId}`);
+            handleAdActionComplete();
         } catch (err) {
             setError('Error al eliminar el anuncio.');
             console.error(err);
@@ -56,7 +58,7 @@ function AdManagement() {
             <div className="flex justify-between items-center mb-6">
                 <h3 className="text-2xl font-semibold text-white">Gestión de Anuncios</h3>
                 <button 
-                    onClick={() => { setShowForm(!showForm); setEditingAd(null); }} // Al abrir/cerrar, limpiar edición
+                    onClick={() => { setShowForm(!showForm); setEditingAd(null); }}
                     className="bg-green-600 text-white px-4 py-2 rounded-md font-medium hover:bg-green-700 transition"
                 >
                     <i className={`fas ${showForm ? 'fa-times' : 'fa-plus'} mr-2`}></i>
@@ -69,7 +71,7 @@ function AdManagement() {
                     <AdForm 
                         onAdCreated={handleAdActionComplete} 
                         onClose={() => {setShowForm(false); setEditingAd(null);}} 
-                        initialData={editingAd} // Le pasamos el anuncio si estamos editando
+                        initialData={editingAd}
                     />
                 </div>
             )}

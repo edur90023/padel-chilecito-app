@@ -15,7 +15,8 @@ function NewsManagement() {
     const fetchNews = async () => {
         try {
             setLoading(true);
-            const response = await axios.get('${API_BASE_URL}/api/news');
+            // ¡CORRECCIÓN! Se usa la ruta relativa. Axios se encarga del resto.
+            const response = await axios.get('/news');
             setNews(response.data);
             setError(null);
         } catch (err) {
@@ -44,8 +45,8 @@ function NewsManagement() {
     const handleDelete = async (postId) => {
         if (!window.confirm('¿Estás seguro de que quieres eliminar esta noticia?')) return;
         try {
-            // Asumiendo que tienes un endpoint para eliminar
-            await axios.delete(`${API_BASE_URL}/api/news/${postId}`);
+            // ¡CORRECCIÓN! Se usa la ruta relativa.
+            await axios.delete(`/news/${postId}`);
             handleNewsActionComplete();
         } catch (err) {
             setError('Error al eliminar la noticia.');
@@ -85,7 +86,6 @@ function NewsManagement() {
                         news.map(post => (
                             <div key={post._id} className="bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
                                 {post.imageUrl && (
-                                    // CORRECCIÓN: Se añade la URL base del servidor a la imagen
                                     <img src={`${API_BASE_URL}${post.imageUrl}`} alt={post.title} className="w-full h-48 object-cover" />
                                 )}
                                 <div className="p-4 flex flex-col flex-grow">
