@@ -16,16 +16,12 @@ const path = require('path');
 require('dotenv').config();
 
 const app = express();
-
-// --- ¡ESTA ES LA LÍNEA CLAVE! ---
-// Le dice al servidor: "Usa el puerto que Render te da (process.env.PORT).
-// Si no existe (porque estoy en mi computadora), usa el 5000".
 const PORT = process.env.PORT || 5000;
 
 // --- CONFIGURACIÓN DE CORS ---
 const whiteList = [
     'http://localhost:5173',
-    'https://padel-chilecito-app.vercel.app' // Asegúrate de que esta es tu URL de Vercel
+    'https://padel-chilecito-app.vercel.app' // ¡IMPORTANTE! Asegúrate de que esta es tu URL exacta de Vercel.
 ];
 
 const corsOptions = {
@@ -33,6 +29,7 @@ const corsOptions = {
         if (whiteList.indexOf(origin) !== -1 || !origin) {
             callback(null, true);
         } else {
+            // Esta línea es la que genera el error "No permitido por CORS"
             callback(new Error('No permitido por CORS'));
         }
     }
@@ -53,7 +50,8 @@ app.use('/api/tournaments', require('./routes/tournaments'));
 app.use('/api/news', require('./routes/news'));
 app.use('/api/ads', require('./routes/ads'));
 app.use('/api/gallery', require('./routes/gallery'));
-app.use('/api/ranking', require('./routes/ranking'));
+// --- ¡LÍNEA ELIMINADA! Ya no usamos la ruta del ranking antiguo ---
+// app.use('/api/ranking', require('./routes/ranking')); 
 app.use('/api/seed', require('./routes/seed'));
 app.use('/api/community', require('./routes/community'));
 app.use('/api/livestream', require('./routes/livestream'));
