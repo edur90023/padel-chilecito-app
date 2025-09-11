@@ -1,10 +1,8 @@
-// frontend/src/App.jsx
-
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink, Navigate, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import axios from 'axios';
-import { useInstallPWA } from './hooks/useInstallPWA'; // <-- ¡NUEVA IMPORTACIÓN!
+import { useInstallPWA } from './hooks/useInstallPWA'; // Importamos el hook que creaste
 
 import Admin from './components/Admin';
 import LoginPage from './pages/LoginPage';
@@ -43,7 +41,7 @@ const PublicLayout = () => {
     const { isAdmin, logout } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isLiveEnabled, setIsLiveEnabled] = useState(false);
-    const { installPrompt, handleInstall } = useInstallPWA(); // <-- ¡USAMOS EL HOOK QUE CREASTE!
+    const { installPrompt, handleInstall } = useInstallPWA(); // Usamos el hook
 
     useEffect(() => {
         const checkLiveStatus = async () => {
@@ -84,7 +82,6 @@ const PublicLayout = () => {
                             </div>
                         </div>
                         <div className="hidden md:flex items-center">
-                             {/* --- ¡NUEVO BOTÓN DE INSTALACIÓN PARA ESCRITORIO! --- */}
                              {installPrompt && (
                                 <button
                                     onClick={handleInstall}
@@ -126,7 +123,6 @@ const PublicLayout = () => {
                         <NavItem to="/standings" icon="fas fa-star" onClick={closeMenu}>Rankings</NavItem>
                         <NavItem to="/rules" icon="fas fa-gavel" onClick={closeMenu}>Reglamento</NavItem>
                         <div className="border-t border-gray-700 pt-4 mt-4 space-y-2">
-                             {/* --- ¡NUEVO BOTÓN DE INSTALACIÓN PARA MÓVIL! --- */}
                              {installPrompt && (
                                  <button
                                      onClick={() => { handleInstall(); closeMenu(); }}
