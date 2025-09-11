@@ -1,7 +1,10 @@
+// frontend/src/App.jsx
+
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink, Navigate, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import axios from 'axios';
+import { useInstallPWA } from './hooks/useInstallPWA'; // <-- ¡NUEVA IMPORTACIÓN!
 
 import Admin from './components/Admin';
 import LoginPage from './pages/LoginPage';
@@ -40,6 +43,7 @@ const PublicLayout = () => {
     const { isAdmin, logout } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isLiveEnabled, setIsLiveEnabled] = useState(false);
+    const { installPrompt, handleInstall } = useInstallPWA(); // <-- ¡USAMOS EL HOOK QUE CREASTE!
 
     useEffect(() => {
         const checkLiveStatus = async () => {
@@ -80,6 +84,16 @@ const PublicLayout = () => {
                             </div>
                         </div>
                         <div className="hidden md:flex items-center">
+                             {/* --- ¡NUEVO BOTÓN DE INSTALACIÓN PARA ESCRITORIO! --- */}
+                             {installPrompt && (
+                                <button
+                                    onClick={handleInstall}
+                                    className="mr-4 bg-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-purple-700 transition animate-pulse"
+                                    title="Instalar aplicación"
+                                >
+                                   <i className="fas fa-download mr-2"></i> Instalar App
+                                </button>
+                            )}
                              {isAdmin ? (
                                 <>
                                     <NavLink to="/admin" className="mr-4 bg-secondary text-dark-primary px-4 py-2 rounded-md text-sm font-medium hover:bg-yellow-500 transition">
@@ -112,6 +126,15 @@ const PublicLayout = () => {
                         <NavItem to="/standings" icon="fas fa-star" onClick={closeMenu}>Rankings</NavItem>
                         <NavItem to="/rules" icon="fas fa-gavel" onClick={closeMenu}>Reglamento</NavItem>
                         <div className="border-t border-gray-700 pt-4 mt-4 space-y-2">
+                             {/* --- ¡NUEVO BOTÓN DE INSTALACIÓN PARA MÓVIL! --- */}
+                             {installPrompt && (
+                                 <button
+                                     onClick={() => { handleInstall(); closeMenu(); }}
+                                     className="block text-center w-full bg-purple-600 text-white px-4 py-2 rounded-md font-medium hover:bg-purple-700 transition animate-pulse"
+                                 >
+                                    <i className="fas fa-download mr-2"></i> Instalar Aplicación
+                                 </button>
+                             )}
                              {isAdmin ? (
                                 <>
                                     <NavLink to="/admin" onClick={closeMenu} className="block text-center w-full bg-secondary text-dark-primary px-4 py-2 rounded-md font-medium hover:bg-yellow-500 transition">
