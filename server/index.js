@@ -1,4 +1,4 @@
-// server/index.js (VERSIÓN CORREGIDA)
+// server/index.js
 
 process.on('uncaughtException', (error, origin) => {
   console.error('<<<<< ¡¡¡ERROR FATAL NO CAPTURADO!!! >>>>>');
@@ -16,12 +16,16 @@ const path = require('path');
 require('dotenv').config();
 
 const app = express();
+
+// --- ¡ESTA ES LA LÍNEA CLAVE! ---
+// Le dice al servidor: "Usa el puerto que Render te da (process.env.PORT).
+// Si no existe (porque estoy en mi computadora), usa el 5000".
 const PORT = process.env.PORT || 5000;
 
-// --- CONFIGURACIÓN DE CORS DEFINITIVA ---
+// --- CONFIGURACIÓN DE CORS ---
 const whiteList = [
     'http://localhost:5173',
-    'https://padel-chilecito-app.vercel.app' // <-- ¡ASEGÚRATE DE QUE ESTA ES TU URL DE VERCEL!
+    'https://padel-chilecito-app.vercel.app' // Asegúrate de que esta es tu URL de Vercel
 ];
 
 const corsOptions = {
@@ -53,6 +57,7 @@ app.use('/api/ranking', require('./routes/ranking'));
 app.use('/api/seed', require('./routes/seed'));
 app.use('/api/community', require('./routes/community'));
 app.use('/api/livestream', require('./routes/livestream'));
+
 app.listen(PORT, () => {
   console.log(`Servidor escuchando en el puerto ${PORT}`);
 });
