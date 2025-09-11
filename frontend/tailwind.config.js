@@ -6,39 +6,42 @@ export default {
   ],
   theme: {
     extend: {
-      colors: {
-        primary: '#34D399', // Verde Esmeralda
-        'primary-dark': '#069469',
-        secondary: '#FBBF24', // Ámbar
-        accent: '#3B82F6',   // Azul
-        danger: '#EF4444',
-        'dark-primary': '#111827',   // Fondo principal (casi negro)
-        'dark-secondary': '#1F2937', // Fondo para tarjetas y secciones
-        'text-primary': '#F9FAFB',   // Blanco casi puro
-        'text-secondary': '#9CA3AF', // Gris claro
-      },
+      // --- ¡NUEVAS LÍNEAS! ---
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
+        'title': ['"Exo 2"', 'sans-serif'],
+      },
+      // --- (El resto de tus colores y temas se mantienen igual) ---
+      colors: {
+        'dark-primary': '#111827',
+        'dark-secondary': '#1F2937',
+        'primary': '#10B981',
+        'primary-dark': '#059669',
+        'secondary': '#FBBF24',
+        'text-primary': '#F9FAFB',
+        'text-secondary': '#9CA3AF',
+        'danger': '#EF4444',
+      },
+      boxShadow: {
+        'primary': '0 4px 14px 0 rgba(16, 185, 129, 0.39)',
+        'primary-hover': '0 6px 20px 0 rgba(16, 185, 129, 0.5)',
+      },
+      animation: {
+        'fade-in': 'fadeIn 0.5s ease-in-out',
+        'lift': 'lift 0.3s ease-in-out forwards',
       },
       keyframes: {
         fadeIn: {
-          '0%': { opacity: '0' },
-          '100%': { opacity: '1' },
+          '0%': { opacity: '0', transform: 'translateY(-10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
         },
         lift: {
           '0%': { transform: 'translateY(0)' },
-          '100%': { transform: 'translateY(-4px)' },
+          '100%': { transform: 'translateY(-5px)' },
         }
-      },
-      animation: {
-        'fade-in': 'fadeIn 0.5s ease-out forwards',
-        'lift': 'lift 0.2s ease-out forwards',
-      },
-      boxShadow: {
-        'primary': '0 4px 15px rgba(52, 211, 153, 0.2)',
-        'primary-hover': '0 6px 20px rgba(52, 211, 153, 0.3)',
       }
     },
   },
-  plugins: [],
+  plugins: [
+    require('@tailwindcss/aspect-ratio'),
+  ],
 }
