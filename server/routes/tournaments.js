@@ -11,7 +11,8 @@ function isAuthenticated(req, res, next) {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ error: 'No autorizado' });
     try {
-        req.user = jwt.verify(token, 'CLAVE_SECRETA_SUPER_SEGURA');
+        // ¡CORRECCIÓN DE SEGURIDAD! Ahora usa la variable de entorno.
+        req.user = jwt.verify(token, process.env.JWT_SECRET);
         next();
     } catch (error) {
         res.status(401).json({ error: 'Token inválido' });
@@ -216,7 +217,7 @@ router.put('/:tournamentId/category/:categoryId/match/:matchId', isAuthenticated
     }
 });
 
-// --- RUTA DE GENERACIÓN DE PLAYOFFS (LÓGICA CORREGIDA) ---
+// GENERACIÓN DE PLAYOFFS
 router.post('/:tournamentId/category/:categoryId/generate-playoffs', isAuthenticated, async (req, res) => {
     try {
         const { tournamentId, categoryId } = req.params;
@@ -227,42 +228,31 @@ router.post('/:tournamentId/category/:categoryId/generate-playoffs', isAuthentic
         
         const calculateStandings = (zone) => {
             const stats = {};
-            // Inicializa las estadísticas para cada equipo en la zona
             zone.teams.forEach(t => {
                 if (t && t._id) {
                     stats[t._id.toString()] = { team: t, p: 0, w: 0, l: 0, sf: 0, sc: 0, gf: 0, gc: 0, pts: 0 };
                 }
             });
-
-            // Procesa cada partido finalizado
             zone.matches.forEach(m => {
                 if (m.status !== 'Finalizado' || !m.teamA?._id || !m.teamB?._id) return;
-                
-                // --- ¡VERIFICACIÓN DE SEGURIDAD CLAVE! ---
-                // Nos aseguramos de que ambos equipos del partido existan en las estadísticas antes de continuar.
                 const teamAId = m.teamA._id.toString();
                 const teamBId = m.teamB._id.toString();
                 if (!stats[teamAId] || !stats[teamBId]) {
                     console.warn(`Saltando partido con equipos no encontrados en la zona: ${m.teamA.teamName} vs ${m.teamB.teamName}`);
                     return;
                 }
-
                 const statsA = stats[teamAId];
                 const statsB = stats[teamBId];
-
                 statsA.p++;
                 statsB.p++;
-
                 let setsA = 0, setsB = 0;
                 m.scoreA.forEach((s, i) => { if (s > m.scoreB[i]) setsA++; else setsB++; });
-
                 statsA.sf += setsA; statsA.sc += setsB;
                 statsB.sf += setsB; statsB.sc += setsA;
                 statsA.gf += m.scoreA.reduce((a, b) => a + b, 0);
                 statsA.gc += m.scoreB.reduce((a, b) => a + b, 0);
                 statsB.gf += m.scoreB.reduce((a, b) => a + b, 0);
                 statsB.gc += m.scoreA.reduce((a, b) => a + b, 0);
-
                 if (setsA > setsB) {
                     statsA.w++; statsA.pts += 2;
                     statsB.l++; statsB.pts += 1;
@@ -271,7 +261,6 @@ router.post('/:tournamentId/category/:categoryId/generate-playoffs', isAuthentic
                     statsA.l++; statsA.pts += 1;
                 }
             });
-
             return Object.values(stats).sort((a, b) => {
                 if (b.pts !== a.pts) return b.pts - a.pts;
                 const diffA = a.sf - a.sc; const diffB = b.sf - b.sc;
@@ -309,7 +298,6 @@ router.post('/:tournamentId/category/:categoryId/generate-playoffs', isAuthentic
         res.status(500).json({ error: 'Error al generar la llave de playoffs.', details: error.message });
     }
 });
-
 
 // AVANZAR GANADORES DE PLAYOFFS
 router.post('/:tournamentId/category/:categoryId/advance-playoffs', isAuthenticated, async (req, res) => {
