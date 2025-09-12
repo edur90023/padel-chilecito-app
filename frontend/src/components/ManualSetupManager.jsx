@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 
 function ManualSetupManager({ category, onAction }) {
-    const [zones, setZones] = useState([{ id: 1, zoneName: 'Zona A', teams: [''] }]);
+    const [zones, setZones] = useState([{ id: Date.now(), zoneName: 'Zona A', teams: [''] }]);
 
     const addZone = () => {
         const nextLetter = String.fromCharCode(65 + zones.length);
@@ -11,7 +11,9 @@ function ManualSetupManager({ category, onAction }) {
     };
 
     const removeZone = (zoneId) => {
-        setZones(zones.filter(z => z.id !== zoneId));
+        if (zones.length > 1) {
+            setZones(zones.filter(z => z.id !== zoneId));
+        }
     };
 
     const handleZoneNameChange = (zoneId, newName) => {
@@ -40,7 +42,7 @@ function ManualSetupManager({ category, onAction }) {
     
     const removeTeamFromZone = (zoneId, teamIndex) => {
         setZones(zones.map(z => {
-            if (z.id === zoneId) {
+            if (z.id === zoneId && z.teams.length > 1) {
                 return { ...z, teams: z.teams.filter((_, i) => i !== teamIndex) };
             }
             return z;
@@ -48,7 +50,6 @@ function ManualSetupManager({ category, onAction }) {
     };
 
     const handleSaveStructure = () => {
-        // Filtramos zonas y equipos vacíos antes de guardar
         const finalZones = zones
             .map(z => ({
                 ...z,
