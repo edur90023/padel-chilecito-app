@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink, Navigate, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import axios from 'axios';
-import { useInstallPWA } from './hooks/useInstallPWA'; // Importamos el hook que creaste
+import { useInstallPWA } from './hooks/useInstallPWA';
+import NotificationManager from './components/NotificationManager'; // <-- ¡IMPORTACIÓN AÑADIDA!
 
 import Admin from './components/Admin';
 import LoginPage from './pages/LoginPage';
@@ -41,7 +42,7 @@ const PublicLayout = () => {
     const { isAdmin, logout } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isLiveEnabled, setIsLiveEnabled] = useState(false);
-    const { installPrompt, handleInstall } = useInstallPWA(); // Usamos el hook
+    const { installPrompt, handleInstall } = useInstallPWA();
 
     useEffect(() => {
         const checkLiveStatus = async () => {
@@ -161,6 +162,8 @@ const PublicLayout = () => {
                     <Route path="/community" element={<CommunityPage />} />
                 </Routes>
             </main>
+            {/* --- ¡COMPONENTE AÑADIDO! --- */}
+            <NotificationManager />
         </>
     );
 };
