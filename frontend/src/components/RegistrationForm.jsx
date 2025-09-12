@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 
 function RegistrationForm({ tournament, onClose }) {
-    const categories = tournament?.categories || [];
+    const categories = tournament?.categories.filter(c => c.status === 'Inscripciones Abiertas') || [];
     
     const [formData, setFormData] = useState({
         player1Name: '',
@@ -27,6 +27,10 @@ function RegistrationForm({ tournament, onClose }) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (!selectedCategory) {
+            setError("Por favor, selecciona una categoría.");
+            return;
+        }
         setLoading(true);
         setError('');
         setSuccess('');
@@ -40,17 +44,23 @@ function RegistrationForm({ tournament, onClose }) {
                 player2Phone: formData.player2Phone
             };
             await axios.post(`/tournaments/${tournament._id}/register`, dataToSend);
-            setSuccess("¡Inscripción completada con éxito! Serás redirigido a WhatsApp para notificar al organizador.");
-
-            if (tournament.organizerPhone) {
-                const message = `¡Nueva inscripción al torneo "${tournament.name}"!\n\nCategoría: *${selectedCategory}*\nPareja: *${formData.player1Name}* y *${formData.player2Name}*\n\n¡Gracias por organizar!`;
-                const whatsappUrl = `https://wa.me/${tournament.organizerPhone}?text=${encodeURIComponent(message)}`;
+            
+            // Lógica de WhatsApp mejorada
+            if (tournament.organizerPhone && tournament.organizerPhone.trim() !== '') {
+                setSuccess("¡Inscripción exitosa! Serás redirigido a WhatsApp para notificar al organizador.");
+                
+                const message = `¡Nueva inscripción al torneo "${tournament.name}"!\n\n*Categoría:* ${selectedCategory}\n\n*Pareja:*\n1- ${formData.player1Name} (Tel: ${formData.player1Phone})\n2- ${formData.player2Name} (Tel: ${formData.player2Phone})\n\n¡Gracias por organizar!`;
+                
+                // Limpiamos el número de teléfono de caracteres no deseados
+                const cleanPhone = tournament.organizerPhone.replace(/[^0-9]/g, '');
+                const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
                 
                 setTimeout(() => {
                     window.location.href = whatsappUrl;
                     onClose(); 
                 }, 2500);
             } else {
+                setSuccess("¡Inscripción completada con éxito!");
                 setTimeout(() => {
                     onClose(); 
                 }, 2000);
@@ -77,6 +87,7 @@ function RegistrationForm({ tournament, onClose }) {
                     <div className="form-group">
                         <label className="block text-gray-400 mb-2">Categoría:</label>
                         <select value={selectedCategory} onChange={handleCategoryChange} required className="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500">
+                            <option value="" disabled>Selecciona una categoría...</option>
                             {categories.map((cat, index) => (
                                 <option key={index} value={cat.name}>{cat.name}</option>
                             ))}
