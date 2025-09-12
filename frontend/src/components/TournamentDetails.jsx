@@ -1,3 +1,5 @@
+// frontend/src/components/TournamentDetails.jsx
+
 import React, { useState, useMemo, useEffect } from 'react';
 import axios from 'axios';
 import ManualSetupManager from './ManualSetupManager';
@@ -265,7 +267,7 @@ function FinishCategoryManager({ category, onAction }) {
     const getWinnerLoser = (match) => {
         if (match.status !== 'Finalizado') return { winner: null, loser: null };
         let setsA = 0;
-        match.scoreA.forEach((s, i) => { if (s > match.scoreB[i]) setsA++; });
+        match.scoreA.forEach((s, i) => { if (s > m.scoreB[i]) setsA++; });
         const winner = setsA >= Math.ceil(match.scoreA.length / 2) ? match.teamA : match.teamB;
         const loser = String(winner._id) === String(match.teamA._id) ? match.teamB : match.teamA;
         return { winner, loser };

@@ -91,6 +91,7 @@ router.post('/', isAuthenticated, async (req, res) => {
     }
 });
 
+// --- ¡NUEVA RUTA! ---
 // GUARDAR LA ESTRUCTURA MANUAL DE ZONAS Y EQUIPOS
 router.post('/:tournamentId/category/:categoryId/save-manual-structure', isAuthenticated, async (req, res) => {
     try {
@@ -379,7 +380,7 @@ router.post('/:tournamentId/category/:categoryId/advance-playoffs', isAuthentica
     }
 });
 
-// AÑADIR EQUIPO MANUALMENTE
+// AÑADIR EQUIPO MANUALMENTE (A LA LISTA DE INSCRITOS)
 router.post('/:tournamentId/category/:categoryId/add-team', isAuthenticated, async (req, res) => {
     try {
         const { tournamentId, categoryId } = req.params;
