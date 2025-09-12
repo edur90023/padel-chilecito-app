@@ -17,11 +17,16 @@ function isAuthenticated(req, res, next) {
 }
 
 // Configurar web-push con las claves VAPID
-webpush.setVapidDetails(
-    process.env.VAPID_SUBJECT,
-    process.env.VAPID_PUBLIC_KEY,
-    process.env.VAPID_PRIVATE_KEY
-);
+if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+    webpush.setVapidDetails(
+        process.env.VAPID_SUBJECT,
+        process.env.VAPID_PUBLIC_KEY,
+        process.env.VAPID_PRIVATE_KEY
+    );
+} else {
+    console.warn("Las claves VAPID no están configuradas en el entorno. El envío de notificaciones no funcionará.");
+}
+
 
 // Ruta para que el frontend guarde una suscripción (sin cambios)
 router.post('/subscribe', async (req, res) => {
@@ -63,7 +68,7 @@ router.post('/send', isAuthenticated, async (req, res) => {
             webpush.sendNotification(sub, payload).catch(error => {
                 // Si la suscripción ya no es válida (código 410), la eliminamos de la BD
                 if (error.statusCode === 410) {
-                    return Subscription.findByIdAndDelete(sub._id);
+                    return Subscription.deleteOne({ _id: sub._id });
                 } else {
                     console.error('Error al enviar notificación a un suscriptor:', error.body);
                 }
@@ -80,3 +85,4 @@ router.post('/send', isAuthenticated, async (req, res) => {
 });
 
 module.exports = router;
+
