@@ -11,6 +11,10 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
+       workbox: {
+       
+        importScripts: ['/sw-custom.js'], 
+             },
       manifest: {
         name: 'Pádel Chilecito',
         short_name: 'Pádel App',
