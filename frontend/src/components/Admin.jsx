@@ -1,9 +1,6 @@
-// frontend/src/components/Admin.jsx
-
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-// --- ¡CAMBIO AQUÍ! La importación ahora es más clara ---
-import TournamentManagement from '../pages/TournamentManagement'; 
+import TournamentManagement from '../pages/TournamentManagement';
 import NewsManagement from './NewsManagement';
 import AdManagement from './AdManagement';
 import RankingManagement from './RankingManagement';
@@ -12,6 +9,7 @@ import CommunityManagement from './CommunityManagement';
 import GalleryManagement from './GalleryManagement';
 import LiveStreamManagement from './LiveStreamManagement';
 import SimulationTools from './SimulationTools';
+import NotificationSender from './NotificationSender'; // <-- ¡NUEVA IMPORTACIÓN!
 
 function Admin() {
     const { logout } = useAuth();
@@ -33,6 +31,8 @@ function Admin() {
                 </header>
 
                 <nav className="flex flex-wrap border-b border-gray-700 mb-8">
+                    {/* --- ¡NUEVA PESTAÑA! --- */}
+                    <button onClick={() => setActiveTab('notifications')} className={`px-3 py-3 font-medium text-sm rounded-t-lg transition-colors ${activeTab === 'notifications' ? 'border-b-2 border-green-500 text-white' : 'text-gray-400'}`}><i className="fas fa-paper-plane mr-2 text-blue-400"></i>Notificaciones</button>
                     <button onClick={() => setActiveTab('live')} className={`px-3 py-3 font-medium text-sm rounded-t-lg transition-colors ${activeTab === 'live' ? 'border-b-2 border-green-500 text-white' : 'text-gray-400'}`}><i className="fas fa-video mr-2 text-red-500"></i>En Vivo</button>
                     <button onClick={() => setActiveTab('tournaments')} className={`px-3 py-3 font-medium text-sm rounded-t-lg transition-colors ${activeTab === 'tournaments' ? 'border-b-2 border-green-500 text-white' : 'text-gray-400'}`}><i className="fas fa-trophy mr-2"></i>Torneos</button>
                     <button onClick={() => setActiveTab('players')} className={`px-3 py-3 font-medium text-sm rounded-t-lg transition-colors ${activeTab === 'players' ? 'border-b-2 border-green-500 text-white' : 'text-gray-400'}`}><i className="fas fa-users-cog mr-2"></i>Jugadores</button>
@@ -45,6 +45,8 @@ function Admin() {
                 </nav>
                 
                 <main>
+                    {/* --- ¡NUEVA LÓGICA! --- */}
+                    {activeTab === 'notifications' && <NotificationSender />}
                     {activeTab === 'live' && <LiveStreamManagement />}
                     {activeTab === 'tournaments' && <TournamentManagement />}
                     {activeTab === 'players' && <PlayerManagement />} 
