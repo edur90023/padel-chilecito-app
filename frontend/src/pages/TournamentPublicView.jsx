@@ -2,26 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
-import WhatsAppNotifier from '../components/WhatsAppNotifier'; // <-- ¡IMPORTACIÓN AÑADIDA!
-
-// (El resto de tus importaciones y el código del componente no cambian)
+import WhatsAppNotifier from '../components/WhatsAppNotifier';
 
 function TournamentPublicView() {
-    // ... (tu estado existente: tournament, loading, error, etc.)
     const { isAdmin } = useAuth();
     const { id } = useParams();
     const [tournament, setTournament] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [activeCategory, setActiveCategory] = useState(null);
-    const [activeTab, setActiveTab] = useState('zones'); // zones, playoffs, standings
+    const [activeTab, setActiveTab] = useState('zones');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedMatch, setSelectedMatch] = useState(null);
     const [matchResult, setMatchResult] = useState({ scoreA: [0, 0, 0], scoreB: [0, 0, 0], status: 'Pendiente', matchTime: '', matchPlace: '' });
-
-    // ¡NUEVO ESTADO PARA LA NOTIFICACIÓN!
     const [matchToNotify, setMatchToNotify] = useState(null);
-
 
     const fetchTournament = async () => {
         try {
@@ -70,12 +64,20 @@ function TournamentPublicView() {
             setTournament(response.data.tournament);
             setIsModalOpen(false);
 
-            // --- ¡AQUÍ ESTÁ LA MAGIA! ---
-            // Si se guardó lugar o fecha, activamos el notificador
+            // --- ¡LÓGICA CORREGIDA Y MEJORADA! ---
+            // Verificamos si el usuario ingresó un lugar o una fecha en el formulario.
             if (matchResult.matchPlace || matchResult.matchTime) {
-                setMatchToNotify(selectedMatch);
+                // Creamos un nuevo objeto para el notificador, combinando los datos
+                // del partido (equipos, jugadores) con los datos del formulario (lugar, hora).
+                const notificationData = {
+                    ...selectedMatch,
+                    matchPlace: matchResult.matchPlace,
+                    matchTime: matchResult.matchTime,
+                };
+                // Activamos el notificador con los datos correctos y actualizados.
+                setMatchToNotify(notificationData);
             }
-            // -----------------------------
+            // --- FIN DE LA CORRECCIÓN ---
 
         } catch (err) {
             setError('Error al actualizar el resultado.');
@@ -83,10 +85,7 @@ function TournamentPublicView() {
         }
     };
 
-    // ... (el resto de tus funciones como calculateStandings, renderZones, renderPlayoffs, etc. no cambian)
-
     const calculateStandings = (zone) => {
-        // ... (Tu lógica de cálculo de posiciones)
         const stats = {};
         zone.teams.forEach(t => {
             if (t && t._id) {
@@ -98,7 +97,6 @@ function TournamentPublicView() {
             const teamAId = m.teamA._id.toString();
             const teamBId = m.teamB._id.toString();
             if (!stats[teamAId] || !stats[teamBId]) {
-                console.warn(`Saltando partido con equipos no encontrados en la zona: ${m.teamA.teamName} vs ${m.teamB.teamName}`);
                 return;
             }
             const statsA = stats[teamAId];
@@ -233,10 +231,8 @@ function TournamentPublicView() {
     if (error) return <div className="text-center mt-8 text-red-500"><p>{error}</p></div>;
     if (!tournament) return <div className="text-center mt-8"><p>No se encontró el torneo.</p></div>;
 
-
     return (
         <div className="container mx-auto px-4 py-8">
-            {/* --- ¡AQUÍ SE RENDERIZA EL NOTIFICADOR! --- */}
             {matchToNotify && (
                 <WhatsAppNotifier
                     match={matchToNotify}
@@ -246,7 +242,7 @@ function TournamentPublicView() {
             )}
 
             <h2 className="text-4xl font-extrabold text-center text-white mb-4">{tournament.name}</h2>
-            {/* ... (el resto de tu JSX para las pestañas y el contenido no cambia) */}
+            
             <div className="mb-8">
                 <div className="flex justify-center border-b border-gray-700">
                     {tournament.categories.map(cat => (
