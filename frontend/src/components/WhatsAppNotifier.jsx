@@ -22,16 +22,12 @@ const WhatsAppNotifier = ({ match, tournamentName, onComplete }) => {
     const formatArgentinianPhoneNumber = (phone) => {
         if (!phone) return null;
         
-        // 1. Limpiar cualquier caracter que no sea un dígito (espacios, guiones, etc.)
         const cleaned = ('' + phone).replace(/\D/g, '');
 
-        // 2. Validar que el número limpio tenga 10 dígitos (ej: 3825625422)
         if (cleaned.length === 10) {
-            // 3. Añadir el prefijo de país y el 9 para celulares de Argentina
             return '549' + cleaned;
         }
 
-        // 4. Si no cumple con el formato, se considera inválido
         return null;
     };
 
@@ -46,9 +42,8 @@ const WhatsAppNotifier = ({ match, tournamentName, onComplete }) => {
         const formattedPhone = formatArgentinianPhoneNumber(player.phoneNumber);
 
         if (!formattedPhone) {
-            // Si el número no es válido, alertar al admin y pasar al siguiente
             alert(`El número de teléfono de "${player.playerName}" (${player.phoneNumber || 'ninguno'}) no parece ser un número válido de Argentina. Se saltará a este jugador.`);
-            setCurrentIndex(currentIndex + 1); // Moverse al siguiente jugador
+            setCurrentIndex(currentIndex + 1);
             return;
         }
 
@@ -64,8 +59,18 @@ const WhatsAppNotifier = ({ match, tournamentName, onComplete }) => {
 ¡Mucha suerte!`;
 
         const whatsappUrl = `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(message)}`;
+        
+        // --- INICIO DE DIAGNÓSTICO ---
+        // Mostramos una alerta con la URL que vamos a abrir.
+        // Esto nos permite verificar si el número es correcto antes de continuar.
+        alert(`Se intentará abrir el chat para notificar a ${player.playerName}.\n\nURL Generada:\n${whatsappUrl}\n\nPor favor, verifica que el número en la URL sea el correcto. Presiona Aceptar para continuar.`);
+        // --- FIN DE DIAGNÓSTICO ---
 
-        window.open(whatsappUrl, '_blank');
+        const newTab = window.open(whatsappUrl, '_blank');
+
+        if (!newTab) {
+            alert("Error: El navegador bloqueó la ventana emergente. Por favor, permite las ventanas emergentes para este sitio e inténtalo de nuevo.");
+        }
         
         setNotifiedCount(notifiedCount + 1);
         setCurrentIndex(currentIndex + 1);
@@ -88,12 +93,15 @@ const WhatsAppNotifier = ({ match, tournamentName, onComplete }) => {
                             <p className="text-xl font-semibold text-green-400">
                                 {playersToNotify[currentIndex].playerName}
                             </p>
+                             <p className="text-md text-gray-500 mt-1">
+                                Teléfono: {playersToNotify[currentIndex].phoneNumber || 'No registrado'}
+                            </p>
                         </div>
                         <button
                             onClick={notifyNextPlayer}
                             className="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition duration-300 ease-in-out transform hover:scale-105"
                         >
-                            <i className="fab fa-whatsapp mr-2"></i> Preparar Mensaje
+                            <i className="fab fa-whatsapp mr-2"></i> Preparar Mensaje para {playersToNotify[currentIndex].playerName}
                         </button>
                     </>
                 ) : (
