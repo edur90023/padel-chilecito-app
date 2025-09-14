@@ -6,6 +6,12 @@ const WhatsAppNotifier = ({ match, tournamentName, onComplete }) => {
     const [notifiedCount, setNotifiedCount] = useState(0);
 
     useEffect(() => {
+        // --- INICIO DE DIAGNÓSTICO ---
+        // Esto imprimirá los datos del partido en la consola del navegador (F12).
+        // Nos permite verificar si los números de teléfono están llegando correctamente.
+        console.log("DATOS DEL PARTIDO RECIBIDOS POR EL NOTIFICADOR:", match);
+        // --- FIN DE DIAGNÓSTICO ---
+
         if (match) {
             const players = [
                 ...(match.teamA?.players || []),
@@ -59,18 +65,8 @@ const WhatsAppNotifier = ({ match, tournamentName, onComplete }) => {
 ¡Mucha suerte!`;
 
         const whatsappUrl = `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(message)}`;
-        
-        // --- INICIO DE DIAGNÓSTICO ---
-        // Mostramos una alerta con la URL que vamos a abrir.
-        // Esto nos permite verificar si el número es correcto antes de continuar.
-        alert(`Se intentará abrir el chat para notificar a ${player.playerName}.\n\nURL Generada:\n${whatsappUrl}\n\nPor favor, verifica que el número en la URL sea el correcto. Presiona Aceptar para continuar.`);
-        // --- FIN DE DIAGNÓSTICO ---
 
-        const newTab = window.open(whatsappUrl, '_blank');
-
-        if (!newTab) {
-            alert("Error: El navegador bloqueó la ventana emergente. Por favor, permite las ventanas emergentes para este sitio e inténtalo de nuevo.");
-        }
+        window.open(whatsappUrl, '_blank');
         
         setNotifiedCount(notifiedCount + 1);
         setCurrentIndex(currentIndex + 1);
@@ -93,15 +89,12 @@ const WhatsAppNotifier = ({ match, tournamentName, onComplete }) => {
                             <p className="text-xl font-semibold text-green-400">
                                 {playersToNotify[currentIndex].playerName}
                             </p>
-                             <p className="text-md text-gray-500 mt-1">
-                                Teléfono: {playersToNotify[currentIndex].phoneNumber || 'No registrado'}
-                            </p>
                         </div>
                         <button
                             onClick={notifyNextPlayer}
                             className="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition duration-300 ease-in-out transform hover:scale-105"
                         >
-                            <i className="fab fa-whatsapp mr-2"></i> Preparar Mensaje para {playersToNotify[currentIndex].playerName}
+                            <i className="fab fa-whatsapp mr-2"></i> Preparar Mensaje
                         </button>
                     </>
                 ) : (

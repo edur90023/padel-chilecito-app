@@ -7,6 +7,8 @@ const Tournament = require('../models/Tournament');
 const TournamentManager = require('../services/tournament-manager');
 const jwt = require('jsonwebtoken');
 
+// (El resto del archivo permanece igual... solo cambia la función de actualizar partido)
+
 function isAuthenticated(req, res, next) {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ error: 'No autorizado' });
@@ -17,6 +19,8 @@ function isAuthenticated(req, res, next) {
         res.status(401).json({ error: 'Token inválido' });
     }
 }
+
+// ... (todas tus otras rutas GET, POST, DELETE, etc. van aquí sin cambios) ...
 
 // OBTENER TODOS LOS TORNEOS
 router.get('/', async (req, res) => {
@@ -91,7 +95,6 @@ router.post('/', isAuthenticated, async (req, res) => {
     }
 });
 
-// --- ¡NUEVA RUTA! ---
 // GUARDAR LA ESTRUCTURA MANUAL DE ZONAS Y EQUIPOS
 router.post('/:tournamentId/category/:categoryId/save-manual-structure', isAuthenticated, async (req, res) => {
     try {
@@ -128,7 +131,9 @@ router.post('/:tournamentId/category/:categoryId/save-manual-structure', isAuthe
         category.zones = processedZones;
         category.status = 'Zonas Sorteadas';
         
-        const updatedTournament = await tournament.save();
+        await tournament.save();
+        // Re-fetch para asegurar que los datos estén completos
+        const updatedTournament = await Tournament.findById(tournamentId);
         res.status(200).json({ message: 'Estructura manual guardada y partidos generados.', tournament: updatedTournament });
 
     } catch (error) {
@@ -169,6 +174,7 @@ router.post('/:tournamentId/register', async (req, res) => {
     }
 });
 
+
 // RUTA DE PREVISUALIZACIÓN DE ZONAS
 router.post('/:tournamentId/category/:categoryId/preview-zones', isAuthenticated, async (req, res) => {
     try {
@@ -208,6 +214,7 @@ router.post('/:tournamentId/category/:categoryId/draw-zones', isAuthenticated, a
     }
 });
 
+
 // CERRAR TODAS LAS INSCRIPCIONES
 router.post('/:tournamentId/close-all-registrations', isAuthenticated, async (req, res) => {
     try {
@@ -223,6 +230,7 @@ router.post('/:tournamentId/close-all-registrations', isAuthenticated, async (re
     }
 });
 
+
 // ELIMINAR EQUIPO INSCRITO
 router.delete('/:tournamentId/category/:categoryId/team/:teamId', isAuthenticated, async (req, res) => {
     try {
@@ -236,6 +244,7 @@ router.delete('/:tournamentId/category/:categoryId/team/:teamId', isAuthenticate
         res.status(500).json({ error: "Error al eliminar la pareja" });
     }
 });
+
 
 // MOVER EQUIPO DE CATEGORÍA
 router.post('/:tournamentId/move-team', isAuthenticated, async (req, res) => {
@@ -255,6 +264,7 @@ router.post('/:tournamentId/move-team', isAuthenticated, async (req, res) => {
     }
 });
 
+// --- RUTA CORREGIDA ---
 // ACTUALIZAR RESULTADO DE UN PARTIDO
 router.put('/:tournamentId/category/:categoryId/match/:matchId', isAuthenticated, async (req, res) => {
     try {
@@ -262,24 +272,39 @@ router.put('/:tournamentId/category/:categoryId/match/:matchId', isAuthenticated
         const { scoreA, scoreB, status, matchTime, matchPlace } = req.body;
 
         const tournament = await Tournament.findById(tournamentId);
+        if (!tournament) return res.status(404).json({ error: 'Torneo no encontrado' });
+
         const category = tournament.categories.id(categoryId);
+        if (!category) return res.status(404).json({ error: 'Categoría no encontrada' });
+        
         let match;
+        // Buscar el partido en las zonas o en los playoffs
         for (const zone of category.zones) { if (zone.matches.id(matchId)) { match = zone.matches.id(matchId); break; } }
         if (!match) { for (const round of category.playoffRounds) { if (round.matches.id(matchId)) { match = round.matches.id(matchId); break; } } }
         if (!match) return res.status(404).json({ error: 'Partido no encontrado' });
 
+        // Actualizar los datos del partido
         match.scoreA = scoreA;
         match.scoreB = scoreB;
         match.status = status;
         match.matchTime = matchTime;
         match.matchPlace = matchPlace;
         
-        const updatedTournament = await tournament.save();
-        res.status(200).json({ message: 'Resultado actualizado', tournament: updatedTournament });
+        await tournament.save();
+
+        // --- ¡LA SOLUCIÓN! ---
+        // Volvemos a cargar el torneo DESPUÉS de guardarlo para asegurar que todos los
+        // datos de los jugadores (incluyendo teléfonos) estén completos antes de enviarlo de vuelta.
+        const populatedTournament = await Tournament.findById(tournamentId);
+        
+        res.status(200).json({ message: 'Resultado actualizado', tournament: populatedTournament });
+
     } catch (error) {
+        console.error("Error al actualizar resultado:", error);
         res.status(500).json({ error: 'Error al actualizar resultado.', details: error.message });
     }
 });
+
 
 // GENERACIÓN DE PLAYOFFS
 router.post('/:tournamentId/category/:categoryId/generate-playoffs', isAuthenticated, async (req, res) => {
@@ -380,6 +405,7 @@ router.post('/:tournamentId/category/:categoryId/advance-playoffs', isAuthentica
     }
 });
 
+
 // AÑADIR EQUIPO MANUALMENTE (A LA LISTA DE INSCRITOS)
 router.post('/:tournamentId/category/:categoryId/add-team', isAuthenticated, async (req, res) => {
     try {
@@ -401,6 +427,7 @@ router.post('/:tournamentId/category/:categoryId/add-team', isAuthenticated, asy
     }
 });
 
+
 // ASIGNAR GANADORES Y FINALIZAR CATEGORÍA
 router.post('/:tournamentId/category/:categoryId/finish', isAuthenticated, async (req, res) => {
     try {
@@ -418,5 +445,6 @@ router.post('/:tournamentId/category/:categoryId/finish', isAuthenticated, async
         res.status(500).json({ error: 'Error al guardar los resultados.' });
     }
 });
+
 
 module.exports = router;
