@@ -2,107 +2,116 @@ import React, { useState, useEffect } from 'react';
 
 const WhatsAppNotifier = ({ match, tournamentName, onComplete }) => {
     const [playersToNotify, setPlayersToNotify] = useState([]);
-    const [notifiedPlayers, setNotifiedPlayers] = useState([]);
-    const [isSending, setIsSending] = useState(false);
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const [notifiedCount, setNotifiedCount] = useState(0);
 
     useEffect(() => {
         if (match) {
             const players = [
                 ...(match.teamA?.players || []),
                 ...(match.teamB?.players || [])
-            ].filter(p => p.phoneNumber); // Solo jugadores con teléfono
+            ];
             setPlayersToNotify(players);
         }
     }, [match]);
 
-    const formatPhoneNumber = (phone) => {
-        // Limpia el número de caracteres no numéricos
+    /**
+     * Valida y formatea un número de teléfono de Argentina (formato "3825 625422").
+     * Devuelve el número en formato internacional (ej: 5493825625422) o null si no es válido.
+     */
+    const formatArgentinianPhoneNumber = (phone) => {
+        if (!phone) return null;
+        
+        // 1. Limpiar cualquier caracter que no sea un dígito (espacios, guiones, etc.)
         const cleaned = ('' + phone).replace(/\D/g, '');
-        // Asume que si no empieza con 54, es un número local de Argentina
-        if (cleaned.length === 10 && !cleaned.startsWith('54')) {
+
+        // 2. Validar que el número limpio tenga 10 dígitos (ej: 3825625422)
+        if (cleaned.length === 10) {
+            // 3. Añadir el prefijo de país y el 9 para celulares de Argentina
             return '549' + cleaned;
         }
-        if (cleaned.startsWith('549')) {
-            return cleaned;
-        }
-        // Devuelve el número limpiado si no coincide con los formatos esperados
-        return cleaned;
+
+        // 4. Si no cumple con el formato, se considera inválido
+        return null;
     };
 
-    const handleNotify = (player) => {
-        if (!player || !player.phoneNumber) {
-            alert('Este jugador no tiene un número de teléfono válido.');
+    const notifyNextPlayer = () => {
+        if (currentIndex >= playersToNotify.length) {
+            alert('Todos los jugadores han sido procesados.');
+            onComplete();
             return;
         }
 
-        const formattedPhone = formatPhoneNumber(player.phoneNumber);
+        const player = playersToNotify[currentIndex];
+        const formattedPhone = formatArgentinianPhoneNumber(player.phoneNumber);
+
+        if (!formattedPhone) {
+            // Si el número no es válido, alertar al admin y pasar al siguiente
+            alert(`El número de teléfono de "${player.playerName}" (${player.phoneNumber || 'ninguno'}) no parece ser un número válido de Argentina. Se saltará a este jugador.`);
+            setCurrentIndex(currentIndex + 1); // Moverse al siguiente jugador
+            return;
+        }
+
         const date = match.matchTime ? new Date(match.matchTime).toLocaleDateString('es-AR') : 'Fecha a confirmar';
         const time = match.matchTime ? new Date(match.matchTime).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : 'Hora a confirmar';
 
         const message = `¡Hola ${player.playerName}! Te informamos los datos de tu próximo partido del torneo "${tournamentName}":
--  соперник: ${match.teamA.teamName} vs ${match.teamB.teamName}
+- Partido: ${match.teamA.teamName} vs ${match.teamB.teamName}
 - Lugar: ${match.matchPlace || 'A confirmar'}
 - Fecha: ${date}
 - Hora: ${time} hs
 
 ¡Mucha suerte!`;
 
-        const whatsappUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`;
+        const whatsappUrl = `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(message)}`;
 
-        // Abrir WhatsApp en una nueva pestaña
         window.open(whatsappUrl, '_blank');
-
-        // Marcar al jugador como notificado
-        setNotifiedPlayers([...notifiedPlayers, player._id]);
-
-        // Preguntar si desea continuar
-        if (playersToNotify.length > notifiedPlayers.length + 1) {
-            if (!window.confirm('¡Mensaje preparado! Cuando vuelvas a esta ventana, ¿quieres notificar al siguiente jugador?')) {
-                // Si el usuario cancela, detenemos el proceso
-                setPlayersToNotify([]); // Limpiamos la cola para detener
-            }
-        } else {
-            // Era el último jugador
-            alert('Todos los jugadores han sido notificados.');
-            onComplete();
-        }
+        
+        setNotifiedCount(notifiedCount + 1);
+        setCurrentIndex(currentIndex + 1);
     };
 
-    if (!playersToNotify.length) {
-        return null;
-    }
-
-    const currentPlayer = playersToNotify[notifiedPlayers.length];
+    const hasMorePlayers = currentIndex < playersToNotify.length;
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-            <div className="bg-gray-800 rounded-lg p-8 shadow-xl border border-gray-700 max-w-lg w-full">
-                <h3 className="text-2xl font-bold text-white mb-4">Notificar Jugadores</h3>
-                <p className="text-gray-300 mb-6">
-                    Se abrirá WhatsApp para enviar los detalles del partido. Vuelve a esta pestaña para continuar con el siguiente jugador.
-                </p>
-
-                {currentPlayer ? (
-                    <div className="text-center">
-                        <p className="text-lg text-gray-400 mb-2">Siguiente jugador a notificar:</p>
-                        <p className="text-xl font-semibold text-green-400 mb-6">{currentPlayer.playerName}</p>
+            <div className="bg-gray-800 rounded-lg p-8 shadow-xl border border-gray-700 max-w-lg w-full text-center">
+                <h3 className="text-2xl font-bold text-white mb-4">Notificar Jugadores por WhatsApp</h3>
+                
+                {hasMorePlayers ? (
+                    <>
+                        <p className="text-gray-300 mb-6">
+                            Prepara el mensaje para el siguiente jugador. Se abrirá una nueva pestaña de WhatsApp.
+                        </p>
+                        <div className="bg-gray-900 p-4 rounded-lg mb-6">
+                            <p className="text-lg text-gray-400 mb-2">Siguiente jugador:</p>
+                            <p className="text-xl font-semibold text-green-400">
+                                {playersToNotify[currentIndex].playerName}
+                            </p>
+                        </div>
                         <button
-                            onClick={() => handleNotify(currentPlayer)}
+                            onClick={notifyNextPlayer}
                             className="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition duration-300 ease-in-out transform hover:scale-105"
                         >
-                            <i className="fab fa-whatsapp mr-2"></i> Notificar a {currentPlayer.playerName}
+                            <i className="fab fa-whatsapp mr-2"></i> Preparar Mensaje
                         </button>
-                    </div>
+                    </>
                 ) : (
-                    <p className="text-green-400 text-center">¡Todos los jugadores han sido notificados!</p>
+                    <div className="text-center">
+                         <p className="text-xl text-green-400 mb-6">
+                            ¡Proceso finalizado!
+                        </p>
+                         <p className="text-gray-300 mb-6">
+                            Has preparado notificaciones para {notifiedCount} de {playersToNotify.length} jugadores.
+                        </p>
+                    </div>
                 )}
-
 
                 <button
                     onClick={onComplete}
                     className="w-full mt-4 bg-gray-600 text-white font-medium py-2 px-4 rounded-lg hover:bg-gray-700 transition"
                 >
-                    Finalizar
+                    Cerrar
                 </button>
             </div>
         </div>
