@@ -61,23 +61,49 @@ function TournamentPublicView() {
                 `/tournaments/${tournament._id}/category/${activeCategory._id}/match/${selectedMatch._id}`,
                 matchResult
             );
-            setTournament(response.data.tournament);
-            setIsModalOpen(false);
+            
+            // 1. Guardamos el torneo actualizado que nos devuelve el servidor
+            const updatedTournament = response.data.tournament;
+            setTournament(updatedTournament);
 
-            // --- ¡LÓGICA CORREGIDA Y MEJORADA! ---
-            // Verificamos si el usuario ingresó un lugar o una fecha en el formulario.
+            // 2. Verificamos si el usuario ingresó un lugar o una fecha para notificar
             if (matchResult.matchPlace || matchResult.matchTime) {
-                // Creamos un nuevo objeto para el notificador, combinando los datos
-                // del partido (equipos, jugadores) con los datos del formulario (lugar, hora).
-                const notificationData = {
-                    ...selectedMatch,
-                    matchPlace: matchResult.matchPlace,
-                    matchTime: matchResult.matchTime,
-                };
-                // Activamos el notificador con los datos correctos y actualizados.
-                setMatchToNotify(notificationData);
+                
+                // --- ¡ESTA ES LA CORRECCIÓN CLAVE! ---
+                // Buscamos el partido EXACTO dentro del torneo ACTUALIZADO para asegurar
+                // que tenemos los datos más recientes, incluyendo los números de teléfono.
+                let freshMatchData = null;
+                const updatedCategory = updatedTournament.categories.find(c => c._id === activeCategory._id);
+                
+                // Buscar en las zonas
+                if (updatedCategory && updatedCategory.zones) {
+                    for (const zone of updatedCategory.zones) {
+                        const foundMatch = zone.matches.find(m => m._id === selectedMatch._id);
+                        if (foundMatch) {
+                            freshMatchData = foundMatch;
+                            break;
+                        }
+                    }
+                }
+                
+                // Buscar en los playoffs si no se encontró en zonas
+                if (!freshMatchData && updatedCategory && updatedCategory.playoffRounds) {
+                     for (const round of updatedCategory.playoffRounds) {
+                        const foundMatch = round.matches.find(m => m._id === selectedMatch._id);
+                        if (foundMatch) {
+                            freshMatchData = foundMatch;
+                            break;
+                        }
+                    }
+                }
+
+                // Si encontramos el partido actualizado, activamos el notificador
+                if (freshMatchData) {
+                    setMatchToNotify(freshMatchData);
+                }
             }
-            // --- FIN DE LA CORRECCIÓN ---
+            
+            setIsModalOpen(false);
 
         } catch (err) {
             setError('Error al actualizar el resultado.');
@@ -96,9 +122,7 @@ function TournamentPublicView() {
             if (m.status !== 'Finalizado' || !m.teamA?._id || !m.teamB?._id) return;
             const teamAId = m.teamA._id.toString();
             const teamBId = m.teamB._id.toString();
-            if (!stats[teamAId] || !stats[teamBId]) {
-                return;
-            }
+            if (!stats[teamAId] || !stats[teamBId]) return;
             const statsA = stats[teamAId];
             const statsB = stats[teamBId];
             statsA.p++;
