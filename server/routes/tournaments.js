@@ -112,21 +112,32 @@ router.post('/:tournamentId/category/:categoryId/save-manual-structure', isAuthe
         if (!category) return res.status(404).json({ error: 'Categoría no encontrada.' });
         if (!category.isManual) return res.status(400).json({ error: 'Esta categoría no está configurada para gestión manual.' });
 
-        const processedZones = zones.map(zoneData => {
-            const teams = zoneData.teams.map(teamName => ({
-                _id: new mongoose.Types.ObjectId(),
-                teamName: teamName,
-                players: [{ playerName: 'Jugador 1' }, { playerName: 'Jugador 2' }] 
-            }));
+        const processedZones = [];
+        for (const zoneData of zones) {
+            if (!zoneData.teams || !Array.isArray(zoneData.teams) || !zoneData.zoneName) {
+                return res.status(400).json({ error: 'El formato de una de las zonas es inválido. Debe tener zoneName y una lista de equipos (teams).' });
+            }
+
+            const teams = [];
+            for (const teamName of zoneData.teams) {
+                if (typeof teamName !== 'string' || teamName.trim() === '') {
+                    return res.status(400).json({ error: 'El nombre de uno de los equipos está vacío o no es válido.' });
+                }
+                teams.push({
+                    _id: new mongoose.Types.ObjectId(),
+                    teamName: teamName.trim(),
+                    players: [{ playerName: 'Jugador 1' }, { playerName: 'Jugador 2' }]
+                });
+            }
             
-            const matches = TournamentManager.generateZoneMatches(teams);
+            const matches = TournamentManager._generateZoneMatches(teams);
             
-            return {
+            processedZones.push({
                 zoneName: zoneData.zoneName,
                 teams: teams,
                 matches: matches
-            };
-        });
+            });
+        }
 
         category.zones = processedZones;
         category.status = 'Zonas Sorteadas';
