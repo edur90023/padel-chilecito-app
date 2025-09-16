@@ -6,6 +6,7 @@ import { subscribeUserToPush } from '../utils/notifications';
 function NotificationManager() {
     const [permission, setPermission] = useState(Notification.permission);
     const [isSupported, setIsSupported] = useState(false);
+    const [isDismissed, setIsDismissed] = useState(false);
 
     useEffect(() => {
         if ('Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window) {
@@ -23,15 +24,27 @@ function NotificationManager() {
         } else if (permission === 'granted') {
             subscribeUserToPush();
         }
+        setIsDismissed(true); // Ocultar el banner después de interactuar
     };
 
-    if (!isSupported || permission !== 'default') {
-        return null; // No mostrar nada si no es compatible o si ya se ha concedido/denegado el permiso
+    const handleDismiss = () => {
+        setIsDismissed(true);
+    };
+
+    if (!isSupported || permission !== 'default' || isDismissed) {
+        return null; // No mostrar si no es compatible, si ya hay un permiso o si se ha descartado
     }
 
     return (
-        <div className="fixed bottom-4 right-4 bg-gray-800 border border-green-500 text-white p-4 rounded-lg shadow-lg animate-fade-in z-50">
-            <p className="text-sm mb-2">¡No te pierdas nada! Activa las notificaciones.</p>
+        <div className="fixed bottom-4 right-4 bg-gray-800 border border-green-500 text-white p-4 rounded-lg shadow-lg animate-fade-in z-50 max-w-sm">
+            <button 
+                onClick={handleDismiss} 
+                className="absolute top-1 right-2 text-gray-500 hover:text-white text-2xl leading-none"
+                aria-label="Cerrar"
+            >
+                &times;
+            </button>
+            <p className="text-sm mb-3 pr-4">¡No te pierdas nada! Activa las notificaciones.</p>
             <button 
                 onClick={handleSubscribe}
                 className="w-full bg-green-600 font-semibold py-2 px-4 rounded hover:bg-green-700 transition-colors"
