@@ -1,5 +1,3 @@
-// server/routes/auth.js (VERSIÓN DE DIAGNÓSTICO)
-
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
@@ -17,28 +15,21 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// Ruta de login MODIFICADA para diagnóstico
 router.post('/login', async (req, res) => {
     try {
-        const { username } = req.body;
-        console.log(`[DIAGNÓSTICO] Buscando usuario: ${username}`);
+        const { username, password } = req.body;
         const user = await User.findOne({ username });
-
-        // --- PRUEBA CLAVE ---
-        // Si el usuario simplemente existe, lo dejamos pasar sin verificar la contraseña.
         if (!user) {
-            console.log(`[DIAGNÓSTICO] Usuario no encontrado.`);
-            return res.status(401).send({ error: 'Usuario no encontrado' });
+            return res.status(401).send({ error: 'Credenciales inválidas' });
         }
-        // --- FIN DE LA PRUEBA ---
-
-        console.log(`[DIAGNÓSTICO] Usuario encontrado. Creando token...`);
-        const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-        res.send({ user, token });
-
+        const isMatch = await user.comparePassword(password);
+        if (!isMatch) {
+            return res.status(401).send({ error: 'Credenciales inválidas' });
+        }
+        const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, { expiresIn: '24h' });
+        res.send({ token });
     } catch (error) {
-        console.error("[DIAGNÓSTICO] Error 500 en la ruta /login:", error);
-        res.status(500).send({ error: 'Error en el servidor durante el login' });
+        res.status(500).send({ error: 'Error en el servidor' });
     }
 });
 
