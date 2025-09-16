@@ -68,6 +68,107 @@ class TournamentManager {
         return matches;
     }
 
+    calculateZoneStandings(zone) {
+        const standings = {};
+
+        zone.teams.forEach(team => {
+            standings[team._id] = {
+                team: team,
+                points: 0,
+                matchesPlayed: 0,
+                matchesWon: 0,
+                setsWon: 0,
+                setsLost: 0,
+                gamesWon: 0,
+                gamesLost: 0
+            };
+        });
+
+        zone.matches.forEach(match => {
+            if (match.status !== 'Finalizado' || !match.teamA || !match.teamB) return;
+
+            const teamA_id = match.teamA._id;
+            const teamB_id = match.teamB._id;
+
+            let setsA = 0;
+            let setsB = 0;
+            let gamesA = 0;
+            let gamesB = 0;
+
+            match.scoreA.forEach((s, i) => {
+                gamesA += s;
+                gamesB += match.scoreB[i];
+                if (s > match.scoreB[i]) {
+                    setsA++;
+                } else {
+                    setsB++;
+                }
+            });
+
+            standings[teamA_id].matchesPlayed++;
+            standings[teamB_id].matchesPlayed++;
+            standings[teamA_id].setsWon += setsA;
+            standings[teamB_id].setsWon += setsB;
+            standings[teamA_id].setsLost += setsB;
+            standings[teamB_id].setsLost += setsA;
+            standings[teamA_id].gamesWon += gamesA;
+            standings[teamB_id].gamesWon += gamesB;
+            standings[teamA_id].gamesLost += gamesB;
+            standings[teamB_id].gamesLost += gamesA;
+
+            if (setsA > setsB) {
+                standings[teamA_id].points += 2;
+                standings[teamA_id].matchesWon++;
+                standings[teamB_id].points += 1;
+            } else {
+                standings[teamB_id].points += 2;
+                standings[teamB_id].matchesWon++;
+                standings[teamA_id].points += 1;
+            }
+        });
+
+        const sortedStandings = Object.values(standings).sort((a, b) => {
+            if (b.points !== a.points) {
+                return b.points - a.points;
+            }
+
+            const tiedTeams = [a, b];
+            const teamA_id = a.team._id;
+            const teamB_id = b.team._id;
+
+            const headToHeadMatch = zone.matches.find(m =>
+                (m.teamA._id.equals(teamA_id) && m.teamB._id.equals(teamB_id)) ||
+                (m.teamA._id.equals(teamB_id) && m.teamB._id.equals(teamA_id))
+            );
+
+            if (headToHeadMatch) {
+                let setsA = 0;
+                headToHeadMatch.scoreA.forEach((s, i) => {
+                    if (s > headToHeadMatch.scoreB[i]) setsA++;
+                });
+                const winner = setsA > headToHeadMatch.scoreB.length / 2 ? headToHeadMatch.teamA : headToHeadMatch.teamB;
+                if (winner._id.equals(teamA_id)) return -1;
+                if (winner._id.equals(teamB_id)) return 1;
+            }
+
+            const setDiffA = a.setsWon - a.setsLost;
+            const setDiffB = b.setsWon - b.setsLost;
+            if (setDiffB !== setDiffA) {
+                return setDiffB - setDiffA;
+            }
+
+            const gameDiffA = a.gamesWon - a.gamesLost;
+            const gameDiffB = b.gamesWon - b.gamesLost;
+            if (gameDiffB !== gameDiffA) {
+                return gameDiffB - gameDiffA;
+            }
+
+            return 0;
+        });
+
+        return sortedStandings;
+    }
+
     _getRoundName(numTeams) {
         if (numTeams === 2) return 'Final';
         if (numTeams === 4) return 'Semifinales';

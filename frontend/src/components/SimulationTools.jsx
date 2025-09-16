@@ -54,6 +54,23 @@ function SimulationTools() {
         }
     };
 
+    const handleSimulateAllSituations = async () => {
+        if (!window.confirm('¿Estás seguro? Esto creará un conjunto de torneos de simulación en varios estados.')) return;
+
+        setLoading(true);
+        setMessage('');
+        setError('');
+        try {
+            const response = await axios.post('/seed/all-situations');
+            setMessage(response.data.message);
+        } catch (err) {
+            setError(err.response?.data?.error || 'Error al simular todas las situaciones.');
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleResetDatabase = async () => {
         const confirmation = prompt('Esta acción es irreversible y borrará TODOS los datos (torneos, noticias, jugadores, etc.). Escribe "CONFIRMAR" para proceder.');
         if (confirmation !== 'CONFIRMAR') {
@@ -108,13 +125,20 @@ function SimulationTools() {
                     <i className="fas fa-plus mr-2"></i>Añadir Categoría
                 </button>
                 
-                <div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <button
                         onClick={handleSeedTournament}
                         disabled={loading}
                         className="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition disabled:bg-gray-600"
                     >
                         {loading ? 'Generando Torneo...' : 'Crear Torneo de Simulación'}
+                    </button>
+                    <button
+                        onClick={handleSimulateAllSituations}
+                        disabled={loading}
+                        className="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 transition disabled:bg-gray-600"
+                    >
+                        {loading ? 'Simulando...' : 'Simular Todas las Situaciones'}
                     </button>
                 </div>
             </div>
