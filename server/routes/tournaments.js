@@ -132,9 +132,8 @@ router.post('/:tournamentId/category/:categoryId/save-manual-structure', isAuthe
         category.status = 'Zonas Sorteadas';
         
         await tournament.save();
-        // Re-fetch para asegurar que los datos estén completos
-        const updatedTournament = await Tournament.findById(tournamentId);
-        res.status(200).json({ message: 'Estructura manual guardada y partidos generados.', tournament: updatedTournament });
+        const populatedTournament = await Tournament.findById(tournamentId);
+        res.status(200).json({ message: 'Estructura manual guardada y partidos generados.', tournament: populatedTournament });
 
     } catch (error) {
         console.error("Error guardando estructura manual:", error);
@@ -207,8 +206,9 @@ router.post('/:tournamentId/category/:categoryId/draw-zones', isAuthenticated, a
         const zones = TournamentManager.generateZones(category.registeredPlayers);
         category.zones = zones;
         category.status = 'Zonas Sorteadas';
-        const updatedTournament = await tournament.save();
-        res.status(200).json({ message: `Zonas para ${category.name} generadas.`, tournament: updatedTournament });
+        await tournament.save();
+        const populatedTournament = await Tournament.findById(tournamentId);
+        res.status(200).json({ message: `Zonas para ${category.name} generadas.`, tournament: populatedTournament });
     } catch (error) {
         res.status(500).json({ error: 'Error al generar las zonas.', details: error.message });
     }
@@ -379,8 +379,9 @@ router.post('/:tournamentId/category/:categoryId/generate-playoffs', isAuthentic
         const playoffs = TournamentManager.generatePlayoffs(qualifiedTeams);
         category.playoffRounds = playoffs;
         category.status = 'En Juego';
-        const updatedTournament = await tournament.save();
-        res.status(200).json({ message: 'Llave de playoffs generada exitosamente.', tournament: updatedTournament });
+        await tournament.save();
+        const populatedTournament = await Tournament.findById(tournamentId);
+        res.status(200).json({ message: 'Llave de playoffs generada exitosamente.', tournament: populatedTournament });
 
     } catch (error) {
         console.error("Error al generar playoffs:", error);
@@ -398,8 +399,9 @@ router.post('/:tournamentId/category/:categoryId/advance-playoffs', isAuthentica
         if (!category) return res.status(404).json({ error: 'Categoría no encontrada.' });
         const nextRounds = TournamentManager.advancePlayoffs(category);
         category.playoffRounds.push(...nextRounds);
-        const updatedTournament = await tournament.save();
-        res.status(200).json({ message: "Ganadores avanzados a la siguiente ronda.", tournament: updatedTournament });
+        await tournament.save();
+        const populatedTournament = await Tournament.findById(tournamentId);
+        res.status(200).json({ message: "Ganadores avanzados a la siguiente ronda.", tournament: populatedTournament });
     } catch (error) {
         res.status(500).json({ error: "Error en el servidor al avanzar playoffs.", details: error.message });
     }
