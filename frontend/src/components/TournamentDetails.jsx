@@ -157,6 +157,9 @@ function MatchEditor({ tournamentId, categoryId, match, onAction }) {
         window.open(whatsappUrl, '_blank');
     };
 
+    // Lógica para deshabilitar los botones si no se ha ingresado la hora o el lugar
+    const canNotify = time.trim() !== '' && place.trim() !== '';
+
     if (!isEditing) {
         return (
             <div className="flex items-center justify-between p-2 border-b border-gray-700 text-sm hover:bg-gray-700/50">
@@ -197,32 +200,43 @@ function MatchEditor({ tournamentId, categoryId, match, onAction }) {
             </div>
 
             {/* Player Notification Section */}
-            <div className="pt-4 mt-4 border-t border-gray-700">
-                <h4 className="text-sm font-semibold text-center text-gray-300 mb-3">Notificar Horario por WhatsApp</h4>
-                <div className="grid grid-cols-2 gap-2">
-                    {match.teamA && match.teamA.players && match.teamA.players.map(p => (
-                        <button
-                            key={p._id}
-                            onClick={() => handleNotifyPlayer(p, match.teamA, match.teamB)}
-                            disabled={!time || !place}
-                            className={`flex items-center justify-center gap-2 w-full bg-blue-500 text-white font-semibold py-2 rounded-lg transition text-xs ${(!time || !place) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-600'}`}
-                            title={(!time || !place) ? 'Ingresa el lugar y la hora para poder notificar' : `Notificar a ${p.playerName}`}
-                        >
-                            <i className="fab fa-whatsapp"></i> {p.playerName}
-                        </button>
-                    ))}
-                     {match.teamB && match.teamB.players && match.teamB.players.map(p => (
-                        <button
-                            key={p._id}
-                            onClick={() => handleNotifyPlayer(p, match.teamB, match.teamA)}
-                            disabled={!time || !place}
-                            className={`flex items-center justify-center gap-2 w-full bg-blue-500 text-white font-semibold py-2 rounded-lg transition text-xs ${(!time || !place) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-600'}`}
-                            title={(!time || !place) ? 'Ingresa el lugar y la hora para poder notificar' : `Notificar a ${p.playerName}`}
-                        >
-                            <i className="fab fa-whatsapp"></i> {p.playerName}
-                        </button>
-                    ))}
-                </div>
+            <div className="pt-4 mt-4 border-t border-gray-700 space-y-4">
+                {match.teamA?.players && (
+                    <div>
+                        <p className="font-semibold text-white text-sm mb-2">Notificar a jugadores de {match.teamA.teamName}:</p>
+                        <div className="flex flex-wrap gap-2">
+                            {match.teamA.players.map(player => (
+                                <button
+                                    key={player._id}
+                                    onClick={() => handleNotifyPlayer(player, match.teamA, match.teamB)}
+                                    disabled={!canNotify}
+                                    className="bg-blue-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-blue-600 transition text-sm flex items-center disabled:bg-gray-600 disabled:cursor-not-allowed"
+                                    title={canNotify ? `Notificar a ${player.playerName}` : 'Ingresa el lugar y la hora para poder notificar'}
+                                >
+                                    <i className="fab fa-whatsapp mr-2"></i> {player.playerName}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+                {match.teamB?.players && (
+                    <div>
+                        <p className="font-semibold text-white text-sm mb-2">Notificar a jugadores de {match.teamB.teamName}:</p>
+                        <div className="flex flex-wrap gap-2">
+                            {match.teamB.players.map(player => (
+                                <button
+                                    key={player._id}
+                                    onClick={() => handleNotifyPlayer(player, match.teamB, match.teamA)}
+                                    disabled={!canNotify}
+                                    className="bg-blue-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-blue-600 transition text-sm flex items-center disabled:bg-gray-600 disabled:cursor-not-allowed"
+                                    title={canNotify ? `Notificar a ${player.playerName}` : 'Ingresa el lugar y la hora para poder notificar'}
+                                >
+                                    <i className="fab fa-whatsapp mr-2"></i> {player.playerName}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
