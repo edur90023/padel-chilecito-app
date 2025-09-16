@@ -51,9 +51,13 @@ function RegistrationForm({ tournament, onClose }) {
                 
                 const message = `¡Nueva inscripción al torneo "${tournament.name}"!\n\n*Categoría:* ${selectedCategory}\n\n*Pareja:*\n1- ${formData.player1Name} (Tel: ${formData.player1Phone})\n2- ${formData.player2Name} (Tel: ${formData.player2Phone})\n\n¡Gracias por organizar!`;
                 
-                // Limpiamos el número de teléfono de caracteres no deseados
-                const cleanPhone = tournament.organizerPhone.replace(/[^0-9]/g, '');
-                const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+                // Limpiamos el número y aseguramos el código de país (54 para Argentina)
+                let cleanPhone = tournament.organizerPhone.replace(/[^0-9]/g, '');
+                if (cleanPhone.length > 8 && !cleanPhone.startsWith('54')) {
+                   cleanPhone = `54${cleanPhone}`;
+                }
+
+                const whatsappUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(message)}`;
                 
                 setTimeout(() => {
                     window.location.href = whatsappUrl;

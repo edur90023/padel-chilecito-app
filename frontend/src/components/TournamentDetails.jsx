@@ -140,32 +140,9 @@ function MatchEditor({ tournamentId, categoryId, match, onAction }) {
         setIsEditing(false);
 
         if (notifyPlayers) {
-            // 1. Recopilar todos los jugadores de ambos equipos.
-            const players = [
-                ...(match.teamA?.players || []),
-                ...(match.teamB?.players || [])
-            ];
-
-            // 2. Filtrar los que tienen número y limpiar el número (quitar espacios, guiones, etc.)
-            const phoneNumbers = players
-                .map(p => p.phoneNumber)
-                .filter(phone => phone) // Asegurarse que el número exista
-                .map(phone => phone.replace(/[^0-9]/g, '')); // Dejar solo dígitos
-
-            // 3. Crear el mensaje
             const message = `¡Hola! Se ha programado tu partido de pádel.\n\n*Lugar:* ${place}\n*Fecha/Hora:* ${time}\n\n*Partido:* ${match.teamA.teamName} vs ${match.teamB.teamName}\n\n¡Mucha suerte!`;
-
-            // 4. Abrir una ventana de WhatsApp para cada número
-            if (phoneNumbers.length > 0) {
-                phoneNumbers.forEach(phone => {
-                    // Asumimos que los números ya incluyen el código de país (ej: 549...)
-                    // Si no, habría que añadirlo aquí.
-                    const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-                    window.open(whatsappUrl, '_blank');
-                });
-            } else {
-                alert("No se encontraron números de teléfono para notificar.");
-            }
+            const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+            window.open(whatsappUrl, '_blank');
         }
     };
 
