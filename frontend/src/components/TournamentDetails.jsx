@@ -123,7 +123,7 @@ function MatchEditor({ tournamentId, categoryId, match, onAction }) {
         setSets(newSets);
     };
 
-    const handleUpdateScore = (notifyPlayers = false) => {
+    const handleUpdateScore = () => {
         const finalSets = sets.filter(set => set.a !== '' && set.b !== '');
         const scoreA = finalSets.map(set => parseInt(set.a, 10) || 0);
         const scoreB = finalSets.map(set => parseInt(set.b, 10) || 0);
@@ -138,12 +138,23 @@ function MatchEditor({ tournamentId, categoryId, match, onAction }) {
         };
         onAction('update-match', categoryId, payload);
         setIsEditing(false);
+    };
 
-        if (notifyPlayers) {
-            const message = `¡Hola! Se ha programado tu partido de pádel.\n\n*Lugar:* ${place}\n*Fecha/Hora:* ${time}\n\n*Partido:* ${match.teamA.teamName} vs ${match.teamB.teamName}\n\n¡Mucha suerte!`;
-            const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-            window.open(whatsappUrl, '_blank');
+    const handleNotifyPlayer = (player, team, opponents) => {
+        if (!player.phoneNumber) {
+            alert(`Error: El jugador ${player.playerName} no tiene un número de teléfono registrado.`);
+            return;
         }
+
+        const message = `¡Hola ${player.playerName}! Tu próximo partido del torneo ha sido programado:\n\n*Rivales:* ${opponents.teamName}\n*Lugar:* ${place}\n*Fecha/Hora:* ${time}\n\n¡Mucha suerte!`;
+
+        let cleanPhone = player.phoneNumber.replace(/[^0-9]/g, '');
+        if (cleanPhone.length > 8 && !cleanPhone.startsWith('54')) {
+            cleanPhone = `54${cleanPhone}`;
+        }
+
+        const whatsappUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(message)}`;
+        window.open(whatsappUrl, '_blank');
     };
 
     if (!isEditing) {
@@ -182,11 +193,37 @@ function MatchEditor({ tournamentId, categoryId, match, onAction }) {
              ))}
             <div className="flex gap-2 pt-2">
                 <button onClick={() => setIsEditing(false)} className="w-full bg-gray-600 py-2 rounded hover:bg-gray-500">Cancelar</button>
-                <button onClick={() => handleUpdateScore()} className="w-full bg-green-600 text-white font-bold py-2 rounded hover:bg-green-700">Guardar</button>
+                <button onClick={handleUpdateScore} className="w-full bg-green-600 text-white font-bold py-2 rounded hover:bg-green-700">Guardar Cambios</button>
             </div>
-            <button onClick={() => handleUpdateScore(true)} className="w-full mt-2 bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 transition text-sm">
-                <i className="fab fa-whatsapp mr-2"></i>Guardar y Notificar Horario
-            </button>
+
+            {/* Player Notification Section */}
+            <div className="pt-4 mt-4 border-t border-gray-700">
+                <h4 className="text-sm font-semibold text-center text-gray-300 mb-3">Notificar Horario por WhatsApp</h4>
+                <div className="grid grid-cols-2 gap-2">
+                    {match.teamA && match.teamA.players && match.teamA.players.map(p => (
+                        <button
+                            key={p._id}
+                            onClick={() => handleNotifyPlayer(p, match.teamA, match.teamB)}
+                            disabled={!time || !place}
+                            className={`flex items-center justify-center gap-2 w-full bg-blue-500 text-white font-semibold py-2 rounded-lg transition text-xs ${(!time || !place) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-600'}`}
+                            title={(!time || !place) ? 'Ingresa el lugar y la hora para poder notificar' : `Notificar a ${p.playerName}`}
+                        >
+                            <i className="fab fa-whatsapp"></i> {p.playerName}
+                        </button>
+                    ))}
+                     {match.teamB && match.teamB.players && match.teamB.players.map(p => (
+                        <button
+                            key={p._id}
+                            onClick={() => handleNotifyPlayer(p, match.teamB, match.teamA)}
+                            disabled={!time || !place}
+                            className={`flex items-center justify-center gap-2 w-full bg-blue-500 text-white font-semibold py-2 rounded-lg transition text-xs ${(!time || !place) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-600'}`}
+                            title={(!time || !place) ? 'Ingresa el lugar y la hora para poder notificar' : `Notificar a ${p.playerName}`}
+                        >
+                            <i className="fab fa-whatsapp"></i> {p.playerName}
+                        </button>
+                    ))}
+                </div>
+            </div>
         </div>
     );
 }
