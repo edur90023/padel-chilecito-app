@@ -3,66 +3,126 @@
 const express = require('express');
 const router = express.Router();
 const Ranking = require('../models/Ranking');
-const jwt = require('jsonwebtoken');
+const Tournament = require('../models/Tournament');
+const Player = require('../models/Player');
+const jwt =require('jsonwebtoken')
 
-// Middleware de Autenticación
+// Middleware de Autenticación (simplificado, ¡mejora esto en producción!)
 function isAuthenticated(req, res, next) {
     const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(401).json({ error: 'No autorizado' });
+    if (!token) {
+        return res.status(401).json({ message: 'Authentication required.' });
+    }
     try {
-        req.user = jwt.verify(token, process.env.JWT_SECRET);
+        // En un caso real, deberías verificar el rol del usuario aquí
+        jwt.verify(token, process.env.JWT_SECRET);
         next();
-    } catch (error) {
-        res.status(401).json({ error: 'Token inválido' });
+    } catch (e) {
+        return res.status(401).json({ message: 'Invalid token.' });
     }
 }
 
-// OBTENER TODO EL RANKING
-router.get('/', async (req, res) => {
+// --- NUEVAS RUTAS PARA EL RANKING POR TORNEO ---
+
+// 1. Obtener el ranking de una categoría específica de un torneo
+router.get('/:tournamentId/:categoryName', async (req, res) => {
     try {
-        const ranking = await Ranking.find({}).sort({ points: -1 });
-        res.status(200).json(ranking);
+        const { tournamentId, categoryName } = req.params;
+        const rankings = await Ranking.find({
+            tournament: tournamentId,
+            categoryName: decodeURIComponent(categoryName)
+        })
+        .populate('player', 'firstName lastName dni') // Llenamos los datos del jugador
+        .sort({ points: -1 }); // Ordenamos por puntos descendente
+
+        res.status(200).json(rankings);
     } catch (error) {
+        console.error("Error fetching ranking:", error);
         res.status(500).json({ error: 'Error al obtener el ranking.' });
     }
 });
 
-// AÑADIR PAREJA AL RANKING
-router.post('/', isAuthenticated, async (req, res) => {
+// 2. Actualizar/Crear los puntos de múltiples jugadores en un ranking
+router.post('/update', isAuthenticated, async (req, res) => {
     try {
-        const { teamName, player1Name, player2Name, category, points } = req.body;
-        const newEntry = new Ranking({ teamName, player1Name, player2Name, category, points });
-        await newEntry.save();
-        res.status(201).json(newEntry);
+        const { tournamentId, categoryName, playersPoints } = req.body;
+
+        if (!tournamentId || !categoryName || !Array.isArray(playersPoints)) {
+            return res.status(400).json({ error: 'Datos incompletos o incorrectos.' });
+        }
+
+        const bulkOps = playersPoints.map(p => ({
+            updateOne: {
+                filter: {
+                    tournament: tournamentId,
+                    categoryName: categoryName,
+                    player: p.playerId
+                },
+                update: {
+                    $set: { points: p.points }
+                },
+                upsert: true // Crea el documento si no existe
+            }
+        }));
+
+        await Ranking.bulkWrite(bulkOps);
+
+        res.status(200).json({ message: 'Ranking actualizado correctamente.' });
+
     } catch (error) {
-        res.status(500).json({ error: 'Error al añadir la pareja al ranking.' });
+        console.error("Error updating ranking:", error);
+        res.status(500).json({ error: 'Error al actualizar el ranking.' });
     }
 });
 
-// ACTUALIZAR PUNTOS DE UNA PAREJA
-router.put('/:id', isAuthenticated, async (req, res) => {
+
+// 3. Obtener todos los jugadores inscritos en una categoría de un torneo (para la UI de admin)
+router.get('/players/:tournamentId/:categoryName', isAuthenticated, async (req, res) => {
     try {
-        const { points } = req.body;
-        const updatedEntry = await Ranking.findByIdAndUpdate(
-            req.params.id,
-            { points },
-            { new: true }
+        const { tournamentId, categoryName } = req.params;
+
+        const tournament = await Tournament.findById(tournamentId);
+        if (!tournament) {
+            return res.status(404).json({ error: 'Torneo no encontrado.' });
+        }
+
+        const category = tournament.categories.find(c => c.name === decodeURIComponent(categoryName));
+        if (!category) {
+            return res.status(404).json({ error: 'Categoría no encontrada en el torneo.' });
+        }
+
+        // Extraemos todos los DNI de los jugadores inscritos en esa categoría
+        const registeredDnis = category.registeredPlayers.flatMap(team =>
+            team.players.map(player => player.dni)
         );
-        if (!updatedEntry) return res.status(404).json({ error: 'Pareja no encontrada en el ranking.' });
-        res.status(200).json(updatedEntry);
-    } catch (error) {
-        res.status(500).json({ error: 'Error al actualizar los puntos.' });
-    }
-});
 
-// ELIMINAR PAREJA DEL RANKING
-router.delete('/:id', isAuthenticated, async (req, res) => {
-    try {
-        const deletedEntry = await Ranking.findByIdAndDelete(req.params.id);
-        if (!deletedEntry) return res.status(404).json({ error: 'Pareja no encontrada.' });
-        res.status(200).json({ message: 'Pareja eliminada del ranking.' });
+        // Buscamos a todos los jugadores que coincidan con esos DNI
+        const players = await Player.find({ 'dni': { $in: registeredDnis } });
+
+        // Ahora, para cada jugador, buscamos sus puntos actuales en el ranking
+        const rankings = await Ranking.find({
+            tournament: tournamentId,
+            categoryName: decodeURIComponent(categoryName)
+        });
+
+        // Creamos un mapa de playerId -> points para una búsqueda rápida
+        const pointsMap = rankings.reduce((acc, rank) => {
+            acc[rank.player.toString()] = rank.points;
+            return acc;
+        }, {});
+
+        // Combinamos la información del jugador con sus puntos
+        const playersWithPoints = players.map(player => ({
+            ...player.toObject(),
+            points: pointsMap[player._id.toString()] || 0
+        }));
+
+
+        res.status(200).json(playersWithPoints);
+
     } catch (error) {
-        res.status(500).json({ error: 'Error al eliminar la pareja.' });
+        console.error("Error fetching players for ranking:", error);
+        res.status(500).json({ error: 'Error al obtener los jugadores de la categoría.' });
     }
 });
 

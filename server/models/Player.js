@@ -24,10 +24,6 @@ const playerSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    points: { // Nuevo campo para el ranking
-        type: Number,
-        default: 0,
-    },
     registrationDate: {
         type: Date,
         default: Date.now,
