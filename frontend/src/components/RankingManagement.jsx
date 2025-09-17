@@ -90,6 +90,11 @@ function RankingManagement() {
         setPlayerToAdd(''); // Resetear el selector
     };
 
+    // Quitar un jugador de la tabla del ranking (solo en el estado local)
+    const handleRemovePlayer = (playerIdToRemove) => {
+        setRankingPlayers(prev => prev.filter(p => p._id !== playerIdToRemove));
+    };
+
     // Guardar todos los puntos (actualiza y crea)
     const handleSavePoints = async () => {
         if (!selectedTournament || !selectedCategory) return;
@@ -187,6 +192,7 @@ function RankingManagement() {
                                 <tr>
                                     <th className="p-4">Jugador</th>
                                     <th className="p-4 w-32 text-center">Puntos</th>
+                                    <th className="p-4 w-20 text-center">Acción</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-700">
@@ -199,6 +205,14 @@ function RankingManagement() {
                                                     onChange={(e) => handlePointsChange(player._id, e.target.value)}
                                                     className="w-full bg-gray-900 p-2 rounded text-white text-center"
                                                 />
+                                            </td>
+                                            <td className="p-4 text-center">
+                                                <button
+                                                    onClick={() => handleRemovePlayer(player._id)}
+                                                    className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg text-sm font-semibold"
+                                                >
+                                                    Eliminar
+                                                </button>
                                             </td>
                                         </tr>
                                     ))

@@ -13,8 +13,8 @@ const playerSchema = new mongoose.Schema({
     },
     dni: {
         type: String,
-        required: true,
-        unique: true,
+        required: false,
+        unique: false,
     },
     phone: {
         type: String,
@@ -22,7 +22,7 @@ const playerSchema = new mongoose.Schema({
     },
     category: {
         type: String,
-        required: true,
+        required: false,
     },
     registrationDate: {
         type: Date,
