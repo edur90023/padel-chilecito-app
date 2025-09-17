@@ -35,22 +35,6 @@ function Contact() {
                     </div>
                 </section>
 
-                <section>
-                    <h2 className="text-2xl font-bold text-green-400 mb-4">Nuestra Ubicación</h2>
-                    <p className="text-lg text-white mb-4">Av. La Mejicana S/N, Chilecito, La Rioja</p>
-                    <div className="aspect-w-16 aspect-h-9">
-                        <iframe
-                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3489.627643634034!2d-67.488394884909!3d-29.17528348227636!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x942777174628096b%3A0x81b5e43c5e8c3a13!2sPadel%20Chilecito!5e0!3m2!1ses-419!2sar!4f64"
-                            width="100%"
-                            height="450"
-                            style={{ border: 0 }}
-                            allowFullScreen=""
-                            loading="lazy"
-                            referrerPolicy="no-referrer-when-downgrade"
-                            className="rounded-lg shadow-lg"
-                        ></iframe>
-                    </div>
-                </section>
             </div>
         </div>
     );
