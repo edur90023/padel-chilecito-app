@@ -50,8 +50,7 @@ app.use('/api/tournaments', require('./routes/tournaments'));
 app.use('/api/news', require('./routes/news'));
 app.use('/api/ads', require('./routes/ads'));
 app.use('/api/gallery', require('./routes/gallery'));
-// --- ¡LÍNEA ELIMINADA! Ya no usamos la ruta del ranking antiguo ---
-// app.use('/api/ranking', require('./routes/ranking')); 
+app.use('/api/ranking', require('./routes/ranking'));
 app.use('/api/seed', require('./routes/seed'));
 app.use('/api/community', require('./routes/community'));
 app.use('/api/livestream', require('./routes/livestream'));
