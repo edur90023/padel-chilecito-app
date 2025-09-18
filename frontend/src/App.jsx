@@ -15,7 +15,6 @@ import TournamentPublicView from './pages/TournamentPublicView';
 import Contact from './pages/Contact';
 import CommunityPage from './pages/CommunityPage';
 import LivePage from './pages/LivePage';
-import BookingPage from './pages/BookingPage';
 
 import './index.css';
 
@@ -76,7 +75,6 @@ const PublicLayout = () => {
                             <div className="ml-10 flex items-baseline space-x-4">
                                 {isLiveEnabled && <NavItem to="/live" icon="fas fa-video text-red-500">En Vivo</NavItem>}
                                 <NavItem to="/" icon="fas fa-home">Inicio</NavItem>
-                                <NavItem to="/reservas" icon="fas fa-calendar-alt">Reservas</NavItem>
                                 <NavItem to="/tournaments" icon="fas fa-trophy">Torneos</NavItem>
                                 <NavItem to="/community" icon="fas fa-users">Comunidad</NavItem>
                                 <NavItem to="/gallery" icon="fas fa-images">Galería</NavItem>
@@ -120,7 +118,6 @@ const PublicLayout = () => {
                     <div className="md:hidden p-4 space-y-2">
                         {isLiveEnabled && <NavItem to="/live" icon="fas fa-video text-red-500" onClick={closeMenu}>En Vivo</NavItem>}
                         <NavItem to="/" icon="fas fa-home" onClick={closeMenu}>Inicio</NavItem>
-                        <NavItem to="/reservas" icon="fas fa-calendar-alt" onClick={closeMenu}>Reservas</NavItem>
                         <NavItem to="/tournaments" icon="fas fa-trophy" onClick={closeMenu}>Torneos</NavItem>
                         <NavItem to="/community" icon="fas fa-users" onClick={closeMenu}>Comunidad</NavItem>
                         <NavItem to="/gallery" icon="fas fa-images" onClick={closeMenu}>Galería</NavItem>
@@ -163,7 +160,6 @@ const PublicLayout = () => {
                     <Route path="/standings" element={<Standings />} />
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/community" element={<CommunityPage />} />
-                    <Route path="/reservas" element={<BookingPage />} />
                 </Routes>
             </main>
             {/* --- ¡COMPONENTE AÑADIDO! --- */}
