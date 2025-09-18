@@ -22,8 +22,15 @@ router.post('/register', isAuthenticated, async (req, res) => {
     try {
         const { firstName, lastName, dni, phone, category, points } = req.body;
 
+        // --- DEBUGGING LOG ---
+        console.log(`[DEBUG] Registering player. DNI received: '${dni}' (Type: ${typeof dni})`);
+        // ---
+
         // Solo verificar el DNI si se proporciona uno
         if (dni) {
+            // --- DEBUGGING LOG ---
+            console.log(`[DEBUG] DNI is present, checking for existing player...`);
+            // ---
             const existingPlayer = await Player.findOne({ dni });
             if (existingPlayer) {
                 return res.status(400).json({ error: 'Ya existe un jugador con este DNI.' });
