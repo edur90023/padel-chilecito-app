@@ -191,8 +191,8 @@ function RankingManagement() {
                             </thead>
                             <tbody className="divide-y divide-gray-700">
                                 {rankingPlayers.length > 0 ? (
-                                    rankingPlayers.map(player => (
-                                        <tr key={player._id}>
+                                    rankingPlayers.map((player, index) => (
+                                        <tr key={`${player._id}-${index}`}>
                                             <td className="p-4 font-medium text-white">{`${player.lastName}, ${player.firstName}`}</td>
                                             <td className="p-4">
                                                 <input type="number" value={player.points}
