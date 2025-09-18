@@ -21,14 +21,22 @@ function isAuthenticated(req, res, next) {
 router.post('/register', isAuthenticated, async (req, res) => {
     try {
         const { firstName, lastName, dni, phone, category, points } = req.body;
-        const existingPlayer = await Player.findOne({ dni });
-        if (existingPlayer) {
-            return res.status(400).json({ error: 'Ya existe un jugador con este DNI.' });
+
+        // Solo verificar el DNI si se proporciona uno
+        if (dni) {
+            const existingPlayer = await Player.findOne({ dni });
+            if (existingPlayer) {
+                return res.status(400).json({ error: 'Ya existe un jugador con este DNI.' });
+            }
         }
+
         const newPlayer = new Player({ firstName, lastName, dni, phone, category, points });
         await newPlayer.save();
         res.status(201).json({ message: 'Jugador registrado exitosamente', player: newPlayer });
     } catch (error) {
+        if (error.code === 11000) {
+             return res.status(400).json({ error: 'Ya existe un jugador con este DNI.' });
+        }
         res.status(500).json({ error: 'Error al registrar el jugador.' });
     }
 });
