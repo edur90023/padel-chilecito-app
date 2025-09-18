@@ -12,7 +12,7 @@ import Gallery from './pages/Gallery';
 import Tournament from './pages/Tournament';
 import Standings from './pages/Standings';
 import TournamentPublicView from './pages/TournamentPublicView';
-import Rules from './pages/Rules';
+import Contact from './pages/Contact';
 import CommunityPage from './pages/CommunityPage';
 import LivePage from './pages/LivePage';
 
@@ -79,7 +79,7 @@ const PublicLayout = () => {
                                 <NavItem to="/community" icon="fas fa-users">Comunidad</NavItem>
                                 <NavItem to="/gallery" icon="fas fa-images">Galería</NavItem>
                                 <NavItem to="/standings" icon="fas fa-star">Rankings</NavItem>
-                                <NavItem to="/rules" icon="fas fa-gavel">Reglamento</NavItem>
+                                <NavItem to="/contact" icon="fas fa-address-book">Contacto</NavItem>
                             </div>
                         </div>
                         <div className="hidden md:flex items-center">
@@ -122,7 +122,7 @@ const PublicLayout = () => {
                         <NavItem to="/community" icon="fas fa-users" onClick={closeMenu}>Comunidad</NavItem>
                         <NavItem to="/gallery" icon="fas fa-images" onClick={closeMenu}>Galería</NavItem>
                         <NavItem to="/standings" icon="fas fa-star" onClick={closeMenu}>Rankings</NavItem>
-                        <NavItem to="/rules" icon="fas fa-gavel" onClick={closeMenu}>Reglamento</NavItem>
+                        <NavItem to="/contact" icon="fas fa-address-book" onClick={closeMenu}>Contacto</NavItem>
                         <div className="border-t border-gray-700 pt-4 mt-4 space-y-2">
                              {installPrompt && (
                                  <button
@@ -158,7 +158,7 @@ const PublicLayout = () => {
                     <Route path="/tournaments/:id" element={<TournamentPublicView />} />
                     <Route path="/gallery" element={<Gallery />} />
                     <Route path="/standings" element={<Standings />} />
-                    <Route path="/rules" element={<Rules />} />
+                    <Route path="/contact" element={<Contact />} />
                     <Route path="/community" element={<CommunityPage />} />
                 </Routes>
             </main>

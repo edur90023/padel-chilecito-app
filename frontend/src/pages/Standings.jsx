@@ -76,7 +76,6 @@ function Standings() {
                                 <td className="p-4 font-bold text-lg">{index + 1}</td>
                                 <td className="p-4">
                                     <p className="font-medium text-white">{`${player.firstName} ${player.lastName}`}</p>
-                                    <p className="text-sm text-gray-400">DNI: {player.dni}</p>
                                 </td>
                                 <td className="p-4 text-gray-400">{player.category}</td>
                                 <td className="p-4 font-bold text-green-400 text-right">{player.points}</td>
