@@ -33,7 +33,7 @@ router.post('/register', isAuthenticated, async (req, res) => {
             // ---
             const existingPlayer = await Player.findOne({ dni });
             if (existingPlayer) {
-                return res.status(400).json({ error: 'Ya existe un jugador con este DNI.' });
+                return res.status(400).json({ error: 'Error de DNI v2: Ya existe un jugador con este DNI.' });
             }
         }
 
@@ -42,7 +42,7 @@ router.post('/register', isAuthenticated, async (req, res) => {
         res.status(201).json({ message: 'Jugador registrado exitosamente', player: newPlayer });
     } catch (error) {
         if (error.code === 11000) {
-             return res.status(400).json({ error: 'Ya existe un jugador con este DNI.' });
+             return res.status(400).json({ error: 'Error de DNI v2: Ya existe un jugador con este DNI.' });
         }
         res.status(500).json({ error: 'Error al registrar el jugador.' });
     }
