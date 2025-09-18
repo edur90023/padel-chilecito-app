@@ -22,27 +22,15 @@ router.post('/register', isAuthenticated, async (req, res) => {
     try {
         const { firstName, lastName, dni, phone, category, points } = req.body;
 
-        // --- DEBUGGING LOG ---
-        console.log(`[DEBUG] Registering player. DNI received: '${dni}' (Type: ${typeof dni})`);
-        // ---
-
-        // Solo verificar el DNI si se proporciona uno
-        if (dni) {
-            // --- DEBUGGING LOG ---
-            console.log(`[DEBUG] DNI is present, checking for existing player...`);
-            // ---
-            const existingPlayer = await Player.findOne({ dni });
-            if (existingPlayer) {
-                return res.status(400).json({ error: 'Error de DNI v2: Ya existe un jugador con este DNI.' });
-            }
-        }
-
+        // La validación de DNI único ahora es manejada por el índice 'sparse' en la base de datos.
+        // Esto evita la comprobación manual y soluciona el error con valores nulos.
         const newPlayer = new Player({ firstName, lastName, dni, phone, category, points });
         await newPlayer.save();
         res.status(201).json({ message: 'Jugador registrado exitosamente', player: newPlayer });
     } catch (error) {
+        // El código 11000 es para error de clave duplicada (DNI en este caso)
         if (error.code === 11000) {
-             return res.status(400).json({ error: 'Error de DNI v2: Ya existe un jugador con este DNI.' });
+             return res.status(400).json({ error: 'Ya existe un jugador con el DNI proporcionado.' });
         }
         res.status(500).json({ error: 'Error al registrar el jugador.' });
     }
