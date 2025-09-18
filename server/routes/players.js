@@ -3,6 +3,7 @@
 const express = require('express');
 const router = express.Router();
 const Player = require('../models/Player');
+const Ranking = require('../models/Ranking');
 const jwt = require('jsonwebtoken');
 
 function isAuthenticated(req, res, next) {
@@ -70,7 +71,11 @@ router.delete('/:id', isAuthenticated, async (req, res) => {
         if (!deletedPlayer) {
             return res.status(404).json({ error: 'Jugador no encontrado.' });
         }
-        res.status(200).json({ message: 'Jugador eliminado exitosamente.' });
+
+        // Eliminar las entradas de ranking asociadas
+        await Ranking.deleteMany({ player: req.params.id });
+
+        res.status(200).json({ message: 'Jugador eliminado exitosamente y rankings asociados limpiados.' });
     } catch (error) {
         res.status(500).json({ error: 'Error al eliminar el jugador.' });
     }

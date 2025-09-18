@@ -28,14 +28,17 @@ function isAuthenticated(req, res, next) {
 router.get('/:tournamentId/:categoryName', async (req, res) => {
     try {
         const { tournamentId, categoryName } = req.params;
-        const rankings = await Ranking.find({
+        let rankings = await Ranking.find({
             tournament: tournamentId,
             categoryName: decodeURIComponent(categoryName)
         })
         .populate('player', 'firstName lastName dni') // Llenamos los datos del jugador
         .sort({ points: -1 }); // Ordenamos por puntos descendente
 
-        res.status(200).json(rankings);
+        // Filtra los rankings para excluir aquellos donde el jugador ha sido eliminado (es nulo)
+        const validRankings = rankings.filter(r => r.player);
+
+        res.status(200).json(validRankings);
     } catch (error) {
         console.error("Error fetching ranking:", error);
         res.status(500).json({ error: 'Error al obtener el ranking.' });
