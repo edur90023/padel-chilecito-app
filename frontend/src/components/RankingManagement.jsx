@@ -16,19 +16,32 @@ function RankingManagement() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
+    // Estados para el formulario de creación de nuevo jugador
+    const [showCreateForm, setShowCreateForm] = useState(false);
+    const [newPlayer, setNewPlayer] = useState({ firstName: '', lastName: '' });
+
+    const fetchAllPlayers = async () => {
+        try {
+            const playersRes = await axios.get('/players');
+            setAllPlayers(playersRes.data.sort((a, b) => a.lastName.localeCompare(b.lastName)));
+        } catch (err) {
+            console.error('No se pudieron recargar los jugadores.', err);
+            setError('Error al recargar la lista de jugadores.');
+        }
+    };
+
     // Cargar torneos y todos los jugadores al montar
     useEffect(() => {
         const fetchInitialData = async () => {
+            setLoading(true);
             try {
-                const [tournamentsRes, playersRes] = await Promise.all([
-                    axios.get('/tournaments'),
-                    axios.get('/players')
-                ]);
+                const tournamentsRes = await axios.get('/tournaments');
                 setTournaments(tournamentsRes.data);
-                // Ordenamos los jugadores alfabéticamente para el selector
-                setAllPlayers(playersRes.data.sort((a, b) => a.lastName.localeCompare(b.lastName)));
+                await fetchAllPlayers();
             } catch (err) {
-                setError('No se pudieron cargar los datos iniciales (torneos y jugadores).');
+                setError('No se pudieron cargar los datos iniciales.');
+            } finally {
+                setLoading(false);
             }
         };
         fetchInitialData();
@@ -88,6 +101,36 @@ function RankingManagement() {
             setRankingPlayers(prev => [...prev, { ...playerObject, points: 0 }]);
         }
         setPlayerToAdd(''); // Resetear el selector
+    };
+
+    const handleCreatePlayer = async () => {
+        if (!newPlayer.firstName || !newPlayer.lastName) {
+            alert('El nombre y el apellido son obligatorios.');
+            return;
+        }
+
+        setLoading(true);
+        setError(null);
+        try {
+            // Usamos una ruta relativa, axiosConfig debería gestionarla
+            const response = await axios.post('/players/register', newPlayer);
+            const createdPlayer = response.data.player;
+
+            // 1. Actualizar la lista global de jugadores
+            await fetchAllPlayers();
+
+            // 2. Añadir el nuevo jugador directamente al ranking actual
+            setRankingPlayers(prev => [...prev, { ...createdPlayer, points: 0 }]);
+
+            // 3. Limpiar y ocultar el formulario
+            setNewPlayer({ firstName: '', lastName: '' });
+            setShowCreateForm(false);
+
+        } catch (err) {
+            setError(err.response?.data?.error || 'Error al crear el jugador.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     // Guardar todos los puntos (actualiza y crea)
@@ -172,6 +215,41 @@ function RankingManagement() {
                     <button onClick={handleAddPlayer} className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-white font-semibold">
                         Añadir
                     </button>
+                    <button onClick={() => setShowCreateForm(!showCreateForm)} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg text-white font-semibold">
+                        {showCreateForm ? 'Cancelar' : 'Crear Nuevo'}
+                    </button>
+                </div>
+            )}
+
+            {/* Formulario para crear nuevo jugador */}
+            {showCreateForm && selectedCategory && (
+                <div className="bg-gray-800 p-4 rounded-lg mb-6 animate-fade-in">
+                    <h4 className="text-lg font-semibold text-white mb-3">Crear y Añadir Nuevo Jugador</h4>
+                    <div className="flex items-end gap-4">
+                        <div className="flex-1">
+                            <label className="block text-sm font-medium text-gray-300">Nombre</label>
+                            <input
+                                type="text"
+                                placeholder="Nombre del jugador"
+                                value={newPlayer.firstName}
+                                onChange={(e) => setNewPlayer({ ...newPlayer, firstName: e.target.value })}
+                                className="w-full bg-gray-700 border-gray-600 text-white rounded-lg p-2 mt-1"
+                            />
+                        </div>
+                        <div className="flex-1">
+                            <label className="block text-sm font-medium text-gray-300">Apellido</label>
+                            <input
+                                type="text"
+                                placeholder="Apellido del jugador"
+                                value={newPlayer.lastName}
+                                onChange={(e) => setNewPlayer({ ...newPlayer, lastName: e.target.value })}
+                                className="w-full bg-gray-700 border-gray-600 text-white rounded-lg p-2 mt-1"
+                            />
+                        </div>
+                        <button onClick={handleCreatePlayer} className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg text-white font-semibold">
+                            Guardar y Añadir
+                        </button>
+                    </div>
                 </div>
             )}
 

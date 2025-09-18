@@ -71,16 +71,16 @@ function PlayerForm({ onPlayerCreated, onClose }) {
                         <input type="text" name="lastName" value={formData.lastName} onChange={handleChange} required />
                     </div>
                     <div className="form-group">
-                        <label>DNI:</label>
-                        <input type="text" name="dni" value={formData.dni} onChange={handleChange} required />
+                        <label>DNI (Opcional):</label>
+                        <input type="text" name="dni" value={formData.dni} onChange={handleChange} />
                     </div>
                     <div className="form-group">
                         <label>Teléfono (Opcional):</label>
                         <input type="tel" name="phone" value={formData.phone} onChange={handleChange} />
                     </div>
                     <div className="form-group">
-                        <label>Categoría:</label>
-                        <input type="text" name="category" value={formData.category} onChange={handleChange} placeholder="Ej: 4ta, 5ta" required />
+                        <label>Categoría (Opcional):</label>
+                        <input type="text" name="category" value={formData.category} onChange={handleChange} placeholder="Ej: 4ta, 5ta" />
                     </div>
                     <button type="submit" className="btn-primary" disabled={loading}>
                         {loading ? 'Registrando...' : 'Registrar Jugador'}
