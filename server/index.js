@@ -55,6 +55,7 @@ app.use('/api/seed', require('./routes/seed'));
 app.use('/api/community', require('./routes/community'));
 app.use('/api/livestream', require('./routes/livestream'));
 app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/bookings', require('./routes/bookings'));
 app.listen(PORT, () => {
   console.log(`Servidor escuchando en el puerto ${PORT}`);
 });
