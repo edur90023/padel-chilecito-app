@@ -12,6 +12,28 @@ const Gallery = require('../models/Gallery');
 const LiveStream = require('../models/LiveStream');
 const User = require('../models/User');
 const TournamentManager = require('../services/tournament-manager');
+const Court = require('../models/Court');
+
+// Ruta para sembrar las canchas
+router.post('/courts', async (req, res) => {
+    try {
+        const courtsData = [
+            { name: 'Cancha 1', courtNumber: 1, type: 'Indoor' },
+            { name: 'Cancha 2', courtNumber: 2, type: 'Indoor' },
+            { name: 'Cancha 3', courtNumber: 3, type: 'Indoor' },
+            { name: 'Cancha 4', courtNumber: 4, type: 'Outdoor' }
+        ];
+
+        await Court.deleteMany({});
+        await Court.insertMany(courtsData);
+
+        res.status(201).json({ message: 'Canchas creadas exitosamente.' });
+    } catch (error) {
+        console.error("Error al sembrar las canchas:", error);
+        res.status(500).json({ error: 'Error al sembrar las canchas.', details: error.message });
+    }
+});
+
 
 function isAuthenticated(req, res, next) {
     const token = req.headers.authorization?.split(' ')[1];
