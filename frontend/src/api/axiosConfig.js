@@ -1,7 +1,6 @@
 import axios from 'axios';
 
-// ¡CAMBIO CLAVE! Apuntamos directamente a la URL de Render.
-export const API_BASE_URL = 'https://padel-chilecito-api.onrender.com';
+export const API_BASE_URL = 'http://localhost:5000';
 
 // Configura la URL base para todas las peticiones de la API
 axios.defaults.baseURL = `${API_BASE_URL}/api`;
