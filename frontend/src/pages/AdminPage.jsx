@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios from '../api/axiosConfig'; // Asegurarse de usar la instancia configurada
 import CreateTournamentForm from '../components/CreateTournamentForm';
 import TournamentDetails from '../components/TournamentDetails';
+import ProfessorManagement from '../components/ProfessorManagement'; // Importar el nuevo componente
 
 function AdminPage() {
-    const [view, setView] = useState('list');
+    const [view, setView] = useState('tournaments'); // 'tournaments', 'professors', etc.
     const [tournaments, setTournaments] = useState([]);
     const [selectedTournament, setSelectedTournament] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -24,8 +25,10 @@ function AdminPage() {
     };
 
     useEffect(() => {
-        fetchTournaments();
-    }, []);
+        if (view === 'tournaments') {
+            fetchTournaments();
+        }
+    }, [view]);
 
     const handleTournamentCreated = () => {
         fetchTournaments();
@@ -34,12 +37,12 @@ function AdminPage() {
 
     const handleViewDetails = (tournament) => {
         setSelectedTournament(tournament);
-        setView('details');
+        setView('tournament-details');
     };
     
     const handleBackToList = () => {
-        fetchTournaments();
-        setView('list');
+        fetchTournaments(); // Puede que quieras separar los fetches
+        setView('tournaments');
         setSelectedTournament(null);
     }
 
@@ -57,11 +60,20 @@ function AdminPage() {
 
     return (
         <div className="animate-fade-in">
-            {view === 'list' && (
+            <div className="mb-8 flex justify-center gap-4 border-b border-gray-700 pb-4">
+                <button onClick={() => setView('tournaments')} className={`px-4 py-2 rounded-md font-medium transition ${view === 'tournaments' ? 'bg-primary text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
+                    Gestionar Torneos
+                </button>
+                <button onClick={() => setView('professors')} className={`px-4 py-2 rounded-md font-medium transition ${view === 'professors' ? 'bg-primary text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
+                    Gestionar Profesores
+                </button>
+            </div>
+
+            {view === 'tournaments' && (
                 <>
                     <div className="flex justify-between items-center mb-6">
                         <h1 className="text-3xl font-bold text-white">Gestión de Torneos</h1>
-                        <button onClick={() => setView('create')} className="bg-green-600 text-white px-4 py-2 rounded-md font-medium hover:bg-green-700 transition">
+                        <button onClick={() => setView('create-tournament')} className="bg-green-600 text-white px-4 py-2 rounded-md font-medium hover:bg-green-700 transition">
                             <i className="fas fa-plus mr-2"></i>Crear Torneo
                         </button>
                     </div>
@@ -103,19 +115,21 @@ function AdminPage() {
                 </>
             )}
 
-            {view === 'create' && (
+            {view === 'create-tournament' && (
                 <CreateTournamentForm 
                     onTournamentCreated={handleTournamentCreated}
-                    onClose={() => setView('list')}
+                    onClose={() => setView('tournaments')}
                 />
             )}
             
-            {view === 'details' && selectedTournament && (
+            {view === 'tournament-details' && selectedTournament && (
                 <TournamentDetails
                     tournament={selectedTournament}
                     onBack={handleBackToList}
                 />
             )}
+
+            {view === 'professors' && <ProfessorManagement />}
         </div>
     );
 }
