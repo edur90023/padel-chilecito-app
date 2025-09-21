@@ -14,6 +14,7 @@ import Standings from './pages/Standings';
 import TournamentPublicView from './pages/TournamentPublicView';
 import Contact from './pages/Contact';
 import CommunityPage from './pages/CommunityPage';
+import ProfessorsPage from './pages/ProfessorsPage';
 import LivePage from './pages/LivePage';
 
 import './index.css';
