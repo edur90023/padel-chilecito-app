@@ -41,6 +41,10 @@ const professorSchema = new mongoose.Schema({
     contactPhone: {
         type: String,
         required: true
+    },
+    isActive: {
+        type: Boolean,
+        default: true
     }
 }, {
     timestamps: true
