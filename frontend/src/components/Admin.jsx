@@ -10,6 +10,7 @@ import GalleryManagement from './GalleryManagement';
 import LiveStreamManagement from './LiveStreamManagement';
 import SimulationTools from './SimulationTools';
 import NotificationSender from './NotificationSender'; // <-- ¡NUEVA IMPORTACIÓN!
+import ProfessorManagement from './ProfessorManagement'; // Importar el nuevo componente
 
 function Admin() {
     const { logout } = useAuth();
@@ -42,6 +43,7 @@ function Admin() {
                     <button onClick={() => setActiveTab('news')} className={`px-3 py-3 font-medium text-sm rounded-t-lg transition-colors ${activeTab === 'news' ? 'border-b-2 border-green-500 text-white' : 'text-gray-400'}`}><i className="fas fa-newspaper mr-2"></i>Noticias</button>
                     <button onClick={() => setActiveTab('ads')} className={`px-3 py-3 font-medium text-sm rounded-t-lg transition-colors ${activeTab === 'ads' ? 'border-b-2 border-green-500 text-white' : 'text-gray-400'}`}><i className="fas fa-ad mr-2"></i>Anuncios</button>
                     <button onClick={() => setActiveTab('tools')} className={`px-3 py-3 font-medium text-sm rounded-t-lg transition-colors ${activeTab === 'tools' ? 'border-b-2 border-green-500 text-white' : 'text-gray-400'}`}><i className="fas fa-tools mr-2"></i>Herramientas</button>
+                    <button onClick={() => setActiveTab('professors')} className={`px-3 py-3 font-medium text-sm rounded-t-lg transition-colors ${activeTab === 'professors' ? 'border-b-2 border-green-500 text-white' : 'text-gray-400'}`}><i className="fas fa-chalkboard-teacher mr-2"></i>Profesores</button>
                 </nav>
                 
                 <main>
@@ -56,6 +58,7 @@ function Admin() {
                     {activeTab === 'news' && <NewsManagement />}
                     {activeTab === 'ads' && <AdManagement />}
                     {activeTab === 'tools' && <SimulationTools />}
+                    {activeTab === 'professors' && <ProfessorManagement />}
                 </main>
             </div>
         </div>

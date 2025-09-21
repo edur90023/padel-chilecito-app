@@ -14,7 +14,6 @@ import Standings from './pages/Standings';
 import TournamentPublicView from './pages/TournamentPublicView';
 import Contact from './pages/Contact';
 import CommunityPage from './pages/CommunityPage';
-import ProfessorsPage from './pages/ProfessorsPage';
 import LivePage from './pages/LivePage';
 
 import './index.css';
@@ -124,7 +123,6 @@ const PublicLayout = () => {
                         <NavItem to="/community" icon="fas fa-users" onClick={closeMenu}>Comunidad</NavItem>
                         <NavItem to="/gallery" icon="fas fa-images" onClick={closeMenu}>Galería</NavItem>
                         <NavItem to="/standings" icon="fas fa-star" onClick={closeMenu}>Rankings</NavItem>
-                        <NavItem to="/profesores" icon="fas fa-chalkboard-teacher" onClick={closeMenu}>Profesores</NavItem>
                         <NavItem to="/contact" icon="fas fa-address-book" onClick={closeMenu}>Contacto</NavItem>
                         <div className="border-t border-gray-700 pt-4 mt-4 space-y-2">
                              {installPrompt && (
@@ -161,9 +159,9 @@ const PublicLayout = () => {
                     <Route path="/tournaments/:id" element={<TournamentPublicView />} />
                     <Route path="/gallery" element={<Gallery />} />
                     <Route path="/standings" element={<Standings />} />
-                    <Route path="/profesores" element={<ProfessorsPage />} />
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/community" element={<CommunityPage />} />
+                    <Route path="/profesores" element={<ProfessorsPage />} />
                 </Routes>
             </main>
             {/* --- ¡COMPONENTE AÑADIDO! --- */}
