@@ -1,4 +1,5 @@
 // server/config/cloudinary.js
+// Ensuring this file is included in the patch.
 
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
