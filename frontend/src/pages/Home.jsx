@@ -27,6 +27,7 @@ function Home() {
     const [ads, setAds] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [currentAdIndex, setCurrentAdIndex] = useState(0);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -45,6 +46,18 @@ function Home() {
         };
         fetchData();
     }, []);
+
+    useEffect(() => {
+        // Only set up the timer if there are ads to display
+        if (ads.length > 1) {
+            const timer = setTimeout(() => {
+                setCurrentAdIndex((prevIndex) => (prevIndex + 1) % ads.length);
+            }, 5000); // Change ad every 5 seconds
+
+            return () => clearTimeout(timer); // Cleanup the timer on component unmount or re-render
+        }
+    }, [currentAdIndex, ads.length]);
+
 
     if (loading) return <div className="loading-spinner mx-auto mt-10"></div>;
     if (error) return <div className="text-red-400 text-center mt-10">{error}</div>;
@@ -68,7 +81,8 @@ function Home() {
                     <div className="sticky top-24">
                         <h3 className="text-2xl font-bold text-white mb-6">Patrocinadores</h3>
                         <div className="space-y-6">
-                            {ads.map(ad => <AdBanner key={ad._id} ad={ad} />)}
+                            {/* Render only the current ad */}
+                            <AdBanner key={ads[currentAdIndex]._id} ad={ads[currentAdIndex]} />
                         </div>
                     </div>
                 </aside>
