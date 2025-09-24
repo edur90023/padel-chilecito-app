@@ -2,7 +2,11 @@ const express = require('express');
 const router = express.Router();
 const Professor = require('../models/Professor');
 const auth = require('../middleware/auth');
+
 const upload = require('../config/cloudinary'); // Importar configuración de Cloudinary
+
+const upload = require('../config/cloudinary');
+
 
 // @route   GET /api/professors/public
 // @desc    Get all active professors
@@ -35,6 +39,7 @@ router.get('/admin', auth, async (req, res) => {
 // @access  Private (Admin)
 router.post('/', auth, upload.single('photo'), async (req, res) => {
     try {
+ 
         const professorData = { ...req.body };
         if (req.file) {
             professorData.photoUrl = req.file.path;
@@ -50,11 +55,27 @@ router.post('/', auth, upload.single('photo'), async (req, res) => {
             professorData.availability = JSON.parse(professorData.availability);
         }
 
+        const { name, description, contactPhone, isActive, categories, locations } = req.body;
+        const professorData = {
+            name,
+            description,
+            contactPhone,
+            isActive,
+            categories: categories.split(',').map(s => s.trim()),
+            locations: locations.split(',').map(s => s.trim()),
+        };
+
+        if (req.file) {
+            professorData.photoUrl = req.file.path;
+        }
+
+
         const newProfessor = new Professor(professorData);
         await newProfessor.save();
         res.status(201).json(newProfessor);
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        console.error("Error creating professor:", error);
+        res.status(400).json({ error: 'Error al crear el profesor. ' + error.message });
     }
 });
 
@@ -63,6 +84,7 @@ router.post('/', auth, upload.single('photo'), async (req, res) => {
 // @access  Private (Admin)
 router.put('/:id', auth, upload.single('photo'), async (req, res) => {
     try {
+
         const updateData = { ...req.body };
         if (req.file) {
             updateData.photoUrl = req.file.path;
@@ -79,12 +101,32 @@ router.put('/:id', auth, upload.single('photo'), async (req, res) => {
         }
 
         const professor = await Professor.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true });
+
+        const { name, description, contactPhone, isActive, categories, locations } = req.body;
+        const updateData = {
+            name,
+            description,
+            contactPhone,
+            isActive,
+            categories: categories.split(',').map(s => s.trim()),
+            locations: locations.split(',').map(s => s.trim()),
+        };
+
+        if (req.file) {
+            updateData.photoUrl = req.file.path;
+        }
+
+        const professor = await Professor.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true });
+
+
         if (!professor) {
             return res.status(404).json({ error: 'Profesor no encontrado' });
         }
+
         res.json(professor);
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        console.error("Error updating professor:", error);
+        res.status(400).json({ error: 'Error al actualizar el profesor. ' + error.message });
     }
 });
 
