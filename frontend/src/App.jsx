@@ -124,6 +124,7 @@ const PublicLayout = () => {
                         <NavItem to="/community" icon="fas fa-users" onClick={closeMenu}>Comunidad</NavItem>
                         <NavItem to="/gallery" icon="fas fa-images" onClick={closeMenu}>Galería</NavItem>
                         <NavItem to="/standings" icon="fas fa-star" onClick={closeMenu}>Rankings</NavItem>
+                        <NavItem to="/profesores" icon="fas fa-chalkboard-teacher" onClick={closeMenu}>Profesores</NavItem>
                         <NavItem to="/contact" icon="fas fa-address-book" onClick={closeMenu}>Contacto</NavItem>
                         <div className="border-t border-gray-700 pt-4 mt-4 space-y-2">
                              {installPrompt && (

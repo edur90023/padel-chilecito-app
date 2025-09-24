@@ -4,19 +4,18 @@ import axios from '../api/axiosConfig';
 const ProfessorForm = ({ professor, onSave, onCancel }) => {
     const [formData, setFormData] = useState({
         name: '',
-        photoUrl: '',
         description: '',
         categories: '',
         locations: '',
         contactPhone: '',
         isActive: true,
     });
+    const [photoFile, setPhotoFile] = useState(null);
 
     useEffect(() => {
         if (professor) {
             setFormData({
                 name: professor.name,
-                photoUrl: professor.photoUrl,
                 description: professor.description,
                 categories: professor.categories.join(', '),
                 locations: professor.locations.join(', '),
@@ -34,24 +33,38 @@ const ProfessorForm = ({ professor, onSave, onCancel }) => {
         }));
     };
 
+    const handleFileChange = (e) => {
+        setPhotoFile(e.target.files[0]);
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const dataToSubmit = {
-            ...formData,
-            categories: formData.categories.split(',').map(s => s.trim()),
-            locations: formData.locations.split(',').map(s => s.trim()),
-        };
+
+        const submissionData = new FormData();
+        submissionData.append('name', formData.name);
+        submissionData.append('description', formData.description);
+        submissionData.append('contactPhone', formData.contactPhone);
+        submissionData.append('isActive', formData.isActive);
+        submissionData.append('categories', formData.categories);
+        submissionData.append('locations', formData.locations);
+
+        if (photoFile) {
+            submissionData.append('photo', photoFile);
+        }
 
         try {
+            const config = {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            };
+
             if (professor) {
-                await axios.put(`/professors/${professor._id}`, dataToSubmit);
+                await axios.put(`/professors/${professor._id}`, submissionData, config);
             } else {
-                await axios.post('/professors', dataToSubmit);
+                await axios.post('/professors', submissionData, config);
             }
             onSave();
         } catch (error) {
-            console.error("Error saving professor:", error);
-            // Aquí se podría mostrar un mensaje de error al usuario
+            console.error("Error saving professor:", error.response ? error.response.data : error);
         }
     };
 
@@ -61,7 +74,11 @@ const ProfessorForm = ({ professor, onSave, onCancel }) => {
                 <h2 className="text-2xl font-bold text-white mb-6">{professor ? 'Editar' : 'Añadir'} Profesor</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <input type="text" name="name" value={formData.name} onChange={handleChange} placeholder="Nombre" className="w-full p-2 rounded bg-dark-primary text-white" required />
-                    <input type="text" name="photoUrl" value={formData.photoUrl} onChange={handleChange} placeholder="URL de la Foto" className="w-full p-2 rounded bg-dark-primary text-white" required />
+                    <div>
+                        <label htmlFor="photo" className="block text-sm font-medium text-gray-300 mb-1">Foto</label>
+                        <input type="file" id="photo" name="photo" onChange={handleFileChange} className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-dark-primary hover:file:bg-primary-dark" />
+                         {professor && !photoFile && <img src={professor.photoUrl} alt="Miniatura" className="w-20 h-20 rounded-full object-cover mt-2"/>}
+                    </div>
                     <textarea name="description" value={formData.description} onChange={handleChange} placeholder="Descripción" className="w-full p-2 rounded bg-dark-primary text-white" />
                     <input type="text" name="categories" value={formData.categories} onChange={handleChange} placeholder="Categorías (separadas por coma)" className="w-full p-2 rounded bg-dark-primary text-white" />
                     <input type="text" name="locations" value={formData.locations} onChange={handleChange} placeholder="Lugares (separados por coma)" className="w-full p-2 rounded bg-dark-primary text-white" />
