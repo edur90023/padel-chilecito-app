@@ -62,7 +62,7 @@ const ProfessorsPage = () => {
                     </div>
                   </div>
                 </div>
-                <p className="text-text-secondary my-4">{prof.description}</p>
+                <p className="text-text-secondary my-4 whitespace-pre-wrap">{prof.description}</p>
 
                 <div className="border-t border-gray-700 pt-4">
                   <h3 className="font-semibold text-text-primary mb-2 flex items-center">
