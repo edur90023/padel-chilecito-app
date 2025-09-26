@@ -4,13 +4,15 @@ import React, { useState, useEffect } from 'react';
 import { subscribeUserToPush } from '../utils/notifications';
 
 function NotificationManager() {
-    const [permission, setPermission] = useState(Notification.permission);
+    const [permission, setPermission] = useState(''); // Inicialización segura para evitar errores en navegadores estrictos
     const [isSupported, setIsSupported] = useState(false);
     const [isDismissed, setIsDismissed] = useState(false);
 
     useEffect(() => {
+        // Comprobar la compatibilidad y obtener el estado del permiso de forma segura
         if ('Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window) {
             setIsSupported(true);
+            setPermission(Notification.permission); // Obtener el permiso solo después de confirmar la compatibilidad
         }
     }, []);
 
