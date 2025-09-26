@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import axios from 'axios';
 import { useInstallPWA } from './hooks/useInstallPWA';
 import NotificationManager from './components/NotificationManager'; // <-- ¡IMPORTACIÓN AÑADIDA!
+import { Analytics } from "@vercel/analytics/react";
 
 import Admin from './components/Admin';
 import LoginPage from './pages/LoginPage';
@@ -182,6 +183,7 @@ function App() {
                     <Route path="/*" element={<PublicLayout />} />
                 </Routes>
             </Router>
+            <Analytics />
         </AuthProvider>
     );
 }
