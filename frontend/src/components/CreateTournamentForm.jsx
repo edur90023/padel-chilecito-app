@@ -9,7 +9,10 @@ function CreateTournamentForm({ onTournamentCreated, onClose }) {
         startDate: '',
         organizerPhone: '',
         categories: '',
-        isManual: false, // <-- ¡NUEVO ESTADO!
+        isManual: false,
+        zonePlaySystem: false,
+        useSeedings: false,
+        avoidClubConflicts: false,
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -30,9 +33,18 @@ function CreateTournamentForm({ onTournamentCreated, onClose }) {
         setSuccess('');
 
         try {
-            await axios.post('/tournaments', formData); // El backend ya espera 'isManual'
+            await axios.post('/tournaments', formData);
             setSuccess(`Torneo "${formData.name}" creado exitosamente.`);
-            setFormData({ name: '', startDate: '', organizerPhone: '', categories: '', isManual: false });
+            setFormData({
+                name: '',
+                startDate: '',
+                organizerPhone: '',
+                categories: '',
+                isManual: false,
+                zonePlaySystem: false,
+                useSeedings: false,
+                avoidClubConflicts: false,
+            });
             setTimeout(() => {
                 if (onTournamentCreated) {
                     onTournamentCreated();
@@ -73,21 +85,37 @@ function CreateTournamentForm({ onTournamentCreated, onClose }) {
                     <input type="text" name="categories" value={formData.categories} onChange={handleChange} placeholder="Ej: 4ta, 5ta, Damas B" required className="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg text-white" />
                 </div>
 
-                <div className="form-group flex items-center gap-3 bg-gray-900/50 p-3 rounded-lg">
-                    <input 
-                        type="checkbox" 
-                        id="isManual" 
-                        name="isManual" 
-                        checked={formData.isManual} 
-                        onChange={handleChange}
-                        className="h-5 w-5 text-blue-500 bg-gray-700 border-gray-600 rounded focus:ring-blue-600"
-                    />
-                    <div>
-                        <label htmlFor="isManual" className="font-medium text-white">Carga Manual</label>
-                        <p className="text-xs text-gray-400">Marcar si los equipos y llaves se cargarán manualmente en lugar de usar inscripciones.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="form-group flex items-center gap-3 bg-gray-900/50 p-3 rounded-lg">
+                        <input type="checkbox" id="isManual" name="isManual" checked={formData.isManual} onChange={handleChange} className="h-5 w-5 text-blue-500 bg-gray-700 border-gray-600 rounded focus:ring-blue-600"/>
+                        <div>
+                            <label htmlFor="isManual" className="font-medium text-white">Carga Manual</label>
+                            <p className="text-xs text-gray-400">Equipos y llaves se gestionan 100% a mano.</p>
+                        </div>
+                    </div>
+                     <div className="form-group flex items-center gap-3 bg-gray-900/50 p-3 rounded-lg">
+                        <input type="checkbox" id="zonePlaySystem" name="zonePlaySystem" checked={formData.zonePlaySystem} onChange={handleChange} className="h-5 w-5 text-blue-500 bg-gray-700 border-gray-600 rounded focus:ring-blue-600"/>
+                        <div>
+                            <label htmlFor="zonePlaySystem" className="font-medium text-white">Usar Sistema APA</label>
+                            <p className="text-xs text-gray-400">En zonas de 4, usa el sistema oficial APA (1vs3, 2vs4).</p>
+                        </div>
+                    </div>
+                     <div className="form-group flex items-center gap-3 bg-gray-900/50 p-3 rounded-lg">
+                        <input type="checkbox" id="useSeedings" name="useSeedings" checked={formData.useSeedings} onChange={handleChange} className="h-5 w-5 text-blue-500 bg-gray-700 border-gray-600 rounded focus:ring-blue-600"/>
+                        <div>
+                            <label htmlFor="useSeedings" className="font-medium text-white">Habilitar Cabezas de Serie</label>
+                            <p className="text-xs text-gray-400">Distribuye los mejores equipos en zonas diferentes.</p>
+                        </div>
+                    </div>
+                     <div className="form-group flex items-center gap-3 bg-gray-900/50 p-3 rounded-lg">
+                        <input type="checkbox" id="avoidClubConflicts" name="avoidClubConflicts" checked={formData.avoidClubConflicts} onChange={handleChange} className="h-5 w-5 text-blue-500 bg-gray-700 border-gray-600 rounded focus:ring-blue-600"/>
+                        <div>
+                            <label htmlFor="avoidClubConflicts" className="font-medium text-white">Evitar Cruces Mismo Club</label>
+                            <p className="text-xs text-gray-400">Intenta no poner equipos del mismo club en la misma zona.</p>
+                        </div>
                     </div>
                 </div>
-                
+
                 <div className="flex gap-4 pt-4">
                     <button type="button" onClick={onClose} className="w-full bg-gray-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-500 transition">Cancelar</button>
                     <button type="submit" className="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition disabled:bg-gray-500" disabled={loading}>

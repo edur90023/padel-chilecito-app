@@ -1,21 +1,28 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
 
-const auth = async (req, res, next) => {
-    try {
-        const token = req.header('Authorization').replace('Bearer ', '');
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const user = await User.findOne({ _id: decoded._id });
+// Este es un generador de middleware. Se usa así: auth(['admin']) o auth(['admin', 'operator'])
+const auth = (allowedRoles) => {
+    return (req, res, next) => {
+        try {
+            const token = req.header('Authorization')?.replace('Bearer ', '');
+            if (!token) {
+                return res.status(401).send({ error: 'Autenticación requerida.' });
+            }
 
-        if (!user) {
-            throw new Error();
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+            if (!allowedRoles.includes(decoded.role)) {
+                return res.status(403).send({ error: 'Permisos insuficientes para esta acción.' });
+            }
+
+            // Adjuntamos la información decodificada del token al request
+            req.user = decoded;
+
+            next();
+        } catch (error) {
+            res.status(401).send({ error: 'Token inválido o expirado.' });
         }
-
-        req.user = user;
-        next();
-    } catch (error) {
-        res.status(401).send({ error: 'Please authenticate.' });
-    }
+    };
 };
 
 module.exports = auth;
