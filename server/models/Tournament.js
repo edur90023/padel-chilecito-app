@@ -9,12 +9,15 @@ const playerInTeamSchema = new mongoose.Schema({
 
 const teamSchema = new mongoose.Schema({
     teamName: { type: String, required: true },
-    players: { type: [playerInTeamSchema], required: true }
+    players: { type: [playerInTeamSchema], required: true },
+    club: { type: String, default: '' }
 });
 
 const matchSchema = new mongoose.Schema({
-    teamA: { type: teamSchema },
-    teamB: { type: teamSchema },
+    teamA: { type: teamSchema, required: false }, // Opcional para partidos futuros
+    teamB: { type: teamSchema, required: false }, // Opcional para partidos futuros
+    placeholderA: { type: String, default: '' }, // e.g., "Ganador Partido 1"
+    placeholderB: { type: String, default: '' }, // e.g., "Perdedor Partido 1"
     scoreA: [{ type: Number }],
     scoreB: [{ type: Number }],
     status: {
@@ -23,7 +26,8 @@ const matchSchema = new mongoose.Schema({
         default: 'Pendiente'
     },
     matchTime: { type: String, default: '' },
-    matchPlace: { type: String, default: '' }
+    matchPlace: { type: String, default: '' },
+    matchOrder: { type: Number, default: 0 } // Para ordenar los partidos
 });
 
 const playoffRoundSchema = new mongoose.Schema({
@@ -47,11 +51,22 @@ const categorySchema = new mongoose.Schema({
     name: { type: String, required: true },
     status: {
         type: String,
-        enum: ['Inscripciones Abiertas', 'Inscripciones Cerradas', 'Zonas Sorteadas', 'En Juego', 'Finalizado', 'Configuración Manual'], // <-- ¡NUEVO ESTADO!
+        enum: ['Inscripciones Abiertas', 'Inscripciones Cerradas', 'Zonas Sorteadas', 'En Juego', 'Finalizado', 'Configuración Manual'],
         default: 'Inscripciones Abiertas'
     },
-    // --- ¡NUEVO CAMPO! ---
     isManual: {
+        type: Boolean,
+        default: false
+    },
+    zonePlaySystem: { // true para "APA Oficial"
+        type: Boolean,
+        default: false
+    },
+    useSeedings: { // true para habilitar cabezas de serie
+        type: Boolean,
+        default: false
+    },
+    avoidClubConflicts: { // true para evitar cruces del mismo club
         type: Boolean,
         default: false
     },

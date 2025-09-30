@@ -1,8 +1,7 @@
-// frontend/src/components/TournamentDetails.jsx
-
 import React, { useState, useMemo, useEffect } from 'react';
 import axios from 'axios';
 import ManualSetupManager from './ManualSetupManager';
+import { useAuth } from '../context/AuthContext';
 
 // --- Sub-componente para la Previsualización de Zonas ---
 function ZonesPreview({ zones, onConfirm, onCancel }) {
@@ -106,7 +105,7 @@ function RegisteredPlayersManager({ tournament, category, onAction }) {
 }
 
 // --- Sub-componente para editar los resultados de un partido ---
-function MatchEditor({ tournamentId, categoryId, match, onAction }) {
+function MatchEditor({ tournamentId, categoryId, match, onAction, userRole }) {
     const [isEditing, setIsEditing] = useState(false);
     const [sets, setSets] = useState([
         { a: match.scoreA[0] || '', b: match.scoreB[0] || '' },
@@ -157,8 +156,18 @@ function MatchEditor({ tournamentId, categoryId, match, onAction }) {
         window.open(whatsappUrl, '_blank');
     };
 
-    // Lógica para deshabilitar los botones si no se ha ingresado la hora o el lugar
     const canNotify = time.trim() !== '' && place.trim() !== '';
+
+    if (!match.teamA || !match.teamB) {
+        return (
+            <div className="flex items-center justify-between p-2 border-b border-gray-700 text-sm text-gray-500">
+                <span className="flex-1 text-left">{match.placeholderA}</span>
+                <span className="font-bold text-center flex-1">vs.</span>
+                <span className="flex-1 text-right">{match.placeholderB}</span>
+                 <button disabled className="ml-4 bg-gray-600 text-white px-2 py-1 text-xs rounded cursor-not-allowed">Pendiente</button>
+            </div>
+        )
+    }
 
     if (!isEditing) {
         return (
@@ -199,45 +208,34 @@ function MatchEditor({ tournamentId, categoryId, match, onAction }) {
                 <button onClick={handleUpdateScore} className="w-full bg-green-600 text-white font-bold py-2 rounded hover:bg-green-700">Guardar Cambios</button>
             </div>
 
-            {/* Player Notification Section */}
-            <div className="pt-4 mt-4 border-t border-gray-700 space-y-4">
-                {match.teamA?.players && (
-                    <div>
-                        <p className="font-semibold text-white text-sm mb-2">Notificar a jugadores de {match.teamA.teamName}:</p>
-                        <div className="flex flex-wrap gap-2">
-                            {match.teamA.players.map(player => (
-                                <button
-                                    key={player._id}
-                                    onClick={() => handleNotifyPlayer(player, match.teamA, match.teamB)}
-                                    disabled={!canNotify}
-                                    className="bg-blue-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-blue-600 transition text-sm flex items-center disabled:bg-gray-600 disabled:cursor-not-allowed"
-                                    title={canNotify ? `Notificar a ${player.playerName}` : 'Ingresa el lugar y la hora para poder notificar'}
-                                >
-                                    <i className="fab fa-whatsapp mr-2"></i> {player.playerName}
-                                </button>
-                            ))}
+            {userRole === 'admin' && (
+                <div className="pt-4 mt-4 border-t border-gray-700 space-y-4">
+                    {match.teamA?.players && (
+                        <div>
+                            <p className="font-semibold text-white text-sm mb-2">Notificar a jugadores de {match.teamA.teamName}:</p>
+                            <div className="flex flex-wrap gap-2">
+                                {match.teamA.players.map(player => (
+                                    <button key={player._id} onClick={() => handleNotifyPlayer(player, match.teamA, match.teamB)} disabled={!canNotify} className="bg-blue-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-blue-600 transition text-sm flex items-center disabled:bg-gray-600 disabled:cursor-not-allowed" title={canNotify ? `Notificar a ${player.playerName}` : 'Ingresa el lugar y la hora para poder notificar'}>
+                                        <i className="fab fa-whatsapp mr-2"></i> {player.playerName}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                )}
-                {match.teamB?.players && (
-                    <div>
-                        <p className="font-semibold text-white text-sm mb-2">Notificar a jugadores de {match.teamB.teamName}:</p>
-                        <div className="flex flex-wrap gap-2">
-                            {match.teamB.players.map(player => (
-                                <button
-                                    key={player._id}
-                                    onClick={() => handleNotifyPlayer(player, match.teamB, match.teamA)}
-                                    disabled={!canNotify}
-                                    className="bg-blue-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-blue-600 transition text-sm flex items-center disabled:bg-gray-600 disabled:cursor-not-allowed"
-                                    title={canNotify ? `Notificar a ${player.playerName}` : 'Ingresa el lugar y la hora para poder notificar'}
-                                >
-                                    <i className="fab fa-whatsapp mr-2"></i> {player.playerName}
-                                </button>
-                            ))}
+                    )}
+                    {match.teamB?.players && (
+                         <div>
+                            <p className="font-semibold text-white text-sm mb-2">Notificar a jugadores de {match.teamB.teamName}:</p>
+                            <div className="flex flex-wrap gap-2">
+                                {match.teamB.players.map(player => (
+                                    <button key={player._id} onClick={() => handleNotifyPlayer(player, match.teamB, match.teamA)} disabled={!canNotify} className="bg-blue-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-blue-600 transition text-sm flex items-center disabled:bg-gray-600 disabled:cursor-not-allowed" title={canNotify ? `Notificar a ${player.playerName}` : 'Ingresa el lugar y la hora para poder notificar'}>
+                                        <i className="fab fa-whatsapp mr-2"></i> {player.playerName}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                )}
-            </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }
@@ -366,16 +364,26 @@ function FinishCategoryManager({ category, onAction }) {
 }
 
 // --- Componente para gestionar una sola categoría ---
-function CategoryManager({ category, tournament, onAction }) {
+function CategoryManager({ category, tournament, onAction, userRole }) {
     const [zonePreview, setZonePreview] = useState(null);
+    const isAdmin = userRole === 'admin';
 
     const areAllZoneMatchesFinished = useMemo(() => {
         if (!category.zones || category.zones.length === 0) return false;
         return category.zones.every(zone => zone.matches.every(match => match.status === 'Finalizado'));
     }, [category.zones]);
 
+    const canAdvanceApaZone = (zone) => {
+        if (!category.zonePlaySystem || zone.teams.length !== 4) return false;
+        const match1 = zone.matches.find(m => m.matchOrder === 1);
+        const match2 = zone.matches.find(m => m.matchOrder === 2);
+        const match3 = zone.matches.find(m => m.matchOrder === 3);
+        // Avanza si los dos primeros partidos están finalizados y el tercero aún no tiene equipos
+        return match1?.status === 'Finalizado' && match2?.status === 'Finalizado' && !match3?.teamA;
+    };
+
     const canAdvancePlayoffs = useMemo(() => {
-        if (category.status !== 'En Juego' || !category.playoffRounds || category.playoffRounds.length === 0) return false;
+        if (category.status !== 'En Juego' || !category.playoffRounds || !category.playoffRounds.length === 0) return false;
         const lastRound = category.playoffRounds[category.playoffRounds.length - 1];
         if (lastRound.roundName === 'Final' || lastRound.roundName === 'Tercer y Cuarto Puesto') return false;
         return lastRound.matches.every(match => match.status === 'Finalizado');
@@ -393,7 +401,7 @@ function CategoryManager({ category, tournament, onAction }) {
         }
     }, [tournament.previewData, category._id]);
 
-    if (category.isManual && category.status === 'Configuración Manual') {
+    if (category.isManual && category.status === 'Configuración Manual' && isAdmin) {
         return <ManualSetupManager category={category} onAction={onAction} />;
     }
 
@@ -414,30 +422,42 @@ function CategoryManager({ category, tournament, onAction }) {
                     <span className="text-gray-400 font-semibold bg-gray-700 px-3 py-1 rounded-full text-sm">{category.status}</span>
                 </div>
                 <div className="p-4 space-y-4">
-                    {category.status === 'Inscripciones Abiertas' && <AddTeamForm categoryId={category._id} onAction={onAction} />}
-                    {category.status === 'Inscripciones Cerradas' && (
-                         <button onClick={handlePreviewZones} className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition">Previsualizar Sorteo de Zonas</button>
+                    {isAdmin && (
+                        <>
+                            {category.status === 'Inscripciones Abiertas' && <AddTeamForm categoryId={category._id} onAction={onAction} />}
+                            {category.status === 'Inscripciones Cerradas' && (
+                                <button onClick={handlePreviewZones} className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition">Previsualizar Sorteo de Zonas</button>
+                            )}
+                            {category.status === 'Zonas Sorteadas' && areAllZoneMatchesFinished && (
+                                <button onClick={() => onAction('generate-playoffs', category._id)} className="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 transition">Calcular Clasificados y Generar Llave</button>
+                            )}
+                             {category.status === 'En Juego' && <FinishCategoryManager category={category} onAction={onAction} />}
+                            {showRegistrationManagement && category.registeredPlayers.length > 0 && <RegisteredPlayersManager tournament={tournament} category={category} onAction={onAction} />}
+                        </>
                     )}
-                    {category.status === 'Zonas Sorteadas' && areAllZoneMatchesFinished && (
-                        <button onClick={() => onAction('generate-playoffs', category._id)} className="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 transition">Calcular Clasificados y Generar Llave</button>
-                    )}
+
                     {canAdvancePlayoffs && (
                         <button onClick={() => onAction('advance-playoffs', category._id)} className="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition">Avanzar Ganadores a la Siguiente Ronda</button>
                     )}
-                    {category.status === 'En Juego' && <FinishCategoryManager category={category} onAction={onAction} />}
-                    {showRegistrationManagement && category.registeredPlayers.length > 0 && <RegisteredPlayersManager tournament={tournament} category={category} onAction={onAction} />}
                     
                     {category.zones && category.zones.length > 0 ? (
                         category.zones.map(zone => (
                             <div key={zone._id} className="p-4 border border-gray-700 rounded-lg">
-                                <h4 className="text-xl font-bold text-white mb-2">{zone.zoneName}</h4>
+                                <div className="flex justify-between items-center mb-2">
+                                    <h4 className="text-xl font-bold text-white">{zone.zoneName}</h4>
+                                    {canAdvanceApaZone(zone) && (
+                                        <button onClick={() => onAction('advance-apa', category._id, { zoneId: zone._id })} className="bg-teal-500 text-white font-bold py-1 px-3 rounded-lg hover:bg-teal-600 transition text-sm">
+                                            Avanzar Zona APA
+                                        </button>
+                                    )}
+                                </div>
                                 {zone.matches.map(match => (
-                                    <MatchEditor key={match._id} tournamentId={tournament._id} categoryId={category._id} match={match} onAction={onAction} />
+                                    <MatchEditor key={match._id} tournamentId={tournament._id} categoryId={category._id} match={match} onAction={onAction} userRole={userRole} />
                                 ))}
                                 <ZoneStandings zone={zone} />
                             </div>
                         ))
-                    ) : ( !showRegistrationManagement && <p className="text-gray-400">Aún no se han sorteado las zonas.</p>)}
+                    ) : ( isAdmin && !showRegistrationManagement && <p className="text-gray-400">Aún no se han sorteado las zonas.</p>)}
                     
                     {category.playoffRounds && category.playoffRounds.length > 0 && (
                         <div className="mt-6">
@@ -446,7 +466,7 @@ function CategoryManager({ category, tournament, onAction }) {
                                 <div key={index} className="mb-4 p-4 border border-gray-700 rounded-lg">
                                     <h5 className="text-lg font-semibold text-gray-300 mb-2">{round.roundName}</h5>
                                     {round.matches.map(match => (
-                                        <MatchEditor key={match._id} tournamentId={tournament._id} categoryId={category._id} match={match} onAction={onAction} />
+                                        <MatchEditor key={match._id} tournamentId={tournament._id} categoryId={category._id} match={match} onAction={onAction} userRole={userRole} />
                                     ))}
                                 </div>
                             ))}
@@ -460,12 +480,33 @@ function CategoryManager({ category, tournament, onAction }) {
 
 // --- Componente principal ---
 function TournamentDetails({ tournament, onBack }) {
+    const { isAdmin, isOperator, logout } = useAuth();
     const [currentTournament, setCurrentTournament] = useState(tournament);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [selectedCategoryId, setSelectedCategoryId] = useState(tournament.categories[0]?._id || null);
+    const [operatorLink, setOperatorLink] = useState('');
+    const [linkLoading, setLinkLoading] = useState(false);
 
     const hasAnyOpenRegistration = useMemo(() => currentTournament.categories.some(cat => cat.status === 'Inscripciones Abiertas'), [currentTournament]);
+    const userRole = isAdmin() ? 'admin' : isOperator() ? 'operator' : null;
+
+    const handleGenerateOperatorLink = async () => {
+        setLinkLoading(true);
+        setOperatorLink('');
+        try {
+            const response = await axios.post('/auth/generate-operator-token', {
+                tournamentId: currentTournament._id
+            });
+            const token = response.data.token;
+            const link = `${window.location.origin}/operate?token=${token}`;
+            setOperatorLink(link);
+        } catch (err) {
+            setError('No se pudo generar el enlace de operador.');
+        } finally {
+            setLinkLoading(false);
+        }
+    };
 
     const handleAction = async (action, categoryId, data = {}) => {
         setLoading(true);
@@ -491,6 +532,7 @@ function TournamentDetails({ tournament, onBack }) {
             else if (action === 'add-team') response = await axios.post(`${url}/category/${categoryId}/add-team`, data);
             else if (action === 'advance-playoffs') response = await axios.post(`${url}/category/${categoryId}/advance-playoffs`);
             else if (action === 'finish') response = await axios.post(`${url}/category/${categoryId}/finish`, data);
+            else if (action === 'advance-apa') response = await axios.post(`${url}/category/${categoryId}/zone/${data.zoneId}/advance-apa`);
             else response = await axios.post(`${url}/category/${categoryId}/${action}`, {});
             
             if(response.data.tournament) {
@@ -508,19 +550,44 @@ function TournamentDetails({ tournament, onBack }) {
         }
     };
     
+    const handleBack = () => {
+        if (isOperator()) {
+            logout();
+        }
+        onBack();
+    };
+
     return (
         <div className="animate-fade-in">
-            <button onClick={onBack} className="mb-6 bg-gray-700 text-white px-4 py-2 rounded-md font-medium hover:bg-gray-600 transition">Volver</button>
+            <button onClick={handleBack} className="mb-6 bg-gray-700 text-white px-4 py-2 rounded-md font-medium hover:bg-gray-600 transition">
+                 {isOperator() ? 'Salir y Cerrar Sesión' : 'Volver'}
+            </button>
             <div className="bg-gray-800 p-6 rounded-lg shadow-xl">
-                <div className="flex justify-between items-center mb-4 border-b border-gray-700 pb-4">
+                <div className="flex justify-between items-center mb-4 border-b border-gray-700 pb-4 flex-wrap gap-4">
                     <div>
                         <h2 className="text-3xl font-bold text-white">{currentTournament.name}</h2>
                         <p className="text-gray-400">Estado General: <span className="font-semibold">{currentTournament.status}</span></p>
                     </div>
-                    {hasAnyOpenRegistration && (
-                         <button onClick={() => { if(window.confirm('¿Seguro?')) { handleAction('close-all-registrations'); } }} className="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition">Cerrar Inscripciones</button>
-                    )}
+                    <div className="flex gap-4">
+                        {isAdmin() && (
+                             <>
+                                <button onClick={handleGenerateOperatorLink} disabled={linkLoading} className="bg-orange-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-orange-600 transition disabled:bg-gray-600">
+                                    {linkLoading ? 'Generando...' : 'Generar Enlace de Operador'}
+                                </button>
+                                {hasAnyOpenRegistration && (
+                                    <button onClick={() => { if(window.confirm('¿Seguro?')) { handleAction('close-all-registrations'); } }} className="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition">Cerrar Inscripciones</button>
+                                )}
+                             </>
+                        )}
+                    </div>
                 </div>
+                {operatorLink && (
+                    <div className="bg-green-900/50 border border-green-700 p-4 rounded-lg mb-4 text-center">
+                        <p className="text-white font-semibold mb-2">Enlace de Operador Generado:</p>
+                        <input type="text" readOnly value={operatorLink} className="w-full p-2 bg-gray-800 border-gray-600 rounded text-green-300 text-center"/>
+                        <button onClick={() => navigator.clipboard.writeText(operatorLink)} className="mt-2 bg-green-600 text-white py-1 px-3 rounded text-sm hover:bg-green-700">Copiar</button>
+                    </div>
+                )}
                 {loading && <div className="text-center my-4 text-blue-400">Procesando...</div>}
                 {error && <p className="bg-red-900/50 text-red-400 p-3 rounded-lg mb-4">{error}</p>}
                 
@@ -544,6 +611,7 @@ function TournamentDetails({ tournament, onBack }) {
                             category={category}
                             tournament={currentTournament}
                             onAction={handleAction}
+                            userRole={userRole}
                         />
                 ))}
             </div>
@@ -552,3 +620,4 @@ function TournamentDetails({ tournament, onBack }) {
 }
 
 export default TournamentDetails;
+>>>>>>> REPLACE
