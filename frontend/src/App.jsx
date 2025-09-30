@@ -17,12 +17,20 @@ import Contact from './pages/Contact';
 import CommunityPage from './pages/CommunityPage';
 import ProfessorsPage from './pages/ProfessorsPage';
 import LivePage from './pages/LivePage';
+import OperatorPage from './pages/OperatorPage'; // Nueva importación
+import OperatorTournamentView from './pages/OperatorTournamentView'; // Nueva importación
 
 import './index.css';
 
 const ProtectedRoute = ({ children }) => {
     const { isAdmin } = useAuth();
-    return isAdmin ? children : <Navigate to="/login" />;
+    return isAdmin() ? children : <Navigate to="/login" />;
+};
+
+// Nuevo componente para proteger rutas de operador
+const OperatorRoute = ({ children }) => {
+    const { isOperator } = useAuth();
+    return isOperator() ? children : <Navigate to="/login?error=unauthorized" />;
 };
 
 const NavItem = ({ to, icon, children, onClick }) => (
@@ -179,7 +187,9 @@ function App() {
             <Router>
                 <Routes>
                     <Route path="/login" element={<LoginPage />} />
+                    <Route path="/operate" element={<OperatorPage />} />
                     <Route path="/admin/*" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+                    <Route path="/operator/tournament/:tournamentId" element={<OperatorRoute><OperatorTournamentView /></OperatorRoute>} />
                     <Route path="/*" element={<PublicLayout />} />
                 </Routes>
             </Router>

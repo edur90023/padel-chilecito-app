@@ -2,13 +2,13 @@
 
 class TournamentManager {
 
-    generateZones(teams) {
+    generateZones(teams, categorySettings = {}) {
         const totalTeams = teams.length;
         if (totalTeams <= 5) {
             return [{
                 zoneName: 'Zona A',
                 teams: teams,
-                matches: this._generateZoneMatches(teams)
+                matches: this._generateZoneMatches(teams, categorySettings)
             }];
         }
         let zonesOf4 = 0;
@@ -26,34 +26,115 @@ class TournamentManager {
             zonesOf4 = (totalTeams - 3) / 4;
         }
         const totalZones = zonesOf4 + zonesOf3;
-        return this._distributeInZones(teams, totalZones);
+        return this._distributeInZones(teams, totalZones, categorySettings);
     }
 
-    _distributeInZones(teams, numZones) {
+    _distributeInZones(teams, numZones, categorySettings = {}) {
+        const { useSeedings, avoidClubConflicts } = categorySettings;
+
         const zones = Array.from({ length: numZones }, (_, i) => ({
             zoneName: `Zona ${String.fromCharCode(65 + i)}`,
             teams: [],
             matches: []
         }));
-        for (let i = 0; i < teams.length; i++) {
-            const team = teams[i];
+
+        let unassignedTeams = [...teams];
+
+        if (useSeedings) {
+            const seededTeams = unassignedTeams.splice(0, numZones);
+            seededTeams.forEach((team, index) => {
+                zones[index].teams.push(team);
+            });
+        }
+
+        for (let i = 0; i < unassignedTeams.length; i++) {
+            const team = unassignedTeams[i];
             const round = Math.floor(i / numZones);
-            let zoneIndex;
-            if (round % 2 === 0) {
-                zoneIndex = i % numZones;
-            } else {
-                zoneIndex = numZones - 1 - (i % numZones);
-            }
+            let zoneIndex = (round % 2 === 0) ? (i % numZones) : (numZones - 1 - (i % numZones));
             zones[zoneIndex].teams.push(team);
         }
+
+        if (avoidClubConflicts) {
+            let swapped;
+            let attempts = 0;
+            const maxAttempts = zones.length * 2;
+
+            do {
+                swapped = false;
+                attempts++;
+                for (let i = 0; i < zones.length; i++) {
+                    const sourceZone = zones[i];
+                    const clubCounts = sourceZone.teams.reduce((acc, t) => {
+                        if (t.club) acc[t.club] = (acc[t.club] || 0) + 1;
+                        return acc;
+                    }, {});
+
+                    const conflictingClub = Object.keys(clubCounts).find(club => clubCounts[club] > 1);
+                    if (!conflictingClub) continue;
+
+                    const teamToMoveIndex = sourceZone.teams.findIndex(t => t.club === conflictingClub);
+                    const teamToMove = sourceZone.teams[teamToMoveIndex];
+
+                    for (let j = 0; j < zones.length; j++) {
+                        if (i === j) continue;
+                        const targetZone = zones[j];
+                        if (targetZone.teams.some(t => t.club === teamToMove.club)) continue;
+
+                        for (let k = 0; k < targetZone.teams.length; k++) {
+                            const teamToSwap = targetZone.teams[k];
+                            if (sourceZone.teams.some(t => t.club && t.club === teamToSwap.club && t._id !== teamToMove._id)) continue;
+
+                            sourceZone.teams[teamToMoveIndex] = teamToSwap;
+                            targetZone.teams[k] = teamToMove;
+                            swapped = true;
+                            break;
+                        }
+                        if (swapped) break;
+                    }
+                    if (swapped) break;
+                }
+            } while (swapped && attempts < maxAttempts);
+        }
+
         zones.forEach(zone => {
-            zone.matches = this._generateZoneMatches(zone.teams);
+            zone.matches = this._generateZoneMatches(zone.teams, categorySettings);
         });
         return zones;
     }
 
-    _generateZoneMatches(teams) {
+    _generateZoneMatches(teams, categorySettings = {}) {
+        const { zonePlaySystem } = categorySettings;
         const matches = [];
+
+        // Sistema "APA Oficial para 4 equipos"
+        if (zonePlaySystem && teams.length === 4) {
+            const [team1, team2, team3, team4] = teams;
+
+            // Partido 1: 1 vs 3
+            matches.push({
+                teamA: team1, teamB: team3,
+                scoreA: [], scoreB: [], status: 'Pendiente', matchOrder: 1
+            });
+            // Partido 2: 2 vs 4
+            matches.push({
+                teamA: team2, teamB: team4,
+                scoreA: [], scoreB: [], status: 'Pendiente', matchOrder: 2
+            });
+            // Partido 3: Ganadores vs Ganadores
+            matches.push({
+                placeholderA: 'Ganador P1', placeholderB: 'Ganador P2',
+                scoreA: [], scoreB: [], status: 'Pendiente', matchOrder: 3
+            });
+            // Partido 4: Perdedores vs Perdedores
+            matches.push({
+                placeholderA: 'Perdedor P1', placeholderB: 'Perdedor P2',
+                scoreA: [], scoreB: [], status: 'Pendiente', matchOrder: 4
+            });
+
+            return matches;
+        }
+
+        // Sistema "Todos contra todos" (por defecto)
         for (let i = 0; i < teams.length; i++) {
             for (let j = i + 1; j < teams.length; j++) {
                 matches.push({
@@ -61,7 +142,8 @@ class TournamentManager {
                     teamB: teams[j],
                     scoreA: [],
                     scoreB: [],
-                    status: 'Pendiente'
+                    status: 'Pendiente',
+                    matchOrder: i * teams.length + j
                 });
             }
         }
