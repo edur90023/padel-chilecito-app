@@ -5,22 +5,7 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const Tournament = require('../models/Tournament');
 const TournamentManager = require('../services/tournament-manager');
-const jwt = require('jsonwebtoken');
-
-// (El resto del archivo permanece igual... solo cambia la función de actualizar partido)
-
-function isAuthenticated(req, res, next) {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(401).json({ error: 'No autorizado' });
-    try {
-        req.user = jwt.verify(token, process.env.JWT_SECRET);
-        next();
-    } catch (error) {
-        res.status(401).json({ error: 'Token inválido' });
-    }
-}
-
-// ... (todas tus otras rutas GET, POST, DELETE, etc. van aquí sin cambios) ...
+const auth = require('../middleware/auth');
 
 // OBTENER TODOS LOS TORNEOS
 router.get('/', async (req, res) => {
@@ -63,9 +48,9 @@ router.get('/latest-finished', async (req, res) => {
 });
 
 // CREAR UN NUEVO TORNEO
-router.post('/', isAuthenticated, async (req, res) => {
+router.post('/', auth(['admin']), async (req, res) => {
     try {
-        const { name, startDate, organizerPhone, categories, isManual } = req.body;
+        const { name, startDate, organizerPhone, categories, isManual, zonePlaySystem, useSeedings, avoidClubConflicts } = req.body;
         
         const categoriesArray = categories.split(',')
             .map(cat => cat.trim())
@@ -73,7 +58,10 @@ router.post('/', isAuthenticated, async (req, res) => {
             .map(name => ({ 
                 name, 
                 status: isManual ? 'Configuración Manual' : 'Inscripciones Abiertas',
-                isManual: !!isManual 
+                isManual: !!isManual,
+                zonePlaySystem: !!zonePlaySystem,
+                useSeedings: !!useSeedings,
+                avoidClubConflicts: !!avoidClubConflicts
             }));
 
         if (categoriesArray.length === 0) {
@@ -96,7 +84,7 @@ router.post('/', isAuthenticated, async (req, res) => {
 });
 
 // GUARDAR LA ESTRUCTURA MANUAL DE ZONAS Y EQUIPOS
-router.post('/:tournamentId/category/:categoryId/save-manual-structure', isAuthenticated, async (req, res) => {
+router.post('/:tournamentId/category/:categoryId/save-manual-structure', auth(['admin']), async (req, res) => {
     try {
         const { tournamentId, categoryId } = req.params;
         const { zones } = req.body; 
@@ -134,7 +122,8 @@ router.post('/:tournamentId/category/:categoryId/save-manual-structure', isAuthe
                 });
             }
             
-            const matches = TournamentManager._generateZoneMatches(teams);
+            // Pasamos la configuración de la categoría al generar los partidos
+            const matches = TournamentManager._generateZoneMatches(teams, category);
             
             processedZones.push({
                 zoneName: zoneData.zoneName,
@@ -157,7 +146,7 @@ router.post('/:tournamentId/category/:categoryId/save-manual-structure', isAuthe
 });
 
 // ELIMINAR UN TORNEO
-router.delete('/:id', isAuthenticated, async (req, res) => {
+router.delete('/:id', auth(['admin']), async (req, res) => {
     try {
         const deletedTournament = await Tournament.findByIdAndDelete(req.params.id);
         if (!deletedTournament) return res.status(404).json({ error: 'Torneo no encontrado.' });
@@ -188,9 +177,73 @@ router.post('/:tournamentId/register', async (req, res) => {
     }
 });
 
+// AVANZAR EN ZONA TIPO APA
+router.post('/:tournamentId/category/:categoryId/zone/:zoneId/advance-apa', auth(['admin', 'operator']), async (req, res) => {
+    try {
+        const { tournamentId, categoryId, zoneId } = req.params;
+
+        // Verificación para el rol de Operador
+        if (req.user.role === 'operator' && req.user.tournamentId !== tournamentId) {
+            return res.status(403).json({ error: 'No tiene permiso para modificar este torneo.' });
+        }
+
+        const tournament = await Tournament.findById(tournamentId);
+        if (!tournament) return res.status(404).json({ error: 'Torneo no encontrado.' });
+
+        const category = tournament.categories.id(categoryId);
+        if (!category) return res.status(404).json({ error: 'Categoría no encontrada.' });
+
+        const zone = category.zones.id(zoneId);
+        if (!zone) return res.status(404).json({ error: 'Zona no encontrada.' });
+
+        const match1 = zone.matches.find(m => m.matchOrder === 1);
+        const match2 = zone.matches.find(m => m.matchOrder === 2);
+
+        if (!match1 || !match2 || match1.status !== 'Finalizado' || match2.status !== 'Finalizado') {
+            return res.status(400).json({ error: 'Los dos primeros partidos de la zona deben estar finalizados para poder avanzar.' });
+        }
+
+        const getMatchWinnerAndLoser = (match) => {
+            let setsA = 0;
+            match.scoreA.forEach((s, i) => { if (s > match.scoreB[i]) setsA++; });
+            const winner = setsA >= Math.ceil(match.scoreA.length / 2) ? match.teamA : match.teamB;
+            const loser = String(winner._id) === String(match.teamA._id) ? match.teamB : match.teamA;
+            return { winner, loser };
+        };
+
+        const { winner: winnerP1, loser: loserP1 } = getMatchWinnerAndLoser(match1);
+        const { winner: winnerP2, loser: loserP2 } = getMatchWinnerAndLoser(match2);
+
+        const winnersMatch = zone.matches.find(m => m.matchOrder === 3);
+        const losersMatch = zone.matches.find(m => m.matchOrder === 4);
+
+        if (winnersMatch) {
+            winnersMatch.teamA = winnerP1;
+            winnersMatch.teamB = winnerP2;
+            winnersMatch.placeholderA = '';
+            winnersMatch.placeholderB = '';
+        }
+
+        if (losersMatch) {
+            losersMatch.teamA = loserP1;
+            losersMatch.teamB = loserP2;
+            losersMatch.placeholderA = '';
+            losersMatch.placeholderB = '';
+        }
+
+        await tournament.save();
+        const populatedTournament = await Tournament.findById(tournamentId);
+        res.status(200).json({ message: 'Se avanzó la zona APA correctamente.', tournament: populatedTournament });
+
+    } catch (error) {
+        console.error("Error al avanzar zona APA:", error);
+        res.status(500).json({ error: 'Error en el servidor al avanzar la zona.', details: error.message });
+    }
+});
+
 
 // RUTA DE PREVISUALIZACIÓN DE ZONAS
-router.post('/:tournamentId/category/:categoryId/preview-zones', isAuthenticated, async (req, res) => {
+router.post('/:tournamentId/category/:categoryId/preview-zones', auth(['admin']), async (req, res) => {
     try {
         const { tournamentId, categoryId } = req.params;
         const tournament = await Tournament.findById(tournamentId);
@@ -200,7 +253,7 @@ router.post('/:tournamentId/category/:categoryId/preview-zones', isAuthenticated
         if (!['Inscripciones Abiertas', 'Inscripciones Cerradas'].includes(category.status)) {
             return res.status(400).json({ error: 'Solo se puede sortear zonas antes de que el torneo comience.' });
         }
-        const previewZones = TournamentManager.generateZones(category.registeredPlayers);
+        const previewZones = TournamentManager.generateZones(category.registeredPlayers, category);
         res.status(200).json({ message: 'Previsualización de zonas generada.', zones: previewZones });
     } catch (error) {
         res.status(500).json({ error: 'Error al previsualizar las zonas.', details: error.message });
@@ -208,7 +261,7 @@ router.post('/:tournamentId/category/:categoryId/preview-zones', isAuthenticated
 });
 
 // CERRAR INSCRIPCIONES Y GENERAR ZONAS
-router.post('/:tournamentId/category/:categoryId/draw-zones', isAuthenticated, async (req, res) => {
+router.post('/:tournamentId/category/:categoryId/draw-zones', auth(['admin']), async (req, res) => {
     try {
         const { tournamentId, categoryId } = req.params;
         const tournament = await Tournament.findById(tournamentId);
@@ -218,7 +271,7 @@ router.post('/:tournamentId/category/:categoryId/draw-zones', isAuthenticated, a
         if (category.status !== 'Inscripciones Cerradas') {
             return res.status(400).json({ error: 'Las inscripciones deben estar cerradas para poder sortear las zonas.' });
         }
-        const zones = TournamentManager.generateZones(category.registeredPlayers);
+        const zones = TournamentManager.generateZones(category.registeredPlayers, category);
         category.zones = zones;
         category.status = 'Zonas Sorteadas';
         await tournament.save();
@@ -231,7 +284,7 @@ router.post('/:tournamentId/category/:categoryId/draw-zones', isAuthenticated, a
 
 
 // CERRAR TODAS LAS INSCRIPCIONES
-router.post('/:tournamentId/close-all-registrations', isAuthenticated, async (req, res) => {
+router.post('/:tournamentId/close-all-registrations', auth(['admin']), async (req, res) => {
     try {
         const tournament = await Tournament.findById(req.params.tournamentId);
         if (!tournament) return res.status(404).json({ error: "Torneo no encontrado" });
@@ -247,7 +300,7 @@ router.post('/:tournamentId/close-all-registrations', isAuthenticated, async (re
 
 
 // ELIMINAR EQUIPO INSCRITO
-router.delete('/:tournamentId/category/:categoryId/team/:teamId', isAuthenticated, async (req, res) => {
+router.delete('/:tournamentId/category/:categoryId/team/:teamId', auth(['admin']), async (req, res) => {
     try {
         const { tournamentId, categoryId, teamId } = req.params;
         const tournament = await Tournament.findById(tournamentId);
@@ -262,7 +315,7 @@ router.delete('/:tournamentId/category/:categoryId/team/:teamId', isAuthenticate
 
 
 // MOVER EQUIPO DE CATEGORÍA
-router.post('/:tournamentId/move-team', isAuthenticated, async (req, res) => {
+router.post('/:tournamentId/move-team', auth(['admin']), async (req, res) => {
     try {
         const { tournamentId } = req.params;
         const { teamId, currentCategoryId, newCategoryId } = req.body;
@@ -281,10 +334,15 @@ router.post('/:tournamentId/move-team', isAuthenticated, async (req, res) => {
 
 // --- RUTA CORREGIDA ---
 // ACTUALIZAR RESULTADO DE UN PARTIDO
-router.put('/:tournamentId/category/:categoryId/match/:matchId', isAuthenticated, async (req, res) => {
+router.put('/:tournamentId/category/:categoryId/match/:matchId', auth(['admin', 'operator']), async (req, res) => {
     try {
         const { tournamentId, categoryId, matchId } = req.params;
         const { scoreA, scoreB, status, matchTime, matchPlace } = req.body;
+
+        // Verificación para el rol de Operador
+        if (req.user.role === 'operator' && req.user.tournamentId !== tournamentId) {
+            return res.status(403).json({ error: 'No tiene permiso para modificar este torneo.' });
+        }
 
         const tournament = await Tournament.findById(tournamentId);
         if (!tournament) return res.status(404).json({ error: 'Torneo no encontrado' });
@@ -322,7 +380,7 @@ router.put('/:tournamentId/category/:categoryId/match/:matchId', isAuthenticated
 
 
 // GENERACIÓN DE PLAYOFFS
-router.post('/:tournamentId/category/:categoryId/generate-playoffs', isAuthenticated, async (req, res) => {
+router.post('/:tournamentId/category/:categoryId/generate-playoffs', auth(['admin']), async (req, res) => {
     try {
         const { tournamentId, categoryId } = req.params;
         const tournament = await Tournament.findById(tournamentId);
@@ -405,9 +463,15 @@ router.post('/:tournamentId/category/:categoryId/generate-playoffs', isAuthentic
 });
 
 // AVANZAR GANADORES DE PLAYOFFS
-router.post('/:tournamentId/category/:categoryId/advance-playoffs', isAuthenticated, async (req, res) => {
+router.post('/:tournamentId/category/:categoryId/advance-playoffs', auth(['admin', 'operator']), async (req, res) => {
     try {
         const { tournamentId, categoryId } = req.params;
+
+        // Verificación para el rol de Operador
+        if (req.user.role === 'operator' && req.user.tournamentId !== tournamentId) {
+            return res.status(403).json({ error: 'No tiene permiso para modificar este torneo.' });
+        }
+
         const tournament = await Tournament.findById(tournamentId);
         if (!tournament) return res.status(404).json({ error: 'Torneo no encontrado.' });
         const category = tournament.categories.id(categoryId);
@@ -424,7 +488,7 @@ router.post('/:tournamentId/category/:categoryId/advance-playoffs', isAuthentica
 
 
 // AÑADIR EQUIPO MANUALMENTE (A LA LISTA DE INSCRITOS)
-router.post('/:tournamentId/category/:categoryId/add-team', isAuthenticated, async (req, res) => {
+router.post('/:tournamentId/category/:categoryId/add-team', auth(['admin']), async (req, res) => {
     try {
         const { tournamentId, categoryId } = req.params;
         const { player1Name, player1Phone, player2Name, player2Phone } = req.body;
@@ -446,7 +510,7 @@ router.post('/:tournamentId/category/:categoryId/add-team', isAuthenticated, asy
 
 
 // ASIGNAR GANADORES Y FINALIZAR CATEGORÍA
-router.post('/:tournamentId/category/:categoryId/finish', isAuthenticated, async (req, res) => {
+router.post('/:tournamentId/category/:categoryId/finish', auth(['admin']), async (req, res) => {
     try {
         const { finishers } = req.body;
         const tournament = await Tournament.findById(req.params.tournamentId);
