@@ -620,4 +620,3 @@ function TournamentDetails({ tournament, onBack }) {
 }
 
 export default TournamentDetails;
->>>>>>> REPLACE
