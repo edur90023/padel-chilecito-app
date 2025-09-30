@@ -20,7 +20,7 @@ router.get('/public', async (req, res) => {
 // @route   GET /api/professors/admin
 // @desc    Get all professors (for admin)
 // @access  Private (Admin)
-router.get('/admin', auth, async (req, res) => {
+router.get('/admin', auth(['admin']), async (req, res) => {
     try {
         const professors = await Professor.find({}).sort({ name: 1 });
         res.status(200).json(professors);
@@ -33,7 +33,7 @@ router.get('/admin', auth, async (req, res) => {
 // @route   POST /api/professors
 // @desc    Create a new professor
 // @access  Private (Admin)
-router.post('/', auth, upload.single('photo'), async (req, res) => {
+router.post('/', auth(['admin']), upload.single('photo'), async (req, res) => {
     try {
         const professorData = { ...req.body };
         if (req.file) {
@@ -61,7 +61,7 @@ router.post('/', auth, upload.single('photo'), async (req, res) => {
 // @route   PUT /api/professors/:id
 // @desc    Update a professor
 // @access  Private (Admin)
-router.put('/:id', auth, upload.single('photo'), async (req, res) => {
+router.put('/:id', auth(['admin']), upload.single('photo'), async (req, res) => {
     try {
         const updateData = { ...req.body };
         if (req.file) {
@@ -91,7 +91,7 @@ router.put('/:id', auth, upload.single('photo'), async (req, res) => {
 // @route   PATCH /api/professors/:id/toggle-active
 // @desc    Toggle professor's active status
 // @access  Private (Admin)
-router.patch('/:id/toggle-active', auth, async (req, res) => {
+router.patch('/:id/toggle-active', auth(['admin']), async (req, res) => {
     try {
         const professor = await Professor.findById(req.params.id);
         if (!professor) {
