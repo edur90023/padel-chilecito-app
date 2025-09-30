@@ -1,11 +1,11 @@
-import React, { useEffect, useContext } from 'react';
+import React, { useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 
 function OperatorPage() {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-    const { setAuthToken } = useContext(AuthContext);
+    const { setAuthToken } = useAuth();
 
     useEffect(() => {
         const token = searchParams.get('token');
