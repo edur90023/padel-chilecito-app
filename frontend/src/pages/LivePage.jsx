@@ -3,23 +3,32 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-// Función para convertir URLs de YouTube/Facebook a URLs de embed
+// frontend/src/pages/LivePage.jsx
+
+// Función para convertir URLs de YouTube/Facebook/Twitch a URLs de embed
 const getEmbedUrl = (url) => {
     if (!url) return null;
 
     // YouTube: de 'watch?v=' a 'embed/'
-    if (url.includes('youtube.com/watch?v=')) {
-        const videoId = url.split('v=')[1].split('&')[0];
+    if (url.includes("youtube.com/watch?v=")) {
+        const videoId = url.split("v=")[1].split("&")[0];
         return `https://www.youtube.com/embed/${videoId}?autoplay=1`;
     }
     // YouTube: URLs cortas 'youtu.be/'
-    if (url.includes('youtu.be/')) {
-        const videoId = url.split('youtu.be/')[1].split('?')[0];
+    if (url.includes("youtu.be/")) {
+        const videoId = url.split("youtu.be/")[1].split("?")[0];
         return `https://www.youtube.com/embed/${videoId}?autoplay=1`;
     }
     // Facebook: requiere un formato específico de embed
-    if (url.includes('facebook.com/')) {
+    if (url.includes("facebook.com/")) {
         return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=false&width=560&autoplay=true`;
+    }
+    // Twitch: requiere el channel y el parent
+    if (url.includes("twitch.tv/")) {
+        const channel = url.split("twitch.tv/")[1].split("/")[0];
+        // Twitch requiere que el dominio del padre sea explícito para insertar el reproductor
+        const parentDomain = window.location.hostname;
+        return `https://player.twitch.tv/?channel=${channel}&parent=${parentDomain}&autoplay=true`;
     }
     // Para DVRs u otras URLs directas, se devuelve la misma
     return url;
