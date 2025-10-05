@@ -9,6 +9,7 @@ function RegistrationForm({ tournament, onClose }) {
         player1Phone: '',
         player2Name: '',
         player2Phone: '',
+        club: '', // <--- AÑADIR ESTADO PARA EL CLUB
     });
 
     const [selectedCategory, setSelectedCategory] = useState(categories[0]?.name || '');
@@ -41,7 +42,8 @@ function RegistrationForm({ tournament, onClose }) {
                 player1Name: formData.player1Name,
                 player1Phone: formData.player1Phone,
                 player2Name: formData.player2Name,
-                player2Phone: formData.player2Phone
+                player2Phone: formData.player2Phone,
+                club: formData.club // <--- ENVIAR EL CLUB
             };
             await axios.post(`/tournaments/${tournament._id}/register`, dataToSend);
             
@@ -112,6 +114,13 @@ function RegistrationForm({ tournament, onClose }) {
                     <div className="form-group">
                         <label className="block text-gray-400 mb-2">Teléfono:</label>
                         <input type="tel" name="player2Phone" value={formData.player2Phone} onChange={handleChange} required className="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg text-white" />
+                    </div>
+
+                    <h4 className="text-lg font-semibold text-green-400 border-t border-gray-700 pt-4">Club o Localidad</h4>
+                    <div className="form-group">
+                        <label className="block text-gray-400 mb-2">Nombre del Club (Opcional):</label>
+                        {/* --- ¡NUEVO CAMPO! --- */}
+                        <input type="text" name="club" value={formData.club} onChange={handleChange} placeholder="Ej: Club Atlético Chilecito" className="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg text-white" />
                     </div>
 
                     <button type="submit" disabled={loading} className="w-full mt-6 bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition disabled:bg-gray-600">

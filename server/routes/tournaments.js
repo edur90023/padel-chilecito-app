@@ -160,7 +160,8 @@ router.delete('/:id', auth(['admin']), async (req, res) => {
 router.post('/:tournamentId/register', async (req, res) => {
     try {
         const { tournamentId } = req.params;
-        const { categoryName, player1Name, player1Phone, player2Name, player2Phone } = req.body;
+        // --- ¡CAMBIO AQUÍ! --- Añadir "club"
+        const { categoryName, player1Name, player1Phone, player2Name, player2Phone, club } = req.body;
         const tournament = await Tournament.findById(tournamentId);
         if (!tournament) return res.status(404).json({ error: 'Torneo no encontrado.' });
         const category = tournament.categories.find(cat => cat.name === categoryName);
@@ -168,7 +169,13 @@ router.post('/:tournamentId/register', async (req, res) => {
         if (category.status !== 'Inscripciones Abiertas') return res.status(400).json({ error: 'Las inscripciones para esta categoría ya están cerradas.' });
         const p1LastName = player1Name.split(' ').pop() || 'Jugador1';
         const p2LastName = player2Name.split(' ').pop() || 'Jugador2';
-        const newTeam = { _id: new mongoose.Types.ObjectId(), teamName: `${p1LastName} / ${p2LastName}`, players: [{ playerName: player1Name, phoneNumber: player1Phone }, { playerName: player2Name, phoneNumber: player2Phone }] };
+        // --- ¡CAMBIO AQUÍ! --- Añadir "club" al nuevo equipo
+        const newTeam = {
+            _id: new mongoose.Types.ObjectId(),
+            teamName: `${p1LastName} / ${p2LastName}`,
+            players: [{ playerName: player1Name, phoneNumber: player1Phone }, { playerName: player2Name, phoneNumber: player2Phone }],
+            club: club || '' // Añadir el club al objeto del equipo
+        };
         category.registeredPlayers.push(newTeam);
         await tournament.save();
         res.status(201).json({ message: '¡Pareja inscrita exitosamente!' });
@@ -524,6 +531,71 @@ router.post('/:tournamentId/category/:categoryId/finish', auth(['admin']), async
         res.status(200).json({ message: 'Categoría finalizada y ganadores registrados.', tournament: updatedTournament });
     } catch (error) {
         res.status(500).json({ error: 'Error al guardar los resultados.' });
+    }
+});
+
+
+// ACTUALIZAR NOMBRE DE UN JUGADOR EN UN EQUIPO
+router.put('/:tournamentId/category/:categoryId/team/:teamId/player/:playerIndex', auth(['admin']), async (req, res) => {
+    try {
+        const { tournamentId, categoryId, teamId, playerIndex } = req.params;
+        const { newName } = req.body;
+
+        if (!newName || !newName.trim()) {
+            return res.status(400).json({ error: 'El nuevo nombre no puede estar vacío.' });
+        }
+
+        const tournament = await Tournament.findById(tournamentId);
+        if (!tournament) return res.status(404).json({ error: 'Torneo no encontrado.' });
+
+        const category = tournament.categories.id(categoryId);
+        if (!category) return res.status(404).json({ error: 'Categoría no encontrada.' });
+
+        let teamFound = false;
+
+        // Función para actualizar el jugador
+        const updatePlayerName = (team) => {
+            if (team && String(team._id) === teamId) {
+                teamFound = true;
+                if (team.players[playerIndex]) {
+                    team.players[playerIndex].playerName = newName.trim();
+                    // Opcional: Actualizar el teamName
+                    const p1LastName = team.players[0].playerName.split(' ').pop();
+                    const p2LastName = team.players[1] ? team.players[1].playerName.split(' ').pop() : 'J2';
+                    team.teamName = `${p1LastName} / ${p2LastName}`;
+                }
+            }
+        };
+
+        // Buscar en zonas
+        category.zones.forEach(zone => {
+            zone.teams.forEach(updatePlayerName);
+            zone.matches.forEach(match => {
+                updatePlayerName(match.teamA);
+                updatePlayerName(match.teamB);
+            });
+        });
+
+        // Buscar en playoffs
+        category.playoffRounds.forEach(round => {
+            round.matches.forEach(match => {
+                updatePlayerName(match.teamA);
+                updatePlayerName(match.teamB);
+            });
+             round.teamsWithByes.forEach(updatePlayerName);
+        });
+
+        if (!teamFound) {
+            return res.status(404).json({ error: 'Equipo no encontrado en esta categoría.' });
+        }
+
+        await tournament.save();
+        const populatedTournament = await Tournament.findById(tournamentId);
+        res.status(200).json({ message: 'Nombre del jugador actualizado.', tournament: populatedTournament });
+
+    } catch (error) {
+        console.error("Error actualizando nombre de jugador:", error);
+        res.status(500).json({ error: 'Error en el servidor al actualizar el nombre.', details: error.message });
     }
 });
 
