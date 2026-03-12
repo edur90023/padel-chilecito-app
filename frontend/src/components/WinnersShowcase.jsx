@@ -24,7 +24,6 @@ function WinnersShowcase() {
     }, []);
 
     if (loading || !tournamentResults) {
-        // No mostramos nada si está cargando o no hay torneos finalizados
         return null;
     }
 
@@ -54,7 +53,6 @@ function WinnersShowcase() {
             <div className="bg-gradient-to-br from-gray-800 to-gray-900 border-2 border-green-500 rounded-xl shadow-2xl shadow-green-500/10 overflow-hidden">
                 <div className="p-6 text-center bg-gray-900/50">
                     <h2 className="text-sm font-bold uppercase text-green-400 tracking-widest">Últimos Resultados</h2>
-                    {/* --- ¡CAMBIO! Mostramos el nombre del torneo --- */}
                     <h1 className="text-4xl font-extrabold text-white mt-1">{tournamentResults.name}</h1>
                 </div>
 
@@ -82,7 +80,7 @@ function WinnersShowcase() {
                                     </div>
                                     <div className="border-l border-gray-700 pl-4">
                                         <p className="text-lg font-bold text-white">{team.teamName}</p>
-                                        <p className="text-sm text-gray-400">{team.players.map(p => p.playerName).join(' / ')}</p>
+                                        {/* Se ha quitado la línea de jugadores individuales para evitar errores visuales */}
                                     </div>
                                 </li>
                             ))}
