@@ -106,21 +106,22 @@ router.post('/:tournamentId/category/:categoryId/save-manual-structure', auth(['
                 return res.status(400).json({ error: 'El formato de una de las zonas es inválido. Debe tener zoneName y una lista de equipos (teams).' });
             }
 
-            const teams = [];
-            for (const teamName of zoneData.teams) {
-                if (typeof teamName !== 'string' || teamName.trim() === '') {
-                    return res.status(400).json({ error: 'El nombre de uno de los equipos está vacío o no es válido.' });
-                }
-                const playerNames = teamName.split('/').map(name => name.trim());
-                const player1Name = playerNames[0] || 'Jugador 1';
-                const player2Name = playerNames[1] || 'Jugador 2';
-
-                teams.push({
-                    _id: new mongoose.Types.ObjectId(),
-                    teamName: teamName.trim(),
-                    players: [{ playerName: player1Name }, { playerName: player2Name }]
-                });
-            }
+           // REEMPLAZA EL BUCLE INTERNO DE save-manual-structure:
+for (const teamName of zoneData.teams) {
+    if (typeof teamName !== 'string' || teamName.trim() === '') continue;
+    
+    // Divide el nombre (Ej: "Perez / Garcia") para crear los objetos de jugador
+    const playerNames = teamName.split('/').map(name => name.trim());
+    
+    teams.push({
+        _id: new mongoose.Types.ObjectId(),
+        teamName: teamName.trim(),
+        players: [
+            { playerName: playerNames[0] || 'Jugador 1' }, 
+            { playerName: playerNames[1] || 'Jugador 2' }
+        ]
+    });
+}
             
             // Pasamos la configuración de la categoría al generar los partidos
             const matches = TournamentManager._generateZoneMatches(teams, category);
