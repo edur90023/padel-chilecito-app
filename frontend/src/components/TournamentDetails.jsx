@@ -107,10 +107,12 @@ function RegisteredPlayersManager({ tournament, category, onAction }) {
 // --- Sub-componente para editar los resultados de un partido ---
 function MatchEditor({ tournamentId, categoryId, match, onAction, userRole }) {
     const [isEditing, setIsEditing] = useState(false);
+    const [teamAName, setTeamAName] = useState(match.teamA?.teamName || '');
+    const [teamBName, setTeamBName] = useState(match.teamB?.teamName || '');
     const [sets, setSets] = useState([
-        { a: match.scoreA[0] || '', b: match.scoreB[0] || '' },
-        { a: match.scoreA[1] || '', b: match.scoreB[1] || '' },
-        { a: match.scoreA[2] || '', b: match.scoreB[2] || '' },
+        { a: match.scoreA[0] !== undefined ? match.scoreA[0] : '', b: match.scoreB[0] !== undefined ? match.scoreB[0] : '' },
+        { a: match.scoreA[1] !== undefined ? match.scoreA[1] : '', b: match.scoreB[1] !== undefined ? match.scoreB[1] : '' },
+        { a: match.scoreA[2] !== undefined ? match.scoreA[2] : '', b: match.scoreB[2] !== undefined ? match.scoreB[2] : '' },
     ]);
     const [time, setTime] = useState(match.matchTime || '');
     const [place, setPlace] = useState(match.matchPlace || '');
@@ -133,7 +135,9 @@ function MatchEditor({ tournamentId, categoryId, match, onAction, userRole }) {
             status: status,
             matchId: match._id,
             matchTime: time,
-            matchPlace: place
+            matchPlace: place,
+            customTeamAName: teamAName,
+            customTeamBName: teamBName
         };
         onAction('update-match', categoryId, payload);
         setIsEditing(false);
@@ -159,22 +163,31 @@ function MatchEditor({ tournamentId, categoryId, match, onAction, userRole }) {
     const canNotify = time.trim() !== '' && place.trim() !== '';
 
     if (!match.teamA || !match.teamB) {
-        return (
-            <div className="flex items-center justify-between p-2 border-b border-gray-700 text-sm text-gray-500">
-                <span className="flex-1 text-left">{match.placeholderA}</span>
-                <span className="font-bold text-center flex-1">vs.</span>
-                <span className="flex-1 text-right">{match.placeholderB}</span>
-                 <button disabled className="ml-4 bg-gray-600 text-white px-2 py-1 text-xs rounded cursor-not-allowed">Pendiente</button>
-            </div>
-        )
+        if (!isEditing) {
+            return (
+                <div className="flex items-center justify-between p-2 border-b border-gray-700 text-sm text-gray-500">
+                    <span className="flex-1 text-left">{match.placeholderA || 'TBD'}</span>
+                    <span className="font-bold text-center flex-1">vs.</span>
+                    <span className="flex-1 text-right">{match.placeholderB || 'TBD'}</span>
+                    <button onClick={() => setIsEditing(true)} className="ml-4 bg-blue-600 text-white px-2 py-1 text-xs rounded hover:bg-blue-700">Editar</button>
+                </div>
+            );
+        }
     }
 
     if (!isEditing) {
         return (
             <div className="flex items-center justify-between p-2 border-b border-gray-700 text-sm hover:bg-gray-700/50">
-                <span className="flex-1 text-left">{match.teamA.teamName}</span>
-                <span className={`font-bold text-center flex-1 ${match.status === 'Finalizado' ? 'text-green-400' : 'text-yellow-400'}`}>{match.status === 'Finalizado' ? match.scoreA.map((s, i) => `${s}-${match.scoreB[i]}`).join(' / ') : 'Pendiente'}</span>
-                <span className="flex-1 text-right">{match.teamB.teamName}</span>
+                <div className="flex-1 text-left">
+                    <p className="text-white font-medium">{match.teamA?.teamName || match.placeholderA}</p>
+                    <p className="text-xs text-gray-400">{match.matchTime} - {match.matchPlace}</p>
+                </div>
+                <span className={`font-bold text-center flex-1 ${match.status === 'Finalizado' ? 'text-green-400' : 'text-yellow-400'}`}>
+                    {match.status === 'Finalizado' ? match.scoreA.map((s, i) => `${s}-${match.scoreB[i]}`).join(' / ') : match.status}
+                </span>
+                <div className="flex-1 text-right text-white font-medium">
+                    {match.teamB?.teamName || match.placeholderB}
+                </div>
                 <button onClick={() => setIsEditing(true)} className="ml-4 bg-blue-600 text-white px-2 py-1 text-xs rounded hover:bg-blue-700">Editar</button>
             </div>
         );
@@ -182,11 +195,22 @@ function MatchEditor({ tournamentId, categoryId, match, onAction, userRole }) {
 
     return (
         <div className="p-4 bg-gray-900 rounded-lg my-2 space-y-3 animate-fade-in border border-blue-500">
-             <p className="text-sm font-semibold text-center text-gray-300">{match.teamA.teamName} vs {match.teamB.teamName}</p>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label className="text-xs text-gray-400 block mb-1">Nombre Equipo A</label>
+                    <input type="text" value={teamAName} onChange={(e) => setTeamAName(e.target.value)} className="w-full p-2 bg-gray-700 rounded-md text-white font-bold" placeholder="Equipo A" />
+                </div>
+                <div>
+                    <label className="text-xs text-gray-400 block mb-1 text-right">Nombre Equipo B</label>
+                    <input type="text" value={teamBName} onChange={(e) => setTeamBName(e.target.value)} className="w-full p-2 bg-gray-700 rounded-md text-white text-right font-bold" placeholder="Equipo B" />
+                </div>
+             </div>
+             
              <div className="grid grid-cols-2 gap-3">
                 <input type="text" value={time} onChange={(e) => setTime(e.target.value)} placeholder="Hora (ej: Viernes 21:00hs)" className="w-full p-2 bg-gray-700 rounded-md text-center text-white" />
                 <input type="text" value={place} onChange={(e) => setPlace(e.target.value)} placeholder="Lugar / Cancha" className="w-full p-2 bg-gray-700 rounded-md text-center text-white" />
              </div>
+             
              <div>
                 <label className="text-xs text-gray-400 block mb-1 text-center">Estado del Partido</label>
                 <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full p-2 bg-gray-700 rounded-md text-center text-white">
@@ -195,45 +219,40 @@ function MatchEditor({ tournamentId, categoryId, match, onAction, userRole }) {
                     <option value="Finalizado">Finalizado</option>
                 </select>
             </div>
-             {[1, 2, 3].map((setNumber, index) => (
-                 <div key={setNumber} className="flex items-center justify-center gap-2">
-                    <label className="text-xs text-gray-400 w-12">Set {setNumber}:</label>
-                    <input type="number" value={sets[index].a} onChange={(e) => handleSetChange(index, 'a', e.target.value)} className="w-16 p-2 bg-gray-700 rounded-md text-center text-white" />
-                    <span className="text-gray-500">-</span>
-                    <input type="number" value={sets[index].b} onChange={(e) => handleSetChange(index, 'b', e.target.value)} className="w-16 p-2 bg-gray-700 rounded-md text-center text-white" />
-                 </div>
-             ))}
+            
+             <div className="space-y-2">
+                 {[1, 2, 3].map((setNumber, index) => (
+                     <div key={setNumber} className="flex items-center justify-center gap-2">
+                        <label className="text-xs text-gray-400 w-12">Set {setNumber}:</label>
+                        <input type="number" value={sets[index].a} onChange={(e) => handleSetChange(index, 'a', e.target.value)} className="w-16 p-2 bg-gray-700 rounded-md text-center text-white" />
+                        <span className="text-gray-500">-</span>
+                        <input type="number" value={sets[index].b} onChange={(e) => handleSetChange(index, 'b', e.target.value)} className="w-16 p-2 bg-gray-700 rounded-md text-center text-white" />
+                     </div>
+                 ))}
+             </div>
+             
             <div className="flex gap-2 pt-2">
-                <button onClick={() => setIsEditing(false)} className="w-full bg-gray-600 py-2 rounded hover:bg-gray-500">Cancelar</button>
+                <button onClick={() => setIsEditing(false)} className="w-full bg-gray-600 py-2 rounded hover:bg-gray-500 text-white">Cancelar</button>
                 <button onClick={handleUpdateScore} className="w-full bg-green-600 text-white font-bold py-2 rounded hover:bg-green-700">Guardar Cambios</button>
             </div>
 
-            {userRole === 'admin' && (
+            {userRole === 'admin' && match.teamA && match.teamB && (
                 <div className="pt-4 mt-4 border-t border-gray-700 space-y-4">
-                    {match.teamA?.players && (
-                        <div>
-                            <p className="font-semibold text-white text-sm mb-2">Notificar a jugadores de {match.teamA.teamName}:</p>
-                            <div className="flex flex-wrap gap-2">
-                                {match.teamA.players.map(player => (
-                                    <button key={player._id} onClick={() => handleNotifyPlayer(player, match.teamA, match.teamB)} disabled={!canNotify} className="bg-blue-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-blue-600 transition text-sm flex items-center disabled:bg-gray-600 disabled:cursor-not-allowed" title={canNotify ? `Notificar a ${player.playerName}` : 'Ingresa el lugar y la hora para poder notificar'}>
-                                        <i className="fab fa-whatsapp mr-2"></i> {player.playerName}
-                                    </button>
-                                ))}
-                            </div>
+                    <div>
+                        <p className="font-semibold text-white text-sm mb-2">Notificar a jugadores:</p>
+                        <div className="flex flex-wrap gap-2">
+                            {match.teamA.players?.map(player => (
+                                <button key={player._id} onClick={() => handleNotifyPlayer(player, match.teamA, match.teamB)} disabled={!canNotify} className="bg-blue-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-blue-600 transition text-sm flex items-center disabled:bg-gray-600">
+                                    <i className="fab fa-whatsapp mr-2"></i> {player.playerName}
+                                </button>
+                            ))}
+                            {match.teamB.players?.map(player => (
+                                <button key={player._id} onClick={() => handleNotifyPlayer(player, match.teamB, match.teamA)} disabled={!canNotify} className="bg-blue-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-blue-600 transition text-sm flex items-center disabled:bg-gray-600">
+                                    <i className="fab fa-whatsapp mr-2"></i> {player.playerName}
+                                </button>
+                            ))}
                         </div>
-                    )}
-                    {match.teamB?.players && (
-                         <div>
-                            <p className="font-semibold text-white text-sm mb-2">Notificar a jugadores de {match.teamB.teamName}:</p>
-                            <div className="flex flex-wrap gap-2">
-                                {match.teamB.players.map(player => (
-                                    <button key={player._id} onClick={() => handleNotifyPlayer(player, match.teamB, match.teamA)} disabled={!canNotify} className="bg-blue-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-blue-600 transition text-sm flex items-center disabled:bg-gray-600 disabled:cursor-not-allowed" title={canNotify ? `Notificar a ${player.playerName}` : 'Ingresa el lugar y la hora para poder notificar'}>
-                                        <i className="fab fa-whatsapp mr-2"></i> {player.playerName}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
+                    </div>
                 </div>
             )}
         </div>
@@ -254,17 +273,24 @@ const ZoneStandings = ({ zone }) => {
             const teamAId = m.teamA._id.toString();
             const teamBId = m.teamB._id.toString();
             if (!stats[teamAId] || !stats[teamBId]) return;
+            
             const statsA = stats[teamAId];
             const statsB = stats[teamBId];
             statsA.p++; statsB.p++;
+            
             let setsA = 0, setsB = 0;
-            m.scoreA.forEach((s, i) => { if (s > m.scoreB[i]) setsA++; else setsB++; });
+            m.scoreA.forEach((s, i) => { 
+                if (s > m.scoreB[i]) setsA++; 
+                else if (m.scoreB[i] > s) setsB++; 
+            });
+            
             statsA.sf += setsA; statsA.sc += setsB;
             statsB.sf += setsB; statsB.sc += setsA;
             statsA.gf += m.scoreA.reduce((a, b) => a + b, 0);
             statsA.gc += m.scoreB.reduce((a, b) => a + b, 0);
             statsB.gf += m.scoreB.reduce((a, b) => a + b, 0);
             statsB.gc += m.scoreA.reduce((a, b) => a + b, 0);
+            
             if (setsA > setsB) {
                 statsA.w++; statsA.pts += 2;
                 statsB.l++; statsB.pts += 1;
@@ -307,14 +333,18 @@ const ZoneStandings = ({ zone }) => {
 
 // --- Sub-componente para gestionar la finalización de la categoría ---
 function FinishCategoryManager({ category, onAction }) {
-    const finalMatch = category.playoffRounds.find(r => r.roundName === 'Final')?.matches[0];
-    const thirdPlaceMatch = category.playoffRounds.find(r => r.roundName === 'Tercer y Cuarto Puesto')?.matches[0];
-    const canFinish = finalMatch?.status === 'Finalizado' && thirdPlaceMatch?.status === 'Finalizado';
+    const finalRound = category.playoffRounds.find(r => r.roundName === 'Final');
+    const thirdPlaceRound = category.playoffRounds.find(r => r.roundName === 'Tercer y Cuarto Puesto');
+    
+    const finalMatch = finalRound?.matches[0];
+    const thirdPlaceMatch = thirdPlaceRound?.matches[0];
+    
+    const canFinish = finalMatch?.status === 'Finalizado' && (!thirdPlaceRound || thirdPlaceMatch?.status === 'Finalizado');
 
-    if (!finalMatch || !thirdPlaceMatch) return null;
+    if (!finalMatch) return null;
 
     const getWinnerLoser = (match) => {
-        if (match.status !== 'Finalizado') return { winner: null, loser: null };
+        if (!match || match.status !== 'Finalizado') return { winner: null, loser: null };
         let setsA = 0;
         match.scoreA.forEach((s, i) => { if (s > match.scoreB[i]) setsA++; });
         const winner = setsA >= Math.ceil(match.scoreA.length / 2) ? match.teamA : match.teamB;
@@ -326,7 +356,7 @@ function FinishCategoryManager({ category, onAction }) {
         const { winner: champion, loser: runnerUp } = getWinnerLoser(finalMatch);
         const { winner: thirdPlace, loser: fourthPlace } = getWinnerLoser(thirdPlaceMatch);
         
-        if (!champion || !runnerUp || !thirdPlace || !fourthPlace) {
+        if (!champion || !runnerUp) {
             alert("Aún faltan resultados para finalizar la categoría.");
             return;
         }
@@ -335,17 +365,17 @@ function FinishCategoryManager({ category, onAction }) {
             ¿Confirmar los siguientes resultados?
             - Campeón: ${champion.teamName}
             - Subcampeón: ${runnerUp.teamName}
-            - 3er Puesto: ${thirdPlace.teamName}
-            - 4to Puesto: ${fourthPlace.teamName}
+            ${thirdPlace ? `- 3er Puesto: ${thirdPlace.teamName}` : ''}
         `;
 
         if (window.confirm(confirmationMessage)) {
             const finishers = [
                 { position: 1, team: champion },
-                { position: 2, team: runnerUp },
-                { position: 3, team: thirdPlace },
-                { position: 4, team: fourthPlace }
+                { position: 2, team: runnerUp }
             ];
+            if (thirdPlace) finishers.push({ position: 3, team: thirdPlace });
+            if (fourthPlace) finishers.push({ position: 4, team: fourthPlace });
+            
             onAction('finish', category._id, { finishers });
         }
     };
@@ -355,9 +385,9 @@ function FinishCategoryManager({ category, onAction }) {
             <button 
                 onClick={handleFinishCategory} 
                 disabled={!canFinish}
-                className="w-full bg-yellow-500 text-black font-bold py-3 px-4 rounded-lg hover:bg-yellow-400 transition disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed"
+                className="w-full bg-yellow-500 text-black font-bold py-3 px-4 rounded-lg hover:bg-yellow-400 transition disabled:bg-gray-600"
             >
-                {canFinish ? 'Declarar Ganadores y Finalizar Categoría' : 'Cargue los resultados de la Final y 3er Puesto'}
+                {canFinish ? 'Declarar Ganadores y Finalizar Categoría' : 'Cargue los resultados de la Final para terminar'}
             </button>
         </div>
     );
@@ -378,12 +408,11 @@ function CategoryManager({ category, tournament, onAction, userRole }) {
         const match1 = zone.matches.find(m => m.matchOrder === 1);
         const match2 = zone.matches.find(m => m.matchOrder === 2);
         const match3 = zone.matches.find(m => m.matchOrder === 3);
-        // Avanza si los dos primeros partidos están finalizados y el tercero aún no tiene equipos
         return match1?.status === 'Finalizado' && match2?.status === 'Finalizado' && !match3?.teamA;
     };
 
     const canAdvancePlayoffs = useMemo(() => {
-        if (category.status !== 'En Juego' || !category.playoffRounds || !category.playoffRounds.length === 0) return false;
+        if (category.status !== 'En Juego' || !category.playoffRounds || category.playoffRounds.length === 0) return false;
         const lastRound = category.playoffRounds[category.playoffRounds.length - 1];
         if (lastRound.roundName === 'Final' || lastRound.roundName === 'Tercer y Cuarto Puesto') return false;
         return lastRound.matches.every(match => match.status === 'Finalizado');
@@ -418,7 +447,7 @@ function CategoryManager({ category, tournament, onAction, userRole }) {
             )}
             <div className="mb-8 bg-gray-800/50 rounded-lg shadow-lg">
                 <div className="flex justify-between items-center bg-gray-900 p-4 rounded-t-lg">
-                    <h3 className="text-2xl font-semibold text-green-400">{category.name} ({category.isManual ? `${category.zones.reduce((acc, z) => acc + z.teams.length, 0)} parejas` : `${category.registeredPlayers.length} inscritos`})</h3>
+                    <h3 className="text-2xl font-semibold text-green-400">{category.name} ({category.isManual ? 'Manual' : `${category.registeredPlayers.length} inscritos`})</h3>
                     <span className="text-gray-400 font-semibold bg-gray-700 px-3 py-1 rounded-full text-sm">{category.status}</span>
                 </div>
                 <div className="p-4 space-y-4">
@@ -440,34 +469,41 @@ function CategoryManager({ category, tournament, onAction, userRole }) {
                         <button onClick={() => onAction('advance-playoffs', category._id)} className="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition">Avanzar Ganadores a la Siguiente Ronda</button>
                     )}
                     
-                    {category.zones && category.zones.length > 0 ? (
-                        category.zones.map(zone => (
-                            <div key={zone._id} className="p-4 border border-gray-700 rounded-lg">
-                                <div className="flex justify-between items-center mb-2">
-                                    <h4 className="text-xl font-bold text-white">{zone.zoneName}</h4>
-                                    {canAdvanceApaZone(zone) && (
-                                        <button onClick={() => onAction('advance-apa', category._id, { zoneId: zone._id })} className="bg-teal-500 text-white font-bold py-1 px-3 rounded-lg hover:bg-teal-600 transition text-sm">
-                                            Avanzar Zona APA
-                                        </button>
-                                    )}
+                    {category.zones && category.zones.length > 0 && (
+                        <div className="space-y-6">
+                            <h4 className="text-xl font-bold text-white border-b border-gray-700 pb-2">Fase de Grupos</h4>
+                            {category.zones.map(zone => (
+                                <div key={zone._id} className="p-4 border border-gray-700 rounded-lg bg-gray-800/30">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h4 className="text-xl font-bold text-white">{zone.zoneName}</h4>
+                                        {canAdvanceApaZone(zone) && (
+                                            <button onClick={() => onAction('advance-apa', category._id, { zoneId: zone._id })} className="bg-teal-500 text-white font-bold py-1 px-3 rounded-lg hover:bg-teal-600 transition text-sm">
+                                                Avanzar Zona APA
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className="space-y-2">
+                                        {zone.matches.map(match => (
+                                            <MatchEditor key={match._id} tournamentId={tournament._id} categoryId={category._id} match={match} onAction={onAction} userRole={userRole} />
+                                        ))}
+                                    </div>
+                                    <ZoneStandings zone={zone} />
                                 </div>
-                                {zone.matches.map(match => (
-                                    <MatchEditor key={match._id} tournamentId={tournament._id} categoryId={category._id} match={match} onAction={onAction} userRole={userRole} />
-                                ))}
-                                <ZoneStandings zone={zone} />
-                            </div>
-                        ))
-                    ) : ( isAdmin && !showRegistrationManagement && <p className="text-gray-400">Aún no se han sorteado las zonas.</p>)}
+                            ))}
+                        </div>
+                    )}
                     
                     {category.playoffRounds && category.playoffRounds.length > 0 && (
-                        <div className="mt-6">
-                            <h4 className="text-xl font-bold text-white mb-2">Fase de Playoffs</h4>
+                        <div className="mt-10">
+                            <h4 className="text-xl font-bold text-white border-b border-gray-700 pb-2 mb-6">Fase de Playoffs</h4>
                             {category.playoffRounds.map((round, index) => (
-                                <div key={index} className="mb-4 p-4 border border-gray-700 rounded-lg">
-                                    <h5 className="text-lg font-semibold text-gray-300 mb-2">{round.roundName}</h5>
-                                    {round.matches.map(match => (
-                                        <MatchEditor key={match._id} tournamentId={tournament._id} categoryId={category._id} match={match} onAction={onAction} userRole={userRole} />
-                                    ))}
+                                <div key={index} className="mb-6 p-4 border border-gray-700 rounded-lg bg-gray-900/20">
+                                    <h5 className="text-lg font-semibold text-primary mb-4">{round.roundName}</h5>
+                                    <div className="space-y-2">
+                                        {round.matches.map(match => (
+                                            <MatchEditor key={match._id} tournamentId={tournament._id} categoryId={category._id} match={match} onAction={onAction} userRole={userRole} />
+                                        ))}
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -538,9 +574,8 @@ function TournamentDetails({ tournament, onBack }) {
             if(response.data.tournament) {
                 const newTournament = { ...response.data.tournament, previewData: null };
                 setCurrentTournament(newTournament);
-                const updatedCategory = newTournament.categories.find(c => c._id === selectedCategoryId);
-                if (!updatedCategory) {
-                    setSelectedCategoryId(newTournament.categories[0]?._id || null);
+                if (!selectedCategoryId && newTournament.categories.length > 0) {
+                    setSelectedCategoryId(newTournament.categories[0]._id);
                 }
             }
         } catch (err) {
