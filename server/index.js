@@ -1,14 +1,4 @@
 // server/index.js
-
-process.on('uncaughtException', (error, origin) => {
-  console.error('<<<<< ¡¡¡ERROR FATAL NO CAPTURADO!!! >>>>>');
-  console.error(error);
-});
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('<<<<< ¡¡¡PROMESA RECHAZADA SIN MANEJAR!!! >>>>>');
-  console.error(reason);
-});
-
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
@@ -18,10 +8,33 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// --- CONFIGURACIÓN DE SEGURIDAD AUTOMÁTICA ---
+// Importamos el modelo y bcrypt para restaurar el acceso si es necesario
+const User = require('./models/User');
+
+async function fixAdminAccess() {
+    try {
+        const adminExists = await User.findOne({ username: 'admin' });
+        if (!adminExists) {
+            console.log("Auto-Fix: Creando usuario administrador por defecto...");
+            const newAdmin = new User({
+                username: 'admin',
+                password: 'admin' // Esta será tu contraseña temporal
+            });
+            await newAdmin.save();
+            console.log("Auto-Fix: Usuario 'admin' creado exitosamente.");
+        } else {
+            console.log("Auto-Fix: El usuario administrador ya existe.");
+        }
+    } catch (err) {
+        console.error("Auto-Fix Error:", err);
+    }
+}
+
 // --- CONFIGURACIÓN DE CORS ---
 const whiteList = [
     'http://localhost:5173',
-    'https://padel-chilecito-app.vercel.app' // ¡IMPORTANTE! Asegúrate de que esta es tu URL exacta de Vercel.
+    'https://padel-chilecito-app.vercel.app'
 ];
 
 const corsOptions = {
@@ -29,7 +42,6 @@ const corsOptions = {
         if (whiteList.indexOf(origin) !== -1 || !origin) {
             callback(null, true);
         } else {
-            // Esta línea es la que genera el error "No permitido por CORS"
             callback(new Error('No permitido por CORS'));
         }
     }
@@ -40,7 +52,11 @@ app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('Conectado a la base de datos de MongoDB'))
+  .then(async () => {
+      console.log('Conectado a la base de datos de MongoDB');
+      // EJECUTAMOS LA REPARACIÓN JUSTO DESPUÉS DE CONECTAR A LA BD
+      await fixAdminAccess();
+  })
   .catch(err => console.error('Error de conexión a la base de datos:', err));
 
 // Rutas de la API
