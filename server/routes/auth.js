@@ -74,6 +74,29 @@ router.post('/register', async (req, res) => {
         res.status(400).send({ error: 'El nombre de usuario ya existe o hubo un error.' });
     }
 });
+// server/routes/auth.js
 
+// Ruta para cambiar la contraseña
+router.put('/change-password', auth(['admin']), async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        const user = await User.findById(req.user.id);
+
+        // 1. Verificar que la contraseña actual sea correcta
+        const isMatch = await user.comparePassword(currentPassword);
+        if (!isMatch) {
+            return res.status(400).json({ error: 'La contraseña actual es incorrecta' });
+        }
+
+        // 2. Actualizar a la nueva contraseña
+        user.password = newPassword;
+        await user.save();
+
+        res.json({ message: 'Contraseña actualizada correctamente' });
+    } catch (error) {
+        console.error('Error al cambiar contraseña:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
 
 module.exports = router;
