@@ -21,4 +21,4 @@ const changePassword = async (newUsername, newPassword) => {
 };
 
 // CAMBIA ESTOS VALORES POR LOS QUE DESEES
-changePassword('PadelCHI', 'PadelCHI_2025');
+changePassword('admin', 'admin123');
