@@ -1,4 +1,4 @@
-// padel-chilecito-app/server/services/tournament-manager.js
+// server/services/tournament-manager.js
 
 class TournamentManager {
 
@@ -106,35 +106,15 @@ class TournamentManager {
         const { zonePlaySystem } = categorySettings;
         const matches = [];
 
-        // Sistema "APA Oficial para 4 equipos"
         if (zonePlaySystem && teams.length === 4) {
             const [team1, team2, team3, team4] = teams;
-
-            // Partido 1: 1 vs 3
-            matches.push({
-                teamA: team1, teamB: team3,
-                scoreA: [], scoreB: [], status: 'Pendiente', matchOrder: 1
-            });
-            // Partido 2: 2 vs 4
-            matches.push({
-                teamA: team2, teamB: team4,
-                scoreA: [], scoreB: [], status: 'Pendiente', matchOrder: 2
-            });
-            // Partido 3: Ganadores vs Ganadores
-            matches.push({
-                placeholderA: 'Ganador P1', placeholderB: 'Ganador P2',
-                scoreA: [], scoreB: [], status: 'Pendiente', matchOrder: 3
-            });
-            // Partido 4: Perdedores vs Perdedores
-            matches.push({
-                placeholderA: 'Perdedor P1', placeholderB: 'Perdedor P2',
-                scoreA: [], scoreB: [], status: 'Pendiente', matchOrder: 4
-            });
-
+            matches.push({ teamA: team1, teamB: team3, scoreA: [], scoreB: [], status: 'Pendiente', matchOrder: 1 });
+            matches.push({ teamA: team2, teamB: team4, scoreA: [], scoreB: [], status: 'Pendiente', matchOrder: 2 });
+            matches.push({ placeholderA: 'Ganador P1', placeholderB: 'Ganador P2', scoreA: [], scoreB: [], status: 'Pendiente', matchOrder: 3 });
+            matches.push({ placeholderA: 'Perdedor P1', placeholderB: 'Perdedor P2', scoreA: [], scoreB: [], status: 'Pendiente', matchOrder: 4 });
             return matches;
         }
 
-        // Sistema "Todos contra todos" (por defecto)
         for (let i = 0; i < teams.length; i++) {
             for (let j = i + 1; j < teams.length; j++) {
                 matches.push({
@@ -148,15 +128,6 @@ class TournamentManager {
             }
         }
         return matches;
-    }
-
-    _getRoundName(numTeams) {
-        if (numTeams === 2) return 'Final';
-        if (numTeams === 4) return 'Semifinales';
-        if (numTeams > 4 && numTeams <= 8) return 'Cuartos de Final';
-        if (numTeams > 8 && numTeams <= 16) return 'Octavos de Final';
-        if (numTeams > 16 && numTeams <= 32) return '16avos de Final';
-        return `Ronda de ${numTeams}`;
     }
 
     generatePlayoffs(qualifiedTeams) {
@@ -181,50 +152,39 @@ class TournamentManager {
             });
         }
 
-        const firstRound = {
+        return [{
             roundName: this._getRoundName(bracketSize),
             matches: matches,
             teamsWithByes: teamsWithByes
-        };
-        
-        return [firstRound];
+        }];
     }
     
     advancePlayoffs(category) {
         const lastRound = category.playoffRounds[category.playoffRounds.length - 1];
         if (!lastRound.matches.every(m => m.status === 'Finalizado')) {
-            throw new Error("No todos los partidos de la ronda actual han finalizado.");
+            throw new Error("No todos los partidos han finalizado.");
         }
 
         if (lastRound.roundName === 'Final' || lastRound.roundName === 'Tercer y Cuarto Puesto') {
-             throw new Error("La llave ya ha finalizado, no se puede avanzar.");
+             throw new Error("La llave ya ha finalizado.");
         }
 
-        if (lastRound.roundName === 'Semifinales' && lastRound.matches.length === 2) {
+        if (lastRound.roundName === 'Semifinales') {
             const winners = [];
             const losers = [];
             lastRound.matches.forEach(match => {
                 let setsA = 0;
                 match.scoreA.forEach((s, i) => { if (s > match.scoreB[i]) setsA++; });
                 const winner = setsA >= Math.ceil(match.scoreA.length / 2) ? match.teamA : match.teamB;
-                // --- ¡ESTA ES LA CORRECCIÓN! ---
-                // Se convierte el _id a string para una comparación segura, ya sea un ObjectId o un string.
                 const loser = String(winner._id) === String(match.teamA._id) ? match.teamB : match.teamA;
                 winners.push(winner);
                 losers.push(loser);
             });
 
-            const finalRound = {
-                roundName: 'Final',
-                matches: [{ teamA: winners[0], teamB: winners[1], scoreA: [], scoreB: [], status: 'Pendiente' }],
-                teamsWithByes: []
-            };
-            const thirdPlaceRound = {
-                roundName: 'Tercer y Cuarto Puesto',
-                matches: [{ teamA: losers[0], teamB: losers[1], scoreA: [], scoreB: [], status: 'Pendiente' }],
-                teamsWithByes: []
-            };
-            return [finalRound, thirdPlaceRound];
+            return [
+                { roundName: 'Final', matches: [{ teamA: winners[0], teamB: winners[1], scoreA: [], scoreB: [], status: 'Pendiente' }], teamsWithByes: [] },
+                { roundName: 'Tercer y Cuarto Puesto', matches: [{ teamA: losers[0], teamB: losers[1], scoreA: [], scoreB: [], status: 'Pendiente' }], teamsWithByes: [] }
+            ];
         }
 
         const getMatchWinnerTeam = (match) => {
@@ -235,20 +195,11 @@ class TournamentManager {
 
         const winners = lastRound.matches.map(getMatchWinnerTeam);
         const teamsForNextRound = [...(lastRound.teamsWithByes || []), ...winners];
-
-        if (teamsForNextRound.length < 2) {
-            throw new Error("No hay suficientes equipos para la siguiente ronda.");
-        }
-        
-        teamsForNextRound.sort((a, b) => a.teamName.localeCompare(b.teamName));
         
         const nextRoundMatches = [];
         for (let i = 0; i < teamsForNextRound.length; i += 2) {
             if (teamsForNextRound[i] && teamsForNextRound[i + 1]) {
-                nextRoundMatches.push({
-                    teamA: teamsForNextRound[i], teamB: teamsForNextRound[i + 1],
-                    scoreA: [], scoreB: [], status: 'Pendiente'
-                });
+                nextRoundMatches.push({ teamA: teamsForNextRound[i], teamB: teamsForNextRound[i + 1], scoreA: [], scoreB: [], status: 'Pendiente' });
             }
         }
         
@@ -257,6 +208,14 @@ class TournamentManager {
             matches: nextRoundMatches,
             teamsWithByes: []
         }];
+    }
+
+    _getRoundName(numTeams) {
+        if (numTeams === 2) return 'Final';
+        if (numTeams === 4) return 'Semifinales';
+        if (numTeams <= 8) return 'Cuartos de Final';
+        if (numTeams <= 16) return 'Octavos de Final';
+        return `Ronda de ${numTeams}`;
     }
 }
 
