@@ -333,47 +333,89 @@ router.post('/:tournamentId/move-team', auth(['admin']), async (req, res) => {
 });
 
 // ACTUALIZAR RESULTADO DE UN PARTIDO + CORRECCIÓN MANUAL
+
 router.put('/:tournamentId/category/:categoryId/match/:matchId', auth(['admin', 'operator']), async (req, res) => {
     try {
         const { tournamentId, categoryId, matchId } = req.params;
         const { scoreA, scoreB, status, matchTime, matchPlace, customTeamAName, customTeamBName } = req.body;
 
         if (req.user.role === 'operator' && req.user.tournamentId !== tournamentId) {
-            return res.status(403).json({ error: 'No tiene permiso para modificar este torneo.' });
+            return res.status(403).json({ error: 'No tiene permiso para este torneo.' });
         }
 
         const tournament = await Tournament.findById(tournamentId);
-        if (!tournament) return res.status(404).json({ error: 'Torneo no encontrado' });
-
         const category = tournament.categories.id(categoryId);
-        if (!category) return res.status(404).json({ error: 'Categoría no encontrada' });
         
         let match;
-        for (const zone of category.zones) { if (zone.matches.id(matchId)) { match = zone.matches.id(matchId); break; } }
-        if (!match) { for (const round of category.playoffRounds) { if (round.matches.id(matchId)) { match = round.matches.id(matchId); break; } } }
-        
+        let parentZone = null;
+
+        // Buscamos el partido y guardamos la zona a la que pertenece
+        for (const zone of category.zones) {
+            if (zone.matches.id(matchId)) {
+                match = zone.matches.id(matchId);
+                parentZone = zone;
+                break;
+            }
+        }
+        if (!match) {
+            for (const round of category.playoffRounds) {
+                if (round.matches.id(matchId)) {
+                    match = round.matches.id(matchId);
+                    break;
+                }
+            }
+        }
+
         if (!match) return res.status(404).json({ error: 'Partido no encontrado' });
 
+        // 1. Actualizar datos básicos
         match.scoreA = scoreA;
         match.scoreB = scoreB;
         match.status = status;
         match.matchTime = matchTime;
         match.matchPlace = matchPlace;
 
-        // CORRECCIÓN MANUAL: Permite editar nombres de equipos si hubo error en el sorteo
-        if (customTeamAName && match.teamA) match.teamA.teamName = customTeamAName;
-        if (customTeamBName && match.teamB) match.teamB.teamName = customTeamBName;
+        // 2. Lógica de corrección global de nombres
+        const updateGlobalTeamName = (teamId, newName) => {
+            if (!newName || !teamId) return;
+            
+            // Actualizar en la lista de inscritos de la categoría
+            const registered = category.registeredPlayers.id(teamId);
+            if (registered) registered.teamName = newName;
+
+            // Actualizar en la lista de equipos de la zona (Esto arregla la Tabla de Posiciones)
+            if (parentZone) {
+                const zoneTeam = parentZone.teams.id(teamId);
+                if (zoneTeam) zoneTeam.teamName = newName;
+            }
+
+            // Actualizar en todos los partidos de la zona (por si juegan otros partidos)
+            if (parentZone) {
+                parentZone.matches.forEach(m => {
+                    if (m.teamA && String(m.teamA._id) === String(teamId)) m.teamA.teamName = newName;
+                    if (m.teamB && String(m.teamB._id) === String(teamId)) m.teamB.teamName = newName;
+                });
+            }
+
+            // Actualizar en todas las llaves de playoffs
+            category.playoffRounds.forEach(round => {
+                round.matches.forEach(m => {
+                    if (m.teamA && String(m.teamA._id) === String(teamId)) m.teamA.teamName = newName;
+                    if (m.teamB && String(m.teamB._id) === String(teamId)) m.teamB.teamName = newName;
+                });
+            });
+        };
+
+        if (customTeamAName && match.teamA) updateGlobalTeamName(match.teamA._id, customTeamAName);
+        if (customTeamBName && match.teamB) updateGlobalTeamName(match.teamB._id, customTeamBName);
         
         await tournament.save();
-        const populatedTournament = await Tournament.findById(tournamentId);
-        res.status(200).json({ message: 'Resultado y nombres actualizados', tournament: populatedTournament });
+        res.status(200).json({ message: 'Actualización global exitosa', tournament: await Tournament.findById(tournamentId) });
 
     } catch (error) {
-        console.error("Error al actualizar partido:", error);
-        res.status(500).json({ error: 'Error interno al procesar los cambios.' });
+        res.status(500).json({ error: 'Error al procesar la actualización global.' });
     }
 });
-
 
 // GENERACIÓN DE PLAYOFFS
 router.post('/:tournamentId/category/:categoryId/generate-playoffs', auth(['admin']), async (req, res) => {
