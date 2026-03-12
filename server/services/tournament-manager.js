@@ -4,6 +4,8 @@ class TournamentManager {
 
     generateZones(teams, categorySettings = {}) {
         const totalTeams = teams.length;
+        if (totalTeams === 0) return [];
+        
         if (totalTeams <= 5) {
             return [{
                 zoneName: 'Zona A',
@@ -11,8 +13,10 @@ class TournamentManager {
                 matches: this._generateZoneMatches(teams, categorySettings)
             }];
         }
+        
         let zonesOf4 = 0;
         let zonesOf3 = 0;
+        
         if (totalTeams % 4 === 0) {
             zonesOf4 = totalTeams / 4;
         } else if (totalTeams % 4 === 1) {
@@ -25,6 +29,7 @@ class TournamentManager {
             zonesOf3 = 1;
             zonesOf4 = (totalTeams - 3) / 4;
         }
+        
         const totalZones = zonesOf4 + zonesOf3;
         return this._distributeInZones(teams, totalZones, categorySettings);
     }
@@ -40,6 +45,7 @@ class TournamentManager {
 
         let unassignedTeams = [...teams];
 
+        // Distribución tipo "Serpiente" para balancear niveles si hay sembrados
         if (useSeedings) {
             const seededTeams = unassignedTeams.splice(0, numZones);
             seededTeams.forEach((team, index) => {
@@ -54,10 +60,11 @@ class TournamentManager {
             zones[zoneIndex].teams.push(team);
         }
 
+        // Lógica para evitar choques del mismo club
         if (avoidClubConflicts) {
             let swapped;
             let attempts = 0;
-            const maxAttempts = zones.length * 2;
+            const maxAttempts = zones.length * 5;
 
             do {
                 swapped = false;
@@ -82,6 +89,7 @@ class TournamentManager {
 
                         for (let k = 0; k < targetZone.teams.length; k++) {
                             const teamToSwap = targetZone.teams[k];
+                            // No intercambiar si creamos un nuevo conflicto en la zona origen o destino
                             if (sourceZone.teams.some(t => t.club && t.club === teamToSwap.club && t._id !== teamToMove._id)) continue;
 
                             sourceZone.teams[teamToMoveIndex] = teamToSwap;
@@ -106,15 +114,17 @@ class TournamentManager {
         const { zonePlaySystem } = categorySettings;
         const matches = [];
 
+        // Sistema APA para 4 equipos
         if (zonePlaySystem && teams.length === 4) {
-            const [team1, team2, team3, team4] = teams;
-            matches.push({ teamA: team1, teamB: team3, scoreA: [], scoreB: [], status: 'Pendiente', matchOrder: 1 });
-            matches.push({ teamA: team2, teamB: team4, scoreA: [], scoreB: [], status: 'Pendiente', matchOrder: 2 });
+            const [t1, t2, t3, t4] = teams;
+            matches.push({ teamA: t1, teamB: t3, scoreA: [], scoreB: [], status: 'Pendiente', matchOrder: 1 });
+            matches.push({ teamA: t2, teamB: t4, scoreA: [], scoreB: [], status: 'Pendiente', matchOrder: 2 });
             matches.push({ placeholderA: 'Ganador P1', placeholderB: 'Ganador P2', scoreA: [], scoreB: [], status: 'Pendiente', matchOrder: 3 });
             matches.push({ placeholderA: 'Perdedor P1', placeholderB: 'Perdedor P2', scoreA: [], scoreB: [], status: 'Pendiente', matchOrder: 4 });
             return matches;
         }
 
+        // Round Robin por defecto
         for (let i = 0; i < teams.length; i++) {
             for (let j = i + 1; j < teams.length; j++) {
                 matches.push({
@@ -162,23 +172,27 @@ class TournamentManager {
     advancePlayoffs(category) {
         const lastRound = category.playoffRounds[category.playoffRounds.length - 1];
         if (!lastRound.matches.every(m => m.status === 'Finalizado')) {
-            throw new Error("No todos los partidos han finalizado.");
+            throw new Error("Hay partidos pendientes en la ronda actual.");
         }
 
-        if (lastRound.roundName === 'Final' || lastRound.roundName === 'Tercer y Cuarto Puesto') {
-             throw new Error("La llave ya ha finalizado.");
+        if (lastRound.roundName === 'Final') {
+             throw new Error("El torneo ya está en la ronda final.");
         }
 
+        const getMatchWinner = (match) => {
+            let setsA = 0;
+            match.scoreA.forEach((s, i) => { if (s > match.scoreB[i]) setsA++; });
+            return setsA >= Math.ceil(match.scoreA.length / 2) ? match.teamA : match.teamB;
+        };
+
+        const winners = lastRound.matches.map(getMatchWinner);
+        const teamsForNextRound = [...(lastRound.teamsWithByes || []), ...winners];
+
+        // Caso especial: Semifinales a Final + 3er puesto
         if (lastRound.roundName === 'Semifinales') {
-            const winners = [];
-            const losers = [];
-            lastRound.matches.forEach(match => {
-                let setsA = 0;
-                match.scoreA.forEach((s, i) => { if (s > match.scoreB[i]) setsA++; });
-                const winner = setsA >= Math.ceil(match.scoreA.length / 2) ? match.teamA : match.teamB;
-                const loser = String(winner._id) === String(match.teamA._id) ? match.teamB : match.teamA;
-                winners.push(winner);
-                losers.push(loser);
+            const losers = lastRound.matches.map(m => {
+                const w = getMatchWinner(m);
+                return String(w._id) === String(m.teamA._id) ? m.teamB : m.teamA;
             });
 
             return [
@@ -187,15 +201,6 @@ class TournamentManager {
             ];
         }
 
-        const getMatchWinnerTeam = (match) => {
-            let setsA = 0;
-            match.scoreA.forEach((s, i) => { if (s > match.scoreB[i]) setsA++; });
-            return setsA >= Math.ceil(match.scoreA.length / 2) ? match.teamA : match.teamB;
-        };
-
-        const winners = lastRound.matches.map(getMatchWinnerTeam);
-        const teamsForNextRound = [...(lastRound.teamsWithByes || []), ...winners];
-        
         const nextRoundMatches = [];
         for (let i = 0; i < teamsForNextRound.length; i += 2) {
             if (teamsForNextRound[i] && teamsForNextRound[i + 1]) {
