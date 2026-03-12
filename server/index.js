@@ -1,21 +1,99 @@
-// server/index.js - Modifica la sección de conexión a la BD
+// server/index.js
+
+process.on('uncaughtException', (error, origin) => {
+  console.error('<<<<< ¡¡¡ERROR FATAL NO CAPTURADO!!! >>>>>');
+  console.error(error);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('<<<<< ¡¡¡PROMESA RECHAZADA SIN MANEJAR!!! >>>>>');
+  console.error(reason);
+});
+
+const express = require('express');
+const cors = require('cors');
+const mongoose = require('mongoose');
+const path = require('path');
+const User = require('./models/User'); // Importación necesaria para el rescate
+require('dotenv').config();
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+// --- FUNCIÓN DE RESCATE DE ACCESO ---
+async function ensureAdminAccess() {
+    try {
+        const adminUsername = 'admin';
+        const temporaryPassword = 'admin'; // Contraseña de rescate
+
+        // Buscamos si el admin ya existe
+        const admin = await User.findOne({ username: adminUsername });
+
+        if (!admin) {
+            console.log("RESCATE: El usuario 'admin' no existe. Creándolo...");
+            const newAdmin = new User({
+                username: adminUsername,
+                password: temporaryPassword
+            });
+            await newAdmin.save();
+            console.log("RESCATE: Usuario 'admin' creado exitosamente con clave 'admin'.");
+        } else {
+            console.log("RESCATE: El usuario 'admin' existe. Forzando actualización de contraseña...");
+            // Actualizamos la contraseña directamente. 
+            // El middleware pre-save de User.js se encargará de encriptarla.
+            admin.password = temporaryPassword;
+            await admin.save();
+            console.log("RESCATE: Contraseña de 'admin' reseteada a 'admin'.");
+        }
+    } catch (err) {
+        console.error("RESCATE ERROR: No se pudo restaurar el acceso:", err);
+    }
+}
+
+// --- CONFIGURACIÓN DE CORS ---
+const whiteList = [
+    'http://localhost:5173',
+    'https://padel-chilecito-app.vercel.app'
+];
+
+const corsOptions = {
+    origin: function (origin, callback) {
+        if (whiteList.indexOf(origin) !== -1 || !origin) {
+            callback(null, true);
+        } else {
+            callback(new Error('No permitido por CORS'));
+        }
+    }
+};
+
+app.use(cors(corsOptions));
+app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// --- CONEXIÓN A BASE DE DATOS Y ARRANQUE ---
 mongoose.connect(process.env.MONGODB_URI)
   .then(async () => {
     console.log('Conectado a la base de datos de MongoDB');
     
-    // LÓGICA DE RESCATE: Actualiza la clave del admin cada vez que inicia
-    const User = require('./models/User');
-    try {
-        const hashedPassword = 'admin'; // La contraseña será 'admin'
-        // El pre-save del modelo User se encargará de encriptarla automáticamente
-        await User.findOneAndUpdate(
-            { username: 'admin' },
-            { password: hashedPassword },
-            { upsert: true, new: true }
-        );
-        console.log("ACCESO RESTAURADO: Usuario 'admin' actualizado con clave 'admin'");
-    } catch (authErr) {
-        console.error("Error en auto-fix de acceso:", authErr);
-    }
+    // Ejecutamos la autoreparación de credenciales al conectar
+    await ensureAdminAccess();
   })
   .catch(err => console.error('Error de conexión a la base de datos:', err));
+
+// Rutas de la API
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/players', require('./routes/players'));
+app.use('/api/tournaments', require('./routes/tournaments'));
+app.use('/api/news', require('./routes/news'));
+app.use('/api/ads', require('./routes/ads'));
+app.use('/api/gallery', require('./routes/gallery'));
+app.use('/api/ranking', require('./routes/ranking'));
+app.use('/api/seed', require('./routes/seed'));
+app.use('/api/community', require('./routes/community'));
+app.use('/api/livestream', require('./routes/livestream'));
+app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/professors', require('./routes/professors'));
+
+app.listen(PORT, () => {
+  console.log(`Servidor escuchando en el puerto ${PORT}`);
+});
