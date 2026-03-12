@@ -1,5 +1,3 @@
-// padel-chilecito-app/server/routes/tournaments.js
-
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
@@ -103,27 +101,25 @@ router.post('/:tournamentId/category/:categoryId/save-manual-structure', auth(['
         const processedZones = [];
         for (const zoneData of zones) {
             if (!zoneData.teams || !Array.isArray(zoneData.teams) || !zoneData.zoneName) {
-                return res.status(400).json({ error: 'El formato de una de las zonas es inválido. Debe tener zoneName y una lista de equipos (teams).' });
+                return res.status(400).json({ error: 'El formato de una de las zonas es inválido.' });
             }
 
-           // REEMPLAZA EL BUCLE INTERNO DE save-manual-structure:
-for (const teamName of zoneData.teams) {
-    if (typeof teamName !== 'string' || teamName.trim() === '') continue;
-    
-    // Divide el nombre (Ej: "Perez / Garcia") para crear los objetos de jugador
-    const playerNames = teamName.split('/').map(name => name.trim());
-    
-    teams.push({
-        _id: new mongoose.Types.ObjectId(),
-        teamName: teamName.trim(),
-        players: [
-            { playerName: playerNames[0] || 'Jugador 1' }, 
-            { playerName: playerNames[1] || 'Jugador 2' }
-        ]
-    });
-}
+            const teams = [];
+            for (const teamName of zoneData.teams) {
+                if (typeof teamName !== 'string' || teamName.trim() === '') continue;
+                
+                const playerNames = teamName.split('/').map(name => name.trim());
+                
+                teams.push({
+                    _id: new mongoose.Types.ObjectId(),
+                    teamName: teamName.trim(),
+                    players: [
+                        { playerName: playerNames[0] || 'Jugador 1' }, 
+                        { playerName: playerNames[1] || 'Jugador 2' }
+                    ]
+                });
+            }
             
-            // Pasamos la configuración de la categoría al generar los partidos
             const matches = TournamentManager._generateZoneMatches(teams, category);
             
             processedZones.push({
@@ -161,7 +157,6 @@ router.delete('/:id', auth(['admin']), async (req, res) => {
 router.post('/:tournamentId/register', async (req, res) => {
     try {
         const { tournamentId } = req.params;
-        // --- ¡CAMBIO AQUÍ! --- Añadir "club"
         const { categoryName, player1Name, player1Phone, player2Name, player2Phone, club } = req.body;
         const tournament = await Tournament.findById(tournamentId);
         if (!tournament) return res.status(404).json({ error: 'Torneo no encontrado.' });
@@ -170,12 +165,11 @@ router.post('/:tournamentId/register', async (req, res) => {
         if (category.status !== 'Inscripciones Abiertas') return res.status(400).json({ error: 'Las inscripciones para esta categoría ya están cerradas.' });
         const p1LastName = player1Name.split(' ').pop() || 'Jugador1';
         const p2LastName = player2Name.split(' ').pop() || 'Jugador2';
-        // --- ¡CAMBIO AQUÍ! --- Añadir "club" al nuevo equipo
         const newTeam = {
             _id: new mongoose.Types.ObjectId(),
             teamName: `${p1LastName} / ${p2LastName}`,
             players: [{ playerName: player1Name, phoneNumber: player1Phone }, { playerName: player2Name, phoneNumber: player2Phone }],
-            club: club || '' // Añadir el club al objeto del equipo
+            club: club || '' 
         };
         category.registeredPlayers.push(newTeam);
         await tournament.save();
@@ -184,13 +178,11 @@ router.post('/:tournamentId/register', async (req, res) => {
         res.status(500).json({ error: 'Error en el servidor al inscribir.' });
     }
 });
-
 // AVANZAR EN ZONA TIPO APA
 router.post('/:tournamentId/category/:categoryId/zone/:zoneId/advance-apa', auth(['admin', 'operator']), async (req, res) => {
     try {
         const { tournamentId, categoryId, zoneId } = req.params;
 
-        // Verificación para el rol de Operador
         if (req.user.role === 'operator' && req.user.tournamentId !== tournamentId) {
             return res.status(403).json({ error: 'No tiene permiso para modificar este torneo.' });
         }
@@ -340,9 +332,7 @@ router.post('/:tournamentId/move-team', auth(['admin']), async (req, res) => {
     }
 });
 
-// --- RUTA CORREGIDA ---
-// ACTUALIZAR RESULTADO DE UN PARTIDO
-
+// ACTUALIZAR RESULTADO DE UN PARTIDO + CORRECCIÓN MANUAL
 router.put('/:tournamentId/category/:categoryId/match/:matchId', auth(['admin', 'operator']), async (req, res) => {
     try {
         const { tournamentId, categoryId, matchId } = req.params;
@@ -364,20 +354,17 @@ router.put('/:tournamentId/category/:categoryId/match/:matchId', auth(['admin', 
         
         if (!match) return res.status(404).json({ error: 'Partido no encontrado' });
 
-        // Actualización de datos de juego
         match.scoreA = scoreA;
         match.scoreB = scoreB;
         match.status = status;
         match.matchTime = matchTime;
         match.matchPlace = matchPlace;
 
-        // CORRECCIÓN MANUAL: Si el admin envía nombres corregidos desde el frontend, los guardamos.
+        // CORRECCIÓN MANUAL: Permite editar nombres de equipos si hubo error en el sorteo
         if (customTeamAName && match.teamA) match.teamA.teamName = customTeamAName;
         if (customTeamBName && match.teamB) match.teamB.teamName = customTeamBName;
         
         await tournament.save();
-
-        // IMPORTANTE: Devolvemos el torneo recargado para que el frontend vea los nombres nuevos.
         const populatedTournament = await Tournament.findById(tournamentId);
         res.status(200).json({ message: 'Resultado y nombres actualizados', tournament: populatedTournament });
 
@@ -408,14 +395,11 @@ router.post('/:tournamentId/category/:categoryId/generate-playoffs', auth(['admi
                 if (m.status !== 'Finalizado' || !m.teamA?._id || !m.teamB?._id) return;
                 const teamAId = m.teamA._id.toString();
                 const teamBId = m.teamB._id.toString();
-                if (!stats[teamAId] || !stats[teamBId]) {
-                    console.warn(`Saltando partido con equipos no encontrados en la zona: ${m.teamA.teamName} vs ${m.teamB.teamName}`);
-                    return;
-                }
+                if (!stats[teamAId] || !stats[teamBId]) return;
+                
                 const statsA = stats[teamAId];
                 const statsB = stats[teamBId];
-                statsA.p++;
-                statsB.p++;
+                statsA.p++; statsB.p++;
                 let setsA = 0, setsB = 0;
                 m.scoreA.forEach((s, i) => { if (s > m.scoreB[i]) setsA++; else setsB++; });
                 statsA.sf += setsA; statsA.sc += setsB;
@@ -432,19 +416,13 @@ router.post('/:tournamentId/category/:categoryId/generate-playoffs', auth(['admi
                     statsA.l++; statsA.pts += 1;
                 }
             });
-           // BUSCA DENTRO DE generate-playoffs EL MÉTODO .sort() Y REEMPLAZA POR ESTE:
-return Object.values(stats).sort((a, b) => {
-    // 1. Por Puntos (2 PG, 1 PP)
-    if (b.pts !== a.pts) return b.pts - a.pts;
-    // 2. Por Diferencia de Sets
-    const diffSetsA = a.sf - a.sc;
-    const diffSetsB = b.sf - b.sc;
-    if (diffSetsB !== diffSetsA) return diffSetsB - diffSetsA;
-    // 3. Por Diferencia de Games
-    const diffGamesA = a.gf - a.gc;
-    const diffGamesB = b.gf - b.gc;
-    return diffGamesB - diffGamesA;
-});
+
+            return Object.values(stats).sort((a, b) => {
+                if (b.pts !== a.pts) return b.pts - a.pts;
+                const diffSetsA = a.sf - a.sc;
+                const diffSetsB = b.sf - b.sc;
+                if (diffSetsB !== diffSetsA) return diffSetsB - diffSetsA;
+                return (b.gf - b.gc) - (a.gf - a.gc);
             });
         };
         
@@ -483,7 +461,6 @@ router.post('/:tournamentId/category/:categoryId/advance-playoffs', auth(['admin
     try {
         const { tournamentId, categoryId } = req.params;
 
-        // Verificación para el rol de Operador
         if (req.user.role === 'operator' && req.user.tournamentId !== tournamentId) {
             return res.status(403).json({ error: 'No tiene permiso para modificar este torneo.' });
         }
@@ -503,7 +480,7 @@ router.post('/:tournamentId/category/:categoryId/advance-playoffs', auth(['admin
 });
 
 
-// AÑADIR EQUIPO MANUALMENTE (A LA LISTA DE INSCRITOS)
+// AÑADIR EQUIPO MANUALMENTE
 router.post('/:tournamentId/category/:categoryId/add-team', auth(['admin']), async (req, res) => {
     try {
         const { tournamentId, categoryId } = req.params;
@@ -536,8 +513,9 @@ router.post('/:tournamentId/category/:categoryId/finish', auth(['admin']), async
         category.status = 'Finalizado';
         const allCategoriesFinished = tournament.categories.every(cat => cat.status === 'Finalizado');
         if (allCategoriesFinished) tournament.status = 'Finalizado';
-        const updatedTournament = await tournament.save();
-        res.status(200).json({ message: 'Categoría finalizada y ganadores registrados.', tournament: updatedTournament });
+        await tournament.save();
+        const populatedTournament = await Tournament.findById(req.params.tournamentId);
+        res.status(200).json({ message: 'Categoría finalizada.', tournament: populatedTournament });
     } catch (error) {
         res.status(500).json({ error: 'Error al guardar los resultados.' });
     }
@@ -562,13 +540,11 @@ router.put('/:tournamentId/category/:categoryId/team/:teamId/player/:playerIndex
 
         let teamFound = false;
 
-        // Función para actualizar el jugador
         const updatePlayerName = (team) => {
             if (team && String(team._id) === teamId) {
                 teamFound = true;
                 if (team.players[playerIndex]) {
                     team.players[playerIndex].playerName = newName.trim();
-                    // Opcional: Actualizar el teamName
                     const p1LastName = team.players[0].playerName.split(' ').pop();
                     const p2LastName = team.players[1] ? team.players[1].playerName.split(' ').pop() : 'J2';
                     team.teamName = `${p1LastName} / ${p2LastName}`;
@@ -576,7 +552,6 @@ router.put('/:tournamentId/category/:categoryId/team/:teamId/player/:playerIndex
             }
         };
 
-        // Buscar en zonas
         category.zones.forEach(zone => {
             zone.teams.forEach(updatePlayerName);
             zone.matches.forEach(match => {
@@ -585,7 +560,6 @@ router.put('/:tournamentId/category/:categoryId/team/:teamId/player/:playerIndex
             });
         });
 
-        // Buscar en playoffs
         category.playoffRounds.forEach(round => {
             round.matches.forEach(match => {
                 updatePlayerName(match.teamA);
@@ -594,19 +568,25 @@ router.put('/:tournamentId/category/:categoryId/team/:teamId/player/:playerIndex
              round.teamsWithByes.forEach(updatePlayerName);
         });
 
-        if (!teamFound) {
-            return res.status(404).json({ error: 'Equipo no encontrado en esta categoría.' });
-        }
+        if (!teamFound) return res.status(404).json({ error: 'Equipo no encontrado.' });
 
         await tournament.save();
         const populatedTournament = await Tournament.findById(tournamentId);
-        res.status(200).json({ message: 'Nombre del jugador actualizado.', tournament: populatedTournament });
+        res.status(200).json({ message: 'Nombre actualizado.', tournament: populatedTournament });
 
     } catch (error) {
-        console.error("Error actualizando nombre de jugador:", error);
-        res.status(500).json({ error: 'Error en el servidor al actualizar el nombre.', details: error.message });
+        res.status(500).json({ error: 'Error al actualizar el nombre.' });
     }
 });
 
+// LIMPIEZA DE TORNEOS FINALIZADOS
+router.delete('/admin/cleanup-finished', auth(['admin']), async (req, res) => {
+    try {
+        const result = await Tournament.deleteMany({ status: 'Finalizado' });
+        res.status(200).json({ message: `Se eliminaron ${result.deletedCount} torneos.` });
+    } catch (error) {
+        res.status(500).json({ error: 'Error durante la limpieza.' });
+    }
+});
 
 module.exports = router;
