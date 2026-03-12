@@ -76,7 +76,7 @@ mongoose.connect(process.env.MONGODB_URI)
     console.log('Conectado a la base de datos de MongoDB');
     
     // Ejecutamos la autoreparación de credenciales al conectar
-    await ensureAdminAccess();
+   // await ensureAdminAccess();
   })
   .catch(err => console.error('Error de conexión a la base de datos:', err));
 
