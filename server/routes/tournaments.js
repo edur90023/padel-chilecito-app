@@ -341,12 +341,12 @@ router.post('/:tournamentId/move-team', auth(['admin']), async (req, res) => {
 
 // --- RUTA CORREGIDA ---
 // ACTUALIZAR RESULTADO DE UN PARTIDO
+
 router.put('/:tournamentId/category/:categoryId/match/:matchId', auth(['admin', 'operator']), async (req, res) => {
     try {
         const { tournamentId, categoryId, matchId } = req.params;
-        const { scoreA, scoreB, status, matchTime, matchPlace } = req.body;
+        const { scoreA, scoreB, status, matchTime, matchPlace, customTeamAName, customTeamBName } = req.body;
 
-        // Verificación para el rol de Operador
         if (req.user.role === 'operator' && req.user.tournamentId !== tournamentId) {
             return res.status(403).json({ error: 'No tiene permiso para modificar este torneo.' });
         }
@@ -358,30 +358,31 @@ router.put('/:tournamentId/category/:categoryId/match/:matchId', auth(['admin', 
         if (!category) return res.status(404).json({ error: 'Categoría no encontrada' });
         
         let match;
-        // Buscar el partido en las zonas o en los playoffs
         for (const zone of category.zones) { if (zone.matches.id(matchId)) { match = zone.matches.id(matchId); break; } }
         if (!match) { for (const round of category.playoffRounds) { if (round.matches.id(matchId)) { match = round.matches.id(matchId); break; } } }
+        
         if (!match) return res.status(404).json({ error: 'Partido no encontrado' });
 
-        // Actualizar los datos del partido
+        // Actualización de datos de juego
         match.scoreA = scoreA;
         match.scoreB = scoreB;
         match.status = status;
         match.matchTime = matchTime;
         match.matchPlace = matchPlace;
+
+        // CORRECCIÓN MANUAL: Si el admin envía nombres corregidos desde el frontend, los guardamos.
+        if (customTeamAName && match.teamA) match.teamA.teamName = customTeamAName;
+        if (customTeamBName && match.teamB) match.teamB.teamName = customTeamBName;
         
         await tournament.save();
 
-        // --- ¡LA SOLUCIÓN! ---
-        // Volvemos a cargar el torneo DESPUÉS de guardarlo para asegurar que todos los
-        // datos de los jugadores (incluyendo teléfonos) estén completos antes de enviarlo de vuelta.
+        // IMPORTANTE: Devolvemos el torneo recargado para que el frontend vea los nombres nuevos.
         const populatedTournament = await Tournament.findById(tournamentId);
-        
-        res.status(200).json({ message: 'Resultado actualizado', tournament: populatedTournament });
+        res.status(200).json({ message: 'Resultado y nombres actualizados', tournament: populatedTournament });
 
     } catch (error) {
-        console.error("Error al actualizar resultado:", error);
-        res.status(500).json({ error: 'Error al actualizar resultado.', details: error.message });
+        console.error("Error al actualizar partido:", error);
+        res.status(500).json({ error: 'Error interno al procesar los cambios.' });
     }
 });
 
