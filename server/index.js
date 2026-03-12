@@ -21,34 +21,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // --- FUNCIÓN DE RESCATE DE ACCESO ---
-async function ensureAdminAccess() {
-    try {
-        const adminUsername = 'admin';
-        const temporaryPassword = 'admin'; // Contraseña de rescate
 
-        // Buscamos si el admin ya existe
-        const admin = await User.findOne({ username: adminUsername });
-
-        if (!admin) {
-            console.log("RESCATE: El usuario 'admin' no existe. Creándolo...");
-            const newAdmin = new User({
-                username: adminUsername,
-                password: temporaryPassword
-            });
-            await newAdmin.save();
-            console.log("RESCATE: Usuario 'admin' creado exitosamente con clave 'admin'.");
-        } else {
-            console.log("RESCATE: El usuario 'admin' existe. Forzando actualización de contraseña...");
-            // Actualizamos la contraseña directamente. 
-            // El middleware pre-save de User.js se encargará de encriptarla.
-            admin.password = temporaryPassword;
-            await admin.save();
-            console.log("RESCATE: Contraseña de 'admin' reseteada a 'admin'.");
-        }
-    } catch (err) {
-        console.error("RESCATE ERROR: No se pudo restaurar el acceso:", err);
-    }
-}
 
 // --- CONFIGURACIÓN DE CORS ---
 const whiteList = [
@@ -76,7 +49,7 @@ mongoose.connect(process.env.MONGODB_URI)
     console.log('Conectado a la base de datos de MongoDB');
     
     // Ejecutamos la autoreparación de credenciales al conectar
-   // await ensureAdminAccess();
+  
   })
   .catch(err => console.error('Error de conexión a la base de datos:', err));
 
