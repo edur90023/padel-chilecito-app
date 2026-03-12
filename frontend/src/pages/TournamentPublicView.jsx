@@ -197,6 +197,8 @@ const PlayoffBracket = ({ rounds }) => {
 };
 
 
+// frontend/src/pages/TournamentPublicView.jsx - Fragmento de WinnersDisplay actualizado
+
 const WinnersDisplay = ({ finishers }) => {
     if (!finishers || finishers.length === 0) {
         return null;
@@ -235,7 +237,7 @@ const WinnersDisplay = ({ finishers }) => {
                         </div>
                         <div className="border-l border-gray-700 pl-4">
                             <p className="text-xl font-bold text-text-primary">{team.teamName}</p>
-                            <p className="text-base text-text-secondary">{team.players.map(p => p.playerName).join(' / ')}</p>
+                            {/* Se ha quitado la línea team.players.map para ocultar los nombres antiguos */}
                         </div>
                     </li>
                 ))}
@@ -243,7 +245,6 @@ const WinnersDisplay = ({ finishers }) => {
         </div>
     );
 };
-
 
 function TournamentPublicView() {
     const { id } = useParams();
