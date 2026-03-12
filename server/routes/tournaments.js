@@ -431,12 +431,19 @@ router.post('/:tournamentId/category/:categoryId/generate-playoffs', auth(['admi
                     statsA.l++; statsA.pts += 1;
                 }
             });
-            return Object.values(stats).sort((a, b) => {
-                if (b.pts !== a.pts) return b.pts - a.pts;
-                const diffA = a.sf - a.sc; const diffB = b.sf - b.sc;
-                if (diffB !== diffA) return diffB - diffA;
-                const gameDiffA = a.gf - a.gc; const gameDiffB = b.gf - b.gc;
-                return gameDiffB - gameDiffA;
+           // BUSCA DENTRO DE generate-playoffs EL MÉTODO .sort() Y REEMPLAZA POR ESTE:
+return Object.values(stats).sort((a, b) => {
+    // 1. Por Puntos (2 PG, 1 PP)
+    if (b.pts !== a.pts) return b.pts - a.pts;
+    // 2. Por Diferencia de Sets
+    const diffSetsA = a.sf - a.sc;
+    const diffSetsB = b.sf - b.sc;
+    if (diffSetsB !== diffSetsA) return diffSetsB - diffSetsA;
+    // 3. Por Diferencia de Games
+    const diffGamesA = a.gf - a.gc;
+    const diffGamesB = b.gf - b.gc;
+    return diffGamesB - diffGamesA;
+});
             });
         };
         
