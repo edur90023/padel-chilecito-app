@@ -21,7 +21,10 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // --- FUNCIÓN DE RESCATE DE ACCESO ---
-
+app.get('/keep-alive', (req, res) => {
+  console.log('Ping recibido: Manteniendo el server despierto');
+  res.status(200).send('OK');
+});
 
 // --- CONFIGURACIÓN DE CORS ---
 const whiteList = [
