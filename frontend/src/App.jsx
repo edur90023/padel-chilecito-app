@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink, Navigate, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import axios from 'axios';
+import axios from './api/axiosConfig'; // Importación corregida para usar la URL de Render
 import { useInstallPWA } from './hooks/useInstallPWA';
 import NotificationManager from './components/NotificationManager';
 import { Analytics } from "@vercel/analytics/react";
@@ -22,16 +22,19 @@ import OperatorTournamentView from './pages/OperatorTournamentView';
 
 import './index.css';
 
+// Componente para proteger rutas de Administrador
 const ProtectedRoute = ({ children }) => {
     const { isAdmin } = useAuth();
     return isAdmin() ? children : <Navigate to="/login" />;
 };
 
+// Componente para proteger rutas de Operador
 const OperatorRoute = ({ children }) => {
     const { isOperator } = useAuth();
     return isOperator() ? children : <Navigate to="/login?error=unauthorized" />;
 };
 
+// Componente reutilizable para los ítems de navegación
 const NavItem = ({ to, icon, children, onClick }) => (
     <NavLink
         to={to}
@@ -53,15 +56,17 @@ const PublicLayout = () => {
     const [isLiveEnabled, setIsLiveEnabled] = useState(false);
     const { installPrompt, handleInstall } = useInstallPWA();
 
+    // Verificación inicial del estado de la transmisión en vivo
     useEffect(() => {
         const checkLiveStatus = async () => {
             try {
+                // Utiliza la instancia configurada que ya apunta a /api
                 const response = await axios.get('/livestream');
                 if (response.data && response.data.isEnabled) {
                     setIsLiveEnabled(true);
                 }
             } catch (error) {
-                console.error("Erro ao verificar o status da transmissão ao vivo.", error);
+                console.error("Error al verificar el status de la transmisión:", error);
             }
         };
         checkLiveStatus();
@@ -80,6 +85,7 @@ const PublicLayout = () => {
                             </Link>
                         </div>
                         
+                        {/* Menú de escritorio */}
                         <div className="hidden lg:block flex-1">
                             <div className="flex items-center justify-center space-x-2 xl:space-x-4">
                                 {isLiveEnabled && <NavItem to="/live" icon="fas fa-video text-red-500">En Vivo</NavItem>}
@@ -94,6 +100,7 @@ const PublicLayout = () => {
                         </div>
 
                         <div className="hidden md:flex items-center flex-shrink-0">
+                             {/* Botón de instalación PWA */}
                              {installPrompt && (
                                 <button
                                     onClick={handleInstall}
@@ -119,6 +126,7 @@ const PublicLayout = () => {
                             )}
                         </div>
 
+                        {/* Botón menú móvil */}
                         <div className="lg:hidden flex items-center">
                             <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none">
                                 <i className={`fas ${isMenuOpen ? 'fa-times' : 'fa-bars'} text-xl`}></i>
@@ -127,6 +135,7 @@ const PublicLayout = () => {
                     </div>
                 </nav>
                 
+                {/* Menú desplegable móvil */}
                 {isMenuOpen && (
                     <div className="lg:hidden p-4 space-y-2 bg-dark-secondary border-t border-gray-700">
                         {isLiveEnabled && <NavItem to="/live" icon="fas fa-video text-red-500" onClick={closeMenu}>En Vivo</NavItem>}
