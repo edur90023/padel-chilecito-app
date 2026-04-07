@@ -49,7 +49,7 @@ function LivePage() {
 
     const embedUrl = getEmbedUrl(streamConfig.streamUrl);
     // Reemplaza "UC_xxxxxxxxxxxx" con el ID real de tu canal de YouTube
-    const youtubeChannelId = "UC_xxxxxxxxxxxx"; 
+    const youtubeChannelId = "UCOrUJEn3xTYaWQJMjNtKJEA"; 
     const subscribeUrl = `https://www.youtube.com/channel/${youtubeChannelId}?sub_confirmation=1`;
 
     return (
