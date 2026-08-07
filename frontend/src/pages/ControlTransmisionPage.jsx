@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-// IMPORTACIÓN CORREGIDA: Usamos tu hook useAuth
+// Importamos tu hook personalizado en lugar del useContext genérico
 import { useAuth } from '../context/AuthContext';
 
 const ControlTransmisionPage = () => {
