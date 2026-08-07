@@ -1,13 +1,10 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { AuthContext } from '../context/AuthContext';
-
+import React, { useState, useEffect } from 'react';
+// IMPORTACIÓN CORREGIDA: Usamos tu hook useAuth
+import { useAuth } from '../context/AuthContext';
 
 const ControlTransmisionPage = () => {
-  // Obtenemos el usuario del contexto de autenticación de tu PWA
-  const { user } = useContext(AuthContext);
-  
-  // Soporta tanto user.role como user.rol dependiendo de cómo lo llames en tu backend
-  const userRole = user?.role || user?.rol || 'usuario_transmision'; 
+  // Utilizamos tus funciones nativas para verificar los roles
+  const { isAdmin } = useAuth();
 
   // Estado para la pestaña de links. Usamos localStorage para persistencia rápida.
   const [links, setLinks] = useState([]);
@@ -97,7 +94,7 @@ const ControlTransmisionPage = () => {
       <h2 className="text-2xl font-bold mb-6 text-slate-800 border-b pb-2">Control de Transmisión</h2>
 
       {/* ADMIN: Formulario de carga de links */}
-      {(userRole === 'admin' || userRole === 'administrador') && (
+      {isAdmin() && (
         <form onSubmit={handleAddLink} className="mb-8 p-5 bg-white rounded-xl shadow-md border border-slate-200">
           <h3 className="font-semibold text-slate-700 mb-4 flex items-center gap-2">
             <span>⚙️</span> Cargar Nuevo Link (Solo Admin)
@@ -146,7 +143,7 @@ const ControlTransmisionPage = () => {
               </button>
               
               {/* Botón de eliminar solo para admin */}
-              {(userRole === 'admin' || userRole === 'administrador') && (
+              {isAdmin() && (
                 <button 
                   onClick={() => handleDeleteLink(link.id)}
                   className="px-4 bg-red-100 text-red-600 hover:bg-red-200 rounded-lg font-bold transition-colors"
