@@ -20,6 +20,9 @@ import LivePage from './pages/LivePage';
 import OperatorPage from './pages/OperatorPage';
 import OperatorTournamentView from './pages/OperatorTournamentView';
 
+// IMPORTACIÓN DEL NUEVO MÓDULO DE TRANSMISIÓN
+import ControlTransmisionPage from './pages/ControlTransmisionPage';
+
 import './index.css';
 
 // Componente para proteger rutas de Administrador
@@ -51,7 +54,8 @@ const NavItem = ({ to, icon, children, onClick }) => (
 );
 
 const PublicLayout = () => {
-    const { isAdmin, logout } = useAuth();
+    // Extraemos también isOperator para poder mostrarle el menú de transmisión
+    const { isAdmin, isOperator, logout } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isLiveEnabled, setIsLiveEnabled] = useState(false);
     const { installPrompt, handleInstall } = useInstallPWA();
@@ -96,6 +100,11 @@ const PublicLayout = () => {
                                 <NavItem to="/standings" icon="fas fa-star">Rankings</NavItem>
                                 <NavItem to="/profesores" icon="fas fa-chalkboard-teacher">Profesores</NavItem>
                                 <NavItem to="/contact" icon="fas fa-address-book">Contacto</NavItem>
+                                
+                                {/* NUEVO BOTÓN DE TRANSMISIÓN: Solo visible para Admin u Operador */}
+                                {(isAdmin() || isOperator()) && (
+                                    <NavItem to="/transmision" icon="fas fa-tv">Transmisión</NavItem>
+                                )}
                             </div>
                         </div>
 
@@ -146,6 +155,12 @@ const PublicLayout = () => {
                         <NavItem to="/standings" icon="fas fa-star" onClick={closeMenu}>Rankings</NavItem>
                         <NavItem to="/profesores" icon="fas fa-chalkboard-teacher" onClick={closeMenu}>Profesores</NavItem>
                         <NavItem to="/contact" icon="fas fa-address-book" onClick={closeMenu}>Contacto</NavItem>
+                        
+                        {/* NUEVO BOTÓN DE TRANSMISIÓN MÓVIL: Solo visible para Admin u Operador */}
+                        {(isAdmin() || isOperator()) && (
+                            <NavItem to="/transmision" icon="fas fa-tv" onClick={closeMenu}>Transmisión</NavItem>
+                        )}
+
                         <div className="border-t border-gray-700 pt-4 mt-4 space-y-2">
                              {installPrompt && (
                                  <button
@@ -184,6 +199,9 @@ const PublicLayout = () => {
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/community" element={<CommunityPage />} />
                     <Route path="/profesores" element={<ProfessorsPage />} />
+                    
+                    {/* NUEVA RUTA INTEGRADA PARA EL CONTROL DE TRANSMISIÓN */}
+                    <Route path="/transmision" element={<ControlTransmisionPage />} />
                 </Routes>
             </main>
             <NotificationManager />
