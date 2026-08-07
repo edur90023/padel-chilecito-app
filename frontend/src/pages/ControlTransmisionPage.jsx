@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 
+
 const ControlTransmisionPage = () => {
   // Obtenemos el usuario del contexto de autenticación de tu PWA
   const { user } = useContext(AuthContext);
