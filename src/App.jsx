@@ -4,7 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import axios from './api/axiosConfig'; // Importación corregida para usar la URL de Render
 import { useInstallPWA } from './hooks/useInstallPWA';
 import NotificationManager from './components/NotificationManager';
-import { Analytics } from "@vercel/analytics/react";
+const Analytics = () => null;
 
 import Admin from './components/Admin';
 import LoginPage from './pages/LoginPage';

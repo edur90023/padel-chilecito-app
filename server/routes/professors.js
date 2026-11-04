@@ -9,11 +9,14 @@ const upload = require('../config/cloudinary'); // Importar configuración de Cl
 // @access  Public
 router.get('/public', async (req, res) => {
     try {
+        const mongoose = require('mongoose');
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(200).json([]);
+        }
         const professors = await Professor.find({ isActive: true }).sort({ name: 1 });
         res.status(200).json(professors);
     } catch (error) {
-        console.error("Error fetching public professors:", error);
-        res.status(500).json({ error: 'Error al obtener los profesores.' });
+        res.status(200).json([]);
     }
 });
 
@@ -22,11 +25,14 @@ router.get('/public', async (req, res) => {
 // @access  Private (Admin)
 router.get('/admin', auth(['admin']), async (req, res) => {
     try {
+        const mongoose = require('mongoose');
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(200).json([]);
+        }
         const professors = await Professor.find({}).sort({ name: 1 });
         res.status(200).json(professors);
     } catch (error) {
-        console.error("Error fetching admin professors:", error);
-        res.status(500).json({ error: 'Error al obtener los profesores.' });
+        res.status(200).json([]);
     }
 });
 

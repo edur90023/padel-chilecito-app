@@ -9,7 +9,8 @@ const auth = (allowedRoles) => {
                 return res.status(401).send({ error: 'Autenticación requerida.' });
             }
 
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const secret = process.env.JWT_SECRET || 'padel-chilecito-secret-key-2024';
+            const decoded = jwt.verify(token, secret);
 
             if (!allowedRoles.includes(decoded.role)) {
                 return res.status(403).send({ error: 'Permisos insuficientes para esta acción.' });

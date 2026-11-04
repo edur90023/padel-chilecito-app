@@ -20,7 +20,7 @@ const TournamentForm = ({ onTournamentCreated }) => {
             // Separa las categorías por comas y elimina los espacios en blanco.
             const categoriesArray = formData.categories.split(',').map(cat => cat.trim());
 
-            const response = await axios.post('http://localhost:5000/api/tournaments/create', {
+            const response = await axios.post('/tournaments', {
                 ...formData,
                 categories: categoriesArray
             });

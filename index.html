@@ -9,6 +9,9 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Pádel Chilecito" />
+    <meta name="description" content="Aplicación para la gestión de torneos de pádel en Chilecito, inscripciones, llaves, rankings y noticias." />
+    <meta property="og:title" content="Pádel Chilecito" />
+    <meta property="og:description" content="Aplicación para la gestión de torneos de pádel en Chilecito, inscripciones, llaves, rankings y noticias." />
     <link rel="apple-touch-icon" href="/pwa-192x192.png" /> 
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,6 +21,22 @@
     <title>Pádel Chilecito</title>
   </head>
   <body>
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for (var reg of registrations) {
+            reg.unregister();
+          }
+        });
+      }
+      if ('caches' in window) {
+        caches.keys().then(function(names) {
+          for (var name of names) {
+            caches.delete(name);
+          }
+        });
+      }
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

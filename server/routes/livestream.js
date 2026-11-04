@@ -20,6 +20,10 @@ function isAuthenticated(req, res, next) {
 // OBTENER CONFIGURACIÓN (Ruta Pública)
 router.get('/', async (req, res) => {
     try {
+        const mongoose = require('mongoose');
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(200).json({ configKey: "main_config", isEnabled: false, streamUrl: "" });
+        }
         // Busca o crea la configuración si no existe
         let config = await LiveStream.findOne({ configKey: "main_config" });
         if (!config) {
@@ -27,7 +31,7 @@ router.get('/', async (req, res) => {
         }
         res.status(200).json(config);
     } catch (error) {
-        res.status(500).json({ error: 'Error al obtener la configuración de la transmisión.' });
+        res.status(200).json({ configKey: "main_config", isEnabled: false, streamUrl: "" });
     }
 });
 

@@ -26,7 +26,7 @@ function PlayerForm({ onPlayerCreated, onClose }) {
         setSuccess('');
 
         try {
-            await axios.post('http://localhost:5000/api/players/register', formData);
+            await axios.post('/players/register', formData);
             setSuccess(`Jugador "${formData.firstName} ${formData.lastName}" registrado exitosamente.`);
 
             // Limpiar el formulario

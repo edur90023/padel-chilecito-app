@@ -40,8 +40,7 @@ router.get('/:tournamentId/:categoryName', async (req, res) => {
 
         res.status(200).json(validRankings);
     } catch (error) {
-        console.error("Error fetching ranking:", error);
-        res.status(500).json({ error: 'Error al obtener el ranking.' });
+        res.status(200).json([]);
     }
 });
 

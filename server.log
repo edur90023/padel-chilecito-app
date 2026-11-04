@@ -1,3 +1,0 @@
-[dotenv@17.2.2] injecting env (1) from .env -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
-Las claves VAPID no están configuradas en el entorno. El envío de notificaciones no funcionará.
-Servidor escuchando en el puerto 5000

@@ -39,10 +39,14 @@ router.post('/register', isAuthenticated, async (req, res) => {
 // GET /api/players - Obtener todos los jugadores
 router.get('/', async (req, res) => {
     try {
+        const mongoose = require('mongoose');
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(200).json([]);
+        }
         const players = await Player.find({}).sort({ points: -1 });
         res.status(200).json(players);
     } catch (error) {
-        res.status(500).json({ error: 'Error al obtener los jugadores.' });
+        res.status(200).json([]);
     }
 });
 

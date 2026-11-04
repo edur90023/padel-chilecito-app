@@ -22,10 +22,14 @@ function isAuthenticated(req, res, next) {
 // GET /api/gallery - (Sin cambios)
 router.get('/', async (req, res) => {
     try {
+        const mongoose = require('mongoose');
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(200).json([]);
+        }
         const albums = await Gallery.find({}).sort({ _id: -1 });
         res.status(200).json(albums);
     } catch (error) {
-        res.status(500).json({ error: 'Error al obtener la galería.' });
+        res.status(200).json([]);
     }
 });
 

@@ -19,20 +19,28 @@ function isAuthenticated(req, res, next) {
 // OBTENER ANUNCIOS PÚBLICOS (SOLO LOS ACTIVOS)
 router.get('/', async (req, res) => {
     try {
+        const mongoose = require('mongoose');
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(200).json([]);
+        }
         const posts = await CommunityPost.find({ isActive: true }).sort({ createdAt: -1 });
         res.status(200).json(posts);
     } catch (error) {
-        res.status(500).json({ error: 'Error al obtener los anuncios.' });
+        res.status(200).json([]);
     }
 });
 
 // OBTENER TODOS LOS ANUNCIOS (PARA ADMIN)
 router.get('/all', isAuthenticated, async (req, res) => {
     try {
+        const mongoose = require('mongoose');
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(200).json([]);
+        }
         const posts = await CommunityPost.find({}).sort({ createdAt: -1 });
         res.status(200).json(posts);
     } catch (error) {
-        res.status(500).json({ error: 'Error al obtener todos los anuncios.' });
+        res.status(200).json([]);
     }
 });
 

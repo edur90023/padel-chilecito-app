@@ -49,11 +49,12 @@ export const AuthProvider = ({ children }) => {
         try {
             const response = await axios.post('/auth/login', { username, password });
             setAuthToken(response.data.token);
-            return true;
+            return { success: true };
         } catch (error) {
             console.error('Error al iniciar sesión:', error);
             setAuthToken(null); // Clear any invalid token
-            return false;
+            const message = error.response?.data?.error || 'Credenciales inválidas. Inténtelo de nuevo.';
+            return { success: false, error: message };
         }
     };
 

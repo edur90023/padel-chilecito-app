@@ -13,7 +13,7 @@ function UploadForm() {
         // Cargar la lista de álbumes al inicio
         const fetchAlbums = async () => {
             try {
-                const response = await axios.get('http://localhost:5000/api/gallery');
+                const response = await axios.get('/gallery');
                 setAlbums(response.data);
             } catch (error) {
                 console.error("Error al obtener álbumes:", error);
@@ -39,7 +39,7 @@ function UploadForm() {
         formData.append('photo', file);
 
         try {
-            await axios.post(`http://localhost:5000/api/gallery/${selectedAlbum}/photos`, formData, {
+            await axios.post(`/gallery/${selectedAlbum}/photos`, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
