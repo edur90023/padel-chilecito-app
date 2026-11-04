@@ -1,0 +1,191 @@
+/*
+ * Archivo: style.css
+ * Tema: Moderno, oscuro, con toques deportivos y animaciones suaves.
+ */
+
+/* --- Importar Fuentes de Google --- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+/* --- Variables CSS --- */
+:root {
+    --primary-color: #34D399; /* Verde esmeralda */
+    --primary-dark: #069469;
+    --secondary-color: #FBBF24; /* Ámbar */
+    --accent-color: #3B82F6;  /* Azul */
+    --danger-color: #EF4444;
+    
+    --background-dark-primary: #111827;   /* Fondo principal (casi negro) */
+    --background-dark-secondary: #1F2937; /* Fondo para tarjetas y secciones */
+    
+    --text-primary: #F9FAFB;   /* Blanco casi puro */
+    --text-secondary: #9CA3AF; /* Gris claro */
+    --text-accent: #111827;     /* Texto oscuro sobre fondos claros */
+    
+    --border-color: #374151; /* Borde sutil */
+    --shadow-color: rgba(52, 211, 153, 0.1); /* Sombra con el color primario */
+
+    --font-family-sans: 'Inter', sans-serif;
+
+    --border-radius-md: 0.5rem; /* 8px */
+    --border-radius-lg: 0.75rem; /* 12px */
+    --transition-speed: 0.3s;
+}
+
+/* --- Base Global --- */
+body {
+    font-family: var(--font-family-sans);
+    line-height: 1.6;
+    background-color: var(--background-dark-primary);
+    color: var(--text-secondary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.content {
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+/* --- Componentes Globales (Botones, Tarjetas, Modales) --- */
+
+.btn {
+    padding: 0.65rem 1.25rem;
+    border-radius: var(--border-radius-md);
+    cursor: pointer;
+    font-size: 0.9em;
+    font-weight: 600;
+    text-align: center;
+    transition: all var(--transition-speed) ease;
+    border: 1px solid transparent;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: var(--text-accent);
+    box-shadow: 0 4px 15px rgba(52, 211, 153, 0.2);
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(52, 211, 153, 0.3);
+}
+
+/* --- Formularios --- */
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    font-size: 0.9em;
+}
+
+.form-group input, .form-group select, .form-group textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    font-size: 1em;
+    color: var(--text-primary);
+    background-color: #374151; /* Gris oscuro para campos */
+    transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
+}
+
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.3);
+    outline: none;
+}
+
+/* --- Panel de Administración --- */
+.admin-dashboard-container {
+    max-width: 1400px;
+    margin: 30px auto;
+    padding: 20px;
+}
+
+.admin-header {
+    text-align: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+}
+
+.admin-header h1 {
+    color: var(--text-primary);
+    font-size: 2.5em;
+    font-weight: 800;
+    margin-bottom: 10px;
+}
+
+.admin-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 25px;
+    justify-content: center;
+}
+
+.tab-button {
+    background: none;
+    border: none;
+    padding: 1rem 1.5rem;
+    font-size: 1em;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-speed);
+    border-bottom: 3px solid transparent;
+    margin-bottom: -1px;
+}
+
+.tab-button:hover {
+    color: var(--text-primary);
+}
+
+.tab-button.active {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.tab-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.tab-header h3 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 1.8em;
+}
+
+/* --- Animaciones y Utilidades --- */
+.loading-spinner {
+    border: 4px solid rgba(255, 255, 255, 0.1);
+    border-top: 4px solid var(--primary-color);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 50px auto;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* --- Página de Login Específica --- */
+.login-page-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 1rem;
+}
+
