@@ -58,7 +58,8 @@ export const AuthProvider = ({ children }) => {
         } catch (error) {
             console.error('Error al iniciar sesión:', error);
             setAuthToken(null);
-            const message = error.response?.data?.error || 'Credenciales inválidas. Inténtelo de nuevo.';
+            const errData = error.response?.data?.error || error.response?.data?.message;
+            const message = typeof errData === 'string' ? errData : (typeof error.message === 'string' ? error.message : 'Credenciales inválidas. Inténtelo de nuevo.');
             return { success: false, error: message };
         }
     };

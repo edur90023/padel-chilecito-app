@@ -24,7 +24,9 @@ function LoginPage() {
         if (result === true || (result && result.success)) {
             navigate('/admin', { replace: true });
         } else {
-            setError((result && result.error) || 'Credenciales inválidas. Inténtelo de nuevo.');
+            const rawError = result && result.error;
+            const message = typeof rawError === 'string' ? rawError : (rawError?.message || 'Credenciales inválidas. Inténtelo de nuevo.');
+            setError(message);
         }
         setLoading(false);
     };
@@ -38,7 +40,7 @@ function LoginPage() {
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    {error && <p className="text-sm text-center text-red-400 bg-red-900/50 p-3 rounded-lg border border-red-700/50">{error}</p>}
+                    {error && <p className="text-sm text-center text-red-400 bg-red-900/50 p-3 rounded-lg border border-red-700/50">{String(error)}</p>}
                     <div>
                         <label htmlFor="username" className="text-sm font-medium text-gray-400">Usuario</label>
                         <input id="username" type="text" value={username} onChange={(e) => setUsername(e.target.value)} required className="w-full px-4 py-3 mt-1.5 text-gray-200 bg-gray-900 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition" placeholder="PadelCHI" />
