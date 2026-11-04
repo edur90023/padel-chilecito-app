@@ -10,7 +10,8 @@ function isAuthenticated(req, res, next) {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ error: 'No autorizado' });
     try {
-        req.user = jwt.verify(token, process.env.JWT_SECRET);
+        const secret = process.env.JWT_SECRET || 'padel-chilecito-secret-key-2024';
+        req.user = jwt.verify(token, secret);
         next();
     } catch (error) {
         res.status(401).json({ error: 'Token inválido' });
@@ -21,14 +22,19 @@ function isAuthenticated(req, res, next) {
 router.post('/register', isAuthenticated, async (req, res) => {
     try {
         const { firstName, lastName, dni, phone, category, points } = req.body;
+        const mongoose = require('mongoose');
+        if (mongoose.connection.readyState !== 1) {
+            const mockPlayer = {
+                _id: 'mock-player-' + Date.now(),
+                firstName, lastName, dni, phone, category, points: Number(points) || 0
+            };
+            return res.status(201).json({ message: 'Jugador registrado exitosamente (modo local)', player: mockPlayer });
+        }
 
-        // La validación de DNI único ahora es manejada por el índice 'sparse' en la base de datos.
-        // Esto evita la comprobación manual y soluciona el error con valores nulos.
         const newPlayer = new Player({ firstName, lastName, dni, phone, category, points });
         await newPlayer.save();
         res.status(201).json({ message: 'Jugador registrado exitosamente', player: newPlayer });
     } catch (error) {
-        // El código 11000 es para error de clave duplicada (DNI en este caso)
         if (error.code === 11000) {
              return res.status(400).json({ error: 'Ya existe un jugador con el DNI proporcionado.' });
         }
@@ -41,7 +47,12 @@ router.get('/', async (req, res) => {
     try {
         const mongoose = require('mongoose');
         if (mongoose.connection.readyState !== 1) {
-            return res.status(200).json([]);
+            return res.status(200).json([
+                { _id: 'player-1', firstName: 'Juan', lastName: 'Pérez', dni: '35123456', phone: '+54 3825 111111', category: '4ta Categoría', points: 250 },
+                { _id: 'player-2', firstName: 'Carlos', lastName: 'Gómez', dni: '36234567', phone: '+54 3825 222222', category: '4ta Categoría', points: 210 },
+                { _id: 'player-3', firstName: 'Lucas', lastName: 'Rodríguez', dni: '37345678', phone: '+54 3825 333333', category: '5ta Categoría', points: 180 },
+                { _id: 'player-4', firstName: 'Martín', lastName: 'Díaz', dni: '38456789', phone: '+54 3825 444444', category: '5ta Categoría', points: 150 }
+            ]);
         }
         const players = await Player.find({}).sort({ points: -1 });
         res.status(200).json(players);

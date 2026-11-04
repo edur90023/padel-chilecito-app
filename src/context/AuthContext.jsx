@@ -13,29 +13,31 @@ const decodeToken = (token) => {
 };
 
 export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(null); // Can be { role: 'admin' } or { role: 'operator', tournamentId: '...' }
     const [token, setToken] = useState(() => localStorage.getItem('token'));
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        if (token) {
-            const decodedUser = decodeToken(token);
-            if (decodedUser) {
-                setUser({ role: decodedUser.role, tournamentId: decodedUser.tournamentId });
-                axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-            } else {
-                // Invalid token found
-                localStorage.removeItem('token');
-                setToken(null);
-                setUser(null);
+    const [user, setUser] = useState(() => {
+        const initialToken = localStorage.getItem('token');
+        if (initialToken) {
+            const decoded = decodeToken(initialToken);
+            if (decoded) {
+                axios.defaults.headers.common['Authorization'] = `Bearer ${initialToken}`;
+                return { role: decoded.role || 'admin', tournamentId: decoded.tournamentId, username: decoded.username };
             }
         }
-        setLoading(false);
-    }, [token]);
+        return null;
+    });
 
     const setAuthToken = (newToken) => {
         if (newToken) {
             localStorage.setItem('token', newToken);
+            const decodedUser = decodeToken(newToken);
+            if (decodedUser) {
+                setUser({
+                    role: decodedUser.role || 'admin',
+                    tournamentId: decodedUser.tournamentId,
+                    username: decodedUser.username
+                });
+                axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+            }
             setToken(newToken);
         } else {
             localStorage.removeItem('token');
@@ -48,11 +50,14 @@ export const AuthProvider = ({ children }) => {
     const login = async (username, password) => {
         try {
             const response = await axios.post('/auth/login', { username, password });
-            setAuthToken(response.data.token);
-            return { success: true };
+            if (response.data && response.data.token) {
+                setAuthToken(response.data.token);
+                return { success: true, user: response.data.user };
+            }
+            return { success: false, error: 'Respuesta inválida del servidor.' };
         } catch (error) {
             console.error('Error al iniciar sesión:', error);
-            setAuthToken(null); // Clear any invalid token
+            setAuthToken(null);
             const message = error.response?.data?.error || 'Credenciales inválidas. Inténtelo de nuevo.';
             return { success: false, error: message };
         }
@@ -65,10 +70,6 @@ export const AuthProvider = ({ children }) => {
     const isAdmin = () => user?.role === 'admin';
     const isOperator = () => user?.role === 'operator';
     const operatorTournamentId = () => user?.tournamentId || null;
-
-    if (loading) {
-        return <div className="flex justify-center items-center h-screen bg-gray-900"><div className="loading-spinner"></div></div>;
-    }
 
     return (
         <AuthContext.Provider value={{ user, token, setAuthToken, login, logout, isAdmin, isOperator, operatorTournamentId }}>

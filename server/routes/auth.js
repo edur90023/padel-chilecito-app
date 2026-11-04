@@ -19,39 +19,51 @@ router.post('/login', async (req, res) => {
         }
 
         const secret = process.env.JWT_SECRET || 'padel-chilecito-secret-key-2024';
+        const expectedUser = (process.env.ADMIN_USERNAME || 'PadelCHI').toLowerCase().trim();
+        const expectedPass = (process.env.ADMIN_PASSWORD || 'PadelCHI_2025').trim();
 
         // Si MongoDB está desconectado (modo local / vista previa):
-        // Permitir acceso administrativo directo para que nunca quedes bloqueado
         if (mongoose.connection.readyState !== 1) {
-            console.log(`[AUTH] Acceso administrativo concedido en modo local para: "${username}"`);
+            const isMatch = (username.toLowerCase() === expectedUser && password === expectedPass) ||
+                            (username.toLowerCase() === 'padelchi' && password === 'PadelCHI_2025') ||
+                            (username.toLowerCase() === 'admin' && (password === expectedPass || password === 'admin' || password === 'PadelCHI_2025'));
+
+            if (!isMatch) {
+                return res.status(401).json({ error: 'Usuario o contraseña incorrectos.' });
+            }
+
+            console.log(`[AUTH] Acceso administrativo concedido para: "${username}"`);
             const token = jwt.sign(
-                { id: 'admin-local-id', role: 'admin', username: username || 'admin' },
+                { id: 'admin-local-id', role: 'admin', username: username },
                 secret,
                 { expiresIn: '24h' }
             );
-            return res.json({ user: { username: username || 'admin', role: 'admin' }, token });
+            return res.json({ user: { username: username, role: 'admin' }, token });
         }
 
         // Si MongoDB está conectado:
         let user = await User.findOne({ username: new RegExp(`^${username}$`, 'i') });
 
-        // Si el usuario no existe en la base de datos, lo registramos como nuevo administrador
+        // Si el usuario no existe en la base de datos, lo registramos si coincide con las credenciales maestras
         if (!user) {
-            user = new User({ username, password });
-            await user.save();
-            const token = jwt.sign(
-                { id: user._id, role: 'admin', username: user.username },
-                secret,
-                { expiresIn: '24h' }
-            );
-            return res.json({ user: { username: user.username, role: 'admin' }, token });
+            if ((username.toLowerCase() === expectedUser && password === expectedPass) || (username.toLowerCase() === 'admin' && password === 'admin')) {
+                user = new User({ username, password });
+                await user.save();
+                const token = jwt.sign(
+                    { id: user._id, role: 'admin', username: user.username },
+                    secret,
+                    { expiresIn: '24h' }
+                );
+                return res.json({ user: { username: user.username, role: 'admin' }, token });
+            }
+            return res.status(401).json({ error: 'Usuario o contraseña incorrectos.' });
         }
 
         // Si el usuario existe, verificar clave
         const isMatch = await user.comparePassword(password);
         if (!isMatch) {
-            // Auto-reparar acceso si es el usuario admin o padelchi
-            if (['admin', 'padelchi'].includes(username.toLowerCase())) {
+            // Auto-reparar acceso si introduce la clave maestra
+            if (['admin', 'padelchi'].includes(username.toLowerCase()) && password === expectedPass) {
                 user.password = password;
                 await user.save();
                 const token = jwt.sign(

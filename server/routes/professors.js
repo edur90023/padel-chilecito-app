@@ -4,6 +4,19 @@ const Professor = require('../models/Professor');
 const auth = require('../middleware/auth');
 const upload = require('../config/cloudinary'); // Importar configuración de Cloudinary
 
+const mockProfessors = [
+    {
+        _id: 'prof-1',
+        name: 'Prof. Marcos Albarracín',
+        phone: '+54 3825 456789',
+        bio: 'Entrenador certificado APA, más de 10 años de experiencia formando jugadores en Chilecito.',
+        categories: ['Iniciación', '4ta Categoría', '5ta Categoría'],
+        locations: ['Club Atlético Chilecito', 'Canchas La Pista'],
+        isActive: true,
+        photoUrl: '/uploads/photo-1756841702587.jpg'
+    }
+];
+
 // @route   GET /api/professors/public
 // @desc    Get all active professors
 // @access  Public
@@ -11,12 +24,12 @@ router.get('/public', async (req, res) => {
     try {
         const mongoose = require('mongoose');
         if (mongoose.connection.readyState !== 1) {
-            return res.status(200).json([]);
+            return res.status(200).json(mockProfessors);
         }
         const professors = await Professor.find({ isActive: true }).sort({ name: 1 });
         res.status(200).json(professors);
     } catch (error) {
-        res.status(200).json([]);
+        res.status(200).json(mockProfessors);
     }
 });
 

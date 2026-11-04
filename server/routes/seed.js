@@ -12,12 +12,14 @@ const Gallery = require('../models/Gallery');
 const LiveStream = require('../models/LiveStream');
 const User = require('../models/User');
 const TournamentManager = require('../services/tournament-manager');
+const jwt = require('jsonwebtoken');
 
 function isAuthenticated(req, res, next) {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ error: 'No autorizado' });
     try {
-        req.user = jwt.verify(token, process.env.JWT_SECRET);
+        const secret = process.env.JWT_SECRET || 'padel-chilecito-secret-key-2024';
+        req.user = jwt.verify(token, secret);
         next();
     } catch (error) {
         res.status(401).json({ error: 'Token inválido' });
