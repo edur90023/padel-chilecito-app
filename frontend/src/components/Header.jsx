@@ -24,12 +24,6 @@ function Header({ navigateTo, isLoggedIn, onLogin }) {
                 >
                     Torneos
                 </button>
-                <button
-                    className={`nav-tab ${'transmision' === 'transmision' ? 'active' : ''}`}
-                    onClick={() => navigateTo('transmision')}
-                >
-                    Transmisión
-                </button>
                 {/* ... (el resto del código sigue igual) */}
             </div>
             {/* ... (el resto del código sigue igual) */}

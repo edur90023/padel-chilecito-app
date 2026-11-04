@@ -378,7 +378,12 @@ router.post('/:tournamentId/move-team', auth(['admin']), async (req, res) => {
 router.put('/:tournamentId/category/:categoryId/match/:matchId', auth(['admin', 'operator']), async (req, res) => {
     try {
         const { tournamentId, categoryId, matchId } = req.params;
-        const { scoreA, scoreB, status, matchTime, matchPlace, customTeamAName, customTeamBName } = req.body;
+        const { 
+            scoreA, scoreB, status, matchTime, matchPlace, matchMapUrl,
+            customTeamAName, customTeamBName,
+            teamAPlayers, teamBPlayers,
+            swapTeams
+        } = req.body;
 
         if (req.user.role === 'operator' && req.user.tournamentId !== tournamentId) {
             return res.status(403).json({ error: 'No tiene permiso para este torneo.' });
@@ -409,52 +414,241 @@ router.put('/:tournamentId/category/:categoryId/match/:matchId', auth(['admin', 
 
         if (!match) return res.status(404).json({ error: 'Partido no encontrado' });
 
-        // 1. Actualizar datos básicos
-        match.scoreA = scoreA;
-        match.scoreB = scoreB;
-        match.status = status;
-        match.matchTime = matchTime;
-        match.matchPlace = matchPlace;
+        // Si se solicita intercambiar equipos A y B de lado
+        if (swapTeams) {
+            const tempTeam = match.teamA;
+            match.teamA = match.teamB;
+            match.teamB = tempTeam;
+            const tempPlaceholder = match.placeholderA;
+            match.placeholderA = match.placeholderB;
+            match.placeholderB = tempPlaceholder;
+        }
 
-        // 2. Lógica de corrección global de nombres
-        const updateGlobalTeamName = (teamId, newName) => {
-            if (!newName || !teamId) return;
+        // 1. Actualizar datos básicos del partido
+        if (Array.isArray(scoreA)) match.scoreA = scoreA;
+        if (Array.isArray(scoreB)) match.scoreB = scoreB;
+        if (status) match.status = status;
+        if (matchTime !== undefined) match.matchTime = matchTime;
+        if (matchPlace !== undefined) match.matchPlace = matchPlace;
+        if (matchMapUrl !== undefined) match.matchMapUrl = matchMapUrl;
+
+        // 2. Lógica de corrección global de nombres y jugadores
+        const updateGlobalTeam = (teamId, newName, newPlayers) => {
+            if (!teamId) return;
             
             // Actualizar en la lista de inscritos de la categoría
             const registered = category.registeredPlayers.id(teamId);
-            if (registered) registered.teamName = newName;
+            if (registered) {
+                if (newName) registered.teamName = newName;
+                if (Array.isArray(newPlayers) && newPlayers.length > 0) registered.players = newPlayers;
+            }
 
             // Actualizar en la lista de equipos de la zona (Esto arregla la Tabla de Posiciones)
             if (parentZone) {
                 const zoneTeam = parentZone.teams.id(teamId);
-                if (zoneTeam) zoneTeam.teamName = newName;
+                if (zoneTeam) {
+                    if (newName) zoneTeam.teamName = newName;
+                    if (Array.isArray(newPlayers) && newPlayers.length > 0) zoneTeam.players = newPlayers;
+                }
             }
 
-            // Actualizar en todos los partidos de la zona (por si juegan otros partidos)
+            // Actualizar en todos los partidos de la zona
             if (parentZone) {
                 parentZone.matches.forEach(m => {
-                    if (m.teamA && String(m.teamA._id) === String(teamId)) m.teamA.teamName = newName;
-                    if (m.teamB && String(m.teamB._id) === String(teamId)) m.teamB.teamName = newName;
+                    if (m.teamA && String(m.teamA._id) === String(teamId)) {
+                        if (newName) m.teamA.teamName = newName;
+                        if (Array.isArray(newPlayers) && newPlayers.length > 0) m.teamA.players = newPlayers;
+                    }
+                    if (m.teamB && String(m.teamB._id) === String(teamId)) {
+                        if (newName) m.teamB.teamName = newName;
+                        if (Array.isArray(newPlayers) && newPlayers.length > 0) m.teamB.players = newPlayers;
+                    }
                 });
             }
 
             // Actualizar en todas las llaves de playoffs
             category.playoffRounds.forEach(round => {
                 round.matches.forEach(m => {
-                    if (m.teamA && String(m.teamA._id) === String(teamId)) m.teamA.teamName = newName;
-                    if (m.teamB && String(m.teamB._id) === String(teamId)) m.teamB.teamName = newName;
+                    if (m.teamA && String(m.teamA._id) === String(teamId)) {
+                        if (newName) m.teamA.teamName = newName;
+                        if (Array.isArray(newPlayers) && newPlayers.length > 0) m.teamA.players = newPlayers;
+                    }
+                    if (m.teamB && String(m.teamB._id) === String(teamId)) {
+                        if (newName) m.teamB.teamName = newName;
+                        if (Array.isArray(newPlayers) && newPlayers.length > 0) m.teamB.players = newPlayers;
+                    }
                 });
             });
         };
 
-        if (customTeamAName && match.teamA) updateGlobalTeamName(match.teamA._id, customTeamAName);
-        if (customTeamBName && match.teamB) updateGlobalTeamName(match.teamB._id, customTeamBName);
+        const resolvedTeamAName = customTeamAName || (Array.isArray(teamAPlayers) ? teamAPlayers.map(p => p.playerName).filter(Boolean).join(' / ') : null);
+        const resolvedTeamBName = customTeamBName || (Array.isArray(teamBPlayers) ? teamBPlayers.map(p => p.playerName).filter(Boolean).join(' / ') : null);
+
+        if (match.teamA) updateGlobalTeam(match.teamA._id, resolvedTeamAName, teamAPlayers);
+        if (match.teamB) updateGlobalTeam(match.teamB._id, resolvedTeamBName, teamBPlayers);
         
         await tournament.save();
         res.status(200).json({ message: 'Actualización global exitosa', tournament: await Tournament.findById(tournamentId) });
 
     } catch (error) {
-        res.status(500).json({ error: 'Error al procesar la actualización global.' });
+        console.error('Error al actualizar partido:', error);
+        res.status(500).json({ error: 'Error al procesar la actualización del partido.' });
+    }
+});
+
+// EDITAR JUGADORES Y EQUIPO REGISTRADO
+router.put('/:tournamentId/category/:categoryId/team/:teamId', auth(['admin', 'operator']), async (req, res) => {
+    try {
+        const { tournamentId, categoryId, teamId } = req.params;
+        const { teamName, players, club } = req.body;
+
+        const tournament = await Tournament.findById(tournamentId);
+        if (!tournament) return res.status(404).json({ error: 'Torneo no encontrado' });
+
+        const category = tournament.categories.id(categoryId);
+        if (!category) return res.status(404).json({ error: 'Categoría no encontrada' });
+
+        const registered = category.registeredPlayers.id(teamId);
+        if (registered) {
+            if (teamName) registered.teamName = teamName.trim();
+            if (club !== undefined) registered.club = club;
+            if (Array.isArray(players) && players.length > 0) {
+                registered.players = players.map(p => ({
+                    playerName: (p.playerName || '').trim(),
+                    phoneNumber: (p.phoneNumber || '').trim()
+                }));
+            }
+        }
+
+        const effectiveTeamName = (teamName || (registered ? registered.teamName : '')).trim();
+
+        // Actualizar en zonas (equipos y partidos)
+        category.zones.forEach(zone => {
+            const zTeam = zone.teams.id(teamId);
+            if (zTeam) {
+                if (effectiveTeamName) zTeam.teamName = effectiveTeamName;
+                if (Array.isArray(players) && players.length > 0) {
+                    zTeam.players = players.map(p => ({
+                        playerName: (p.playerName || '').trim(),
+                        phoneNumber: (p.phoneNumber || '').trim()
+                    }));
+                }
+            }
+
+            zone.matches.forEach(m => {
+                if (m.teamA && String(m.teamA._id) === String(teamId)) {
+                    if (effectiveTeamName) m.teamA.teamName = effectiveTeamName;
+                    if (Array.isArray(players) && players.length > 0) m.teamA.players = players;
+                }
+                if (m.teamB && String(m.teamB._id) === String(teamId)) {
+                    if (effectiveTeamName) m.teamB.teamName = effectiveTeamName;
+                    if (Array.isArray(players) && players.length > 0) m.teamB.players = players;
+                }
+            });
+        });
+
+        // Actualizar en playoffs
+        category.playoffRounds.forEach(round => {
+            round.matches.forEach(m => {
+                if (m.teamA && String(m.teamA._id) === String(teamId)) {
+                    if (effectiveTeamName) m.teamA.teamName = effectiveTeamName;
+                    if (Array.isArray(players) && players.length > 0) m.teamA.players = players;
+                }
+                if (m.teamB && String(m.teamB._id) === String(teamId)) {
+                    if (effectiveTeamName) m.teamB.teamName = effectiveTeamName;
+                    if (Array.isArray(players) && players.length > 0) m.teamB.players = players;
+                }
+            });
+        });
+
+        await tournament.save();
+        res.status(200).json({ message: 'Equipo y jugadores actualizados con éxito.', tournament: await Tournament.findById(tournamentId) });
+    } catch (error) {
+        console.error('Error al editar equipo:', error);
+        res.status(500).json({ error: 'Error al actualizar el equipo' });
+    }
+});
+
+// INTERCAMBIO DE PAREJAS ENTRE ZONAS (CORRECCIÓN DE CRUCE)
+router.post('/:tournamentId/category/:categoryId/swap-zone-teams', auth(['admin']), async (req, res) => {
+    try {
+        const { tournamentId, categoryId } = req.params;
+        const { teamAId, zoneAId, teamBId, zoneBId } = req.body;
+
+        const tournament = await Tournament.findById(tournamentId);
+        if (!tournament) return res.status(404).json({ error: 'Torneo no encontrado' });
+
+        const category = tournament.categories.id(categoryId);
+        if (!category) return res.status(404).json({ error: 'Categoría no encontrada' });
+
+        const zoneA = category.zones.id(zoneAId);
+        const zoneB = category.zones.id(zoneBId);
+        if (!zoneA || !zoneB) return res.status(404).json({ error: 'Zonas no encontradas' });
+
+        const teamAIndex = zoneA.teams.findIndex(t => String(t._id) === String(teamAId));
+        const teamBIndex = zoneB.teams.findIndex(t => String(t._id) === String(teamBId));
+        if (teamAIndex === -1 || teamBIndex === -1) {
+            return res.status(404).json({ error: 'Parejas no encontradas en sus respectivas zonas' });
+        }
+
+        const teamA = zoneA.teams[teamAIndex];
+        const teamB = zoneB.teams[teamBIndex];
+
+        // Intercambiar en las listas de equipos
+        zoneA.teams[teamAIndex] = teamB;
+        zoneB.teams[teamBIndex] = teamA;
+
+        // Actualizar en los partidos de Zone A
+        zoneA.matches.forEach(m => {
+            if (m.teamA && String(m.teamA._id) === String(teamAId)) m.teamA = teamB;
+            if (m.teamB && String(m.teamB._id) === String(teamAId)) m.teamB = teamB;
+        });
+
+        // Actualizar en los partidos de Zone B
+        zoneB.matches.forEach(m => {
+            if (m.teamA && String(m.teamA._id) === String(teamBId)) m.teamA = teamA;
+            if (m.teamB && String(m.teamB._id) === String(teamBId)) m.teamB = teamA;
+        });
+
+        await tournament.save();
+        res.status(200).json({ message: '¡Cruce corregido con éxito! Las parejas fueron intercambiadas entre zonas.', tournament: await Tournament.findById(tournamentId) });
+    } catch (error) {
+        console.error('Error al intercambiar parejas de zona:', error);
+        res.status(500).json({ error: 'Error al intercambiar parejas de zona' });
+    }
+});
+
+// ACTUALIZAR SEDE Y UBICACIÓN GOOGLE MAPS DE UNA ZONA
+router.put('/:tournamentId/category/:categoryId/zone/:zoneId/venue', auth(['admin', 'operator']), async (req, res) => {
+    try {
+        const { tournamentId, categoryId, zoneId } = req.params;
+        const { zonePlace, zoneMapUrl, applyToMatches } = req.body;
+
+        const tournament = await Tournament.findById(tournamentId);
+        if (!tournament) return res.status(404).json({ error: 'Torneo no encontrado' });
+
+        const category = tournament.categories.id(categoryId);
+        if (!category) return res.status(404).json({ error: 'Categoría no encontrada' });
+
+        const zone = category.zones.id(zoneId);
+        if (!zone) return res.status(404).json({ error: 'Zona no encontrada' });
+
+        if (zonePlace !== undefined) zone.zonePlace = (zonePlace || '').trim();
+        if (zoneMapUrl !== undefined) zone.zoneMapUrl = (zoneMapUrl || '').trim();
+
+        // Opcionalmente propagar la sede a los partidos de la zona que no tengan lugar asignado
+        if (applyToMatches && Array.isArray(zone.matches)) {
+            zone.matches.forEach(m => {
+                if (!m.matchPlace || m.matchPlace.trim() === '') m.matchPlace = zone.zonePlace;
+                if (!m.matchMapUrl || m.matchMapUrl.trim() === '') m.matchMapUrl = zone.zoneMapUrl;
+            });
+        }
+
+        await tournament.save();
+        res.status(200).json({ message: 'Sede y ubicación de Maps de la zona guardadas con éxito.', tournament: await Tournament.findById(tournamentId) });
+    } catch (error) {
+        console.error('Error al actualizar sede de la zona:', error);
+        res.status(500).json({ error: 'Error al actualizar sede de la zona' });
     }
 });
 

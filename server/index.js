@@ -57,6 +57,7 @@ app.use('/api/community', require('./routes/community'));
 app.use('/api/livestream', require('./routes/livestream'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/professors', require('./routes/professors'));
+app.use('/api/settings', require('./routes/settings'));
 
 // Middleware de manejo de errores de base de datos
 app.use((err, req, res, next) => {

@@ -6,6 +6,14 @@ import axios from 'axios';
 
 // --- FUNCIONES Y COMPONENTES HELPER ---
 
+const getGoogleMapsUrl = (mapUrl, placeName) => {
+    if (mapUrl && (mapUrl.startsWith('http://') || mapUrl.startsWith('https://'))) {
+        return mapUrl;
+    }
+    const query = mapUrl || placeName || 'Pádel Chilecito La Rioja';
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query + (query.toLowerCase().includes('chilecito') ? '' : ' Chilecito La Rioja'))}`;
+};
+
 const getMatchWinner = (match) => {
     if (match.status !== 'Finalizado' || !match.scoreA || !match.scoreB || match.scoreA.length === 0) {
         return null;
@@ -19,7 +27,7 @@ const MatchDisplay = ({ match }) => {
     const [showDetails, setShowDetails] = useState(false);
     const winner = getMatchWinner(match);
     const formatScore = (scoreArray) => scoreArray.join(' / ');
-    const hasDetails = match.matchTime || match.matchPlace;
+    const hasDetails = match.matchTime || match.matchPlace || match.matchMapUrl;
 
     return (
         <div className="relative group">
@@ -42,12 +50,24 @@ const MatchDisplay = ({ match }) => {
             </button>
             {showDetails && hasDetails && (
                  <div
-                     className="absolute z-10 top-full left-1/2 -translate-x-1/2 mt-2 w-64 bg-gray-900 border border-primary rounded-lg shadow-lg p-4 text-center animate-fade-in"
+                     className="absolute z-20 top-full left-1/2 -translate-x-1/2 mt-2 w-72 bg-gray-900 border border-primary/60 rounded-xl shadow-2xl p-4 text-center animate-fade-in"
                      onClick={(e) => { e.stopPropagation(); setShowDetails(false); }}
                  >
-                     {match.matchPlace && <p className="font-bold text-text-primary text-lg">{match.matchPlace}</p>}
-                     {match.matchTime && <p className="text-primary text-base">{match.matchTime}</p>}
-                     <button onClick={() => setShowDetails(false)} className="absolute top-1 right-2 text-gray-400 hover:text-white">&times;</button>
+                     {match.matchPlace && <p className="font-bold text-text-primary text-base flex items-center justify-center gap-1.5"><i className="fas fa-map-pin text-red-400 text-sm"></i>{match.matchPlace}</p>}
+                     {match.matchTime && <p className="text-primary text-sm mt-1 flex items-center justify-center gap-1.5"><i className="fas fa-clock text-blue-400 text-xs"></i>{match.matchTime}</p>}
+                     {(match.matchMapUrl || match.matchPlace) && (
+                         <a
+                             href={getGoogleMapsUrl(match.matchMapUrl, match.matchPlace)}
+                             target="_blank"
+                             rel="noopener noreferrer"
+                             onClick={(e) => e.stopPropagation()}
+                             className="mt-3 inline-flex items-center justify-center gap-1.5 w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition shadow-md"
+                         >
+                             <i className="fas fa-map-marked-alt text-sm"></i>
+                             <span>Cómo llegar en Google Maps ↗</span>
+                         </a>
+                     )}
+                     <button onClick={() => setShowDetails(false)} className="absolute top-1.5 right-2.5 text-gray-400 hover:text-white text-lg">&times;</button>
                  </div>
             )}
         </div>
@@ -306,7 +326,22 @@ function TournamentPublicView() {
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                                 {selectedCategory.zones.map(zone => (
                                     <div key={zone._id} className="bg-dark-secondary p-5 rounded-lg">
-                                        <h4 className="text-xl font-semibold text-text-primary mb-4">{zone.zoneName}</h4>
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2 border-b border-gray-700/60 pb-3">
+                                            <h4 className="text-xl font-semibold text-text-primary">{zone.zoneName}</h4>
+                                            {(zone.zonePlace || zone.zoneMapUrl) && (
+                                                <a
+                                                    href={getGoogleMapsUrl(zone.zoneMapUrl, zone.zonePlace)}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-500/50 text-emerald-300 rounded-lg text-xs font-bold transition shadow-sm self-start sm:self-auto"
+                                                    title="Abrir ubicación del complejo en Google Maps"
+                                                >
+                                                    <i className="fas fa-map-marker-alt text-red-400"></i>
+                                                    <span>{zone.zonePlace || 'Complejo en Google Maps'}</span>
+                                                    <span className="text-[10px] bg-emerald-500/20 px-1.5 py-0.5 rounded text-emerald-200">Cómo llegar ↗</span>
+                                                </a>
+                                            )}
+                                        </div>
                                         <div className="space-y-2">{zone.matches.map((match, idx) => <MatchDisplay key={match._id || idx} match={match} />)}</div>
                                         <ZoneStandings zone={zone} />
                                     </div>

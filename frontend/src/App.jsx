@@ -20,8 +20,6 @@ import LivePage from './pages/LivePage';
 import OperatorPage from './pages/OperatorPage';
 import OperatorTournamentView from './pages/OperatorTournamentView';
 
-// IMPORTACIÓN DEL NUEVO MÓDULO DE TRANSMISIÓN
-import ControlTransmisionPage from './pages/ControlTransmisionPage';
 
 import './index.css';
 
@@ -53,27 +51,51 @@ const NavItem = ({ to, icon, children, onClick }) => (
     </NavLink>
 );
 
+const DisabledSection = ({ title }) => (
+    <div className="max-w-xl mx-auto my-12 bg-gray-800/90 border border-gray-700 p-8 rounded-2xl text-center shadow-xl">
+        <div className="w-16 h-16 bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4 border border-gray-700">
+            <i className="fas fa-lock text-amber-400 text-2xl"></i>
+        </div>
+        <h2 className="text-2xl font-bold text-white mb-2">Sección {title} Temporalmente Inactiva</h2>
+        <p className="text-gray-400 text-sm mb-6">
+            El administrador ha pausado la visibilidad de esta sección. Estará disponible nuevamente pronto.
+        </p>
+        <Link to="/" className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-dark-primary font-bold rounded-xl hover:bg-primary-dark transition">
+            <i className="fas fa-arrow-left"></i> Volver al Inicio
+        </Link>
+    </div>
+);
+
 const PublicLayout = () => {
     // Extraemos también isOperator para poder mostrarle el menú de transmisión
     const { isAdmin, isOperator, logout } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isLiveEnabled, setIsLiveEnabled] = useState(false);
+    const [siteSettings, setSiteSettings] = useState({ isCommunityEnabled: true, isRankingEnabled: true });
     const { installPrompt, handleInstall } = useInstallPWA();
 
-    // Verificación inicial del estado de la transmisión en vivo
+    // Verificación de transmisiones y ajustes generales
     useEffect(() => {
-        const checkLiveStatus = async () => {
+        const fetchStatus = async () => {
             try {
-                // Utiliza la instancia configurada que ya apunta a /api
-                const response = await axios.get('/livestream');
-                if (response.data && response.data.isEnabled) {
+                const [liveRes, settingsRes] = await Promise.all([
+                    axios.get('/livestream').catch(() => ({ data: { isEnabled: false } })),
+                    axios.get('/settings').catch(() => ({ data: { isCommunityEnabled: true, isRankingEnabled: true } }))
+                ]);
+                if (liveRes.data && liveRes.data.isEnabled) {
                     setIsLiveEnabled(true);
                 }
+                if (settingsRes.data) {
+                    setSiteSettings({
+                        isCommunityEnabled: settingsRes.data.isCommunityEnabled !== false,
+                        isRankingEnabled: settingsRes.data.isRankingEnabled !== false
+                    });
+                }
             } catch (error) {
-                console.error("Error al verificar el status de la transmisión:", error);
+                console.error("Error al verificar status:", error);
             }
         };
-        checkLiveStatus();
+        fetchStatus();
     }, []);
 
     const closeMenu = () => setIsMenuOpen(false);
@@ -95,16 +117,11 @@ const PublicLayout = () => {
                                 {isLiveEnabled && <NavItem to="/live" icon="fas fa-video text-red-500">En Vivo</NavItem>}
                                 <NavItem to="/" icon="fas fa-home">Inicio</NavItem>
                                 <NavItem to="/tournaments" icon="fas fa-trophy">Torneos</NavItem>
-                                <NavItem to="/community" icon="fas fa-users">Comunidad</NavItem>
+                                {siteSettings.isCommunityEnabled && <NavItem to="/community" icon="fas fa-users">Comunidad</NavItem>}
                                 <NavItem to="/gallery" icon="fas fa-images">Galería</NavItem>
-                                <NavItem to="/standings" icon="fas fa-star">Rankings</NavItem>
+                                {siteSettings.isRankingEnabled && <NavItem to="/standings" icon="fas fa-star">Rankings</NavItem>}
                                 <NavItem to="/profesores" icon="fas fa-chalkboard-teacher">Profesores</NavItem>
                                 <NavItem to="/contact" icon="fas fa-address-book">Contacto</NavItem>
-                                
-                                {/* NUEVO BOTÓN DE TRANSMISIÓN: Solo visible para Admin u Operador */}
-                                {(isAdmin() || isOperator()) && (
-                                    <NavItem to="/transmision" icon="fas fa-tv">Transmisión</NavItem>
-                                )}
                             </div>
                         </div>
 
@@ -150,16 +167,11 @@ const PublicLayout = () => {
                         {isLiveEnabled && <NavItem to="/live" icon="fas fa-video text-red-500" onClick={closeMenu}>En Vivo</NavItem>}
                         <NavItem to="/" icon="fas fa-home" onClick={closeMenu}>Inicio</NavItem>
                         <NavItem to="/tournaments" icon="fas fa-trophy" onClick={closeMenu}>Torneos</NavItem>
-                        <NavItem to="/community" icon="fas fa-users" onClick={closeMenu}>Comunidad</NavItem>
+                        {siteSettings.isCommunityEnabled && <NavItem to="/community" icon="fas fa-users" onClick={closeMenu}>Comunidad</NavItem>}
                         <NavItem to="/gallery" icon="fas fa-images" onClick={closeMenu}>Galería</NavItem>
-                        <NavItem to="/standings" icon="fas fa-star" onClick={closeMenu}>Rankings</NavItem>
+                        {siteSettings.isRankingEnabled && <NavItem to="/standings" icon="fas fa-star" onClick={closeMenu}>Rankings</NavItem>}
                         <NavItem to="/profesores" icon="fas fa-chalkboard-teacher" onClick={closeMenu}>Profesores</NavItem>
                         <NavItem to="/contact" icon="fas fa-address-book" onClick={closeMenu}>Contacto</NavItem>
-                        
-                        {/* NUEVO BOTÓN DE TRANSMISIÓN MÓVIL: Solo visible para Admin u Operador */}
-                        {(isAdmin() || isOperator()) && (
-                            <NavItem to="/transmision" icon="fas fa-tv" onClick={closeMenu}>Transmisión</NavItem>
-                        )}
 
                         <div className="border-t border-gray-700 pt-4 mt-4 space-y-2">
                              {installPrompt && (
@@ -195,13 +207,10 @@ const PublicLayout = () => {
                     <Route path="/tournaments" element={<Tournament />} />
                     <Route path="/tournaments/:id" element={<TournamentPublicView />} />
                     <Route path="/gallery" element={<Gallery />} />
-                    <Route path="/standings" element={<Standings />} />
+                    <Route path="/standings" element={siteSettings.isRankingEnabled ? <Standings /> : <DisabledSection title="Rankings" />} />
                     <Route path="/contact" element={<Contact />} />
-                    <Route path="/community" element={<CommunityPage />} />
+                    <Route path="/community" element={siteSettings.isCommunityEnabled ? <CommunityPage /> : <DisabledSection title="Comunidad" />} />
                     <Route path="/profesores" element={<ProfessorsPage />} />
-                    
-                    {/* NUEVA RUTA INTEGRADA PARA EL CONTROL DE TRANSMISIÓN */}
-                    <Route path="/transmision" element={<ControlTransmisionPage />} />
                 </Routes>
             </main>
             <NotificationManager />

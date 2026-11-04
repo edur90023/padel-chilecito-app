@@ -3,6 +3,14 @@ import axios from 'axios';
 import ManualSetupManager from './ManualSetupManager';
 import { useAuth } from '../context/AuthContext';
 
+export const getGoogleMapsUrl = (mapUrl, placeName) => {
+    if (mapUrl && (mapUrl.startsWith('http://') || mapUrl.startsWith('https://'))) {
+        return mapUrl;
+    }
+    const query = mapUrl || placeName || 'Pádel Chilecito La Rioja';
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query + (query.toLowerCase().includes('chilecito') ? '' : ' Chilecito La Rioja'))}`;
+};
+
 // --- Sub-componente para la Previsualización de Zonas ---
 function ZonesPreview({ zones, onConfirm, onCancel }) {
     return (
@@ -63,6 +71,8 @@ function AddTeamForm({ categoryId, onAction }) {
 // --- Sub-componente para gestionar los jugadores inscritos ---
 function RegisteredPlayersManager({ tournament, category, onAction }) {
     const [movingTeam, setMovingTeam] = useState(null);
+    const [editingTeam, setEditingTeam] = useState(null);
+    const [editForm, setEditForm] = useState({ p1Name: '', p1Phone: '', p2Name: '', p2Phone: '', teamName: '' });
 
     const handleDelete = (teamId, teamName) => {
         if (window.confirm(`¿Seguro que quieres eliminar a la pareja "${teamName}"?`)) {
@@ -75,40 +85,299 @@ function RegisteredPlayersManager({ tournament, category, onAction }) {
         setMovingTeam(null);
     };
 
+    const handleStartEdit = (team) => {
+        setEditingTeam(team._id);
+        setEditForm({
+            p1Name: team.players?.[0]?.playerName || '',
+            p1Phone: team.players?.[0]?.phoneNumber || '',
+            p2Name: team.players?.[1]?.playerName || '',
+            p2Phone: team.players?.[1]?.phoneNumber || '',
+            teamName: team.teamName || ''
+        });
+    };
+
+    const handleSaveEdit = (teamId) => {
+        const payload = {
+            teamId,
+            teamName: editForm.teamName.trim(),
+            players: [
+                { playerName: editForm.p1Name.trim(), phoneNumber: editForm.p1Phone.trim() },
+                { playerName: editForm.p2Name.trim(), phoneNumber: editForm.p2Phone.trim() }
+            ]
+        };
+        onAction('edit-team', category._id, payload);
+        setEditingTeam(null);
+    };
+
     return (
         <div className="mt-4 space-y-2">
             {category.registeredPlayers.map((team, index) => (
-                <div key={team._id} className="flex items-center justify-between p-2 bg-gray-700 rounded-md text-sm">
-                    <span className="font-semibold text-white">{index + 1}. {team.teamName}</span>
-                    <div className="flex items-center gap-2">
-                        {movingTeam === team._id ? (
-                            <select
-                                onChange={(e) => handleMove(team._id, e.target.value)}
-                                onBlur={() => setMovingTeam(null)}
-                                className="bg-gray-800 text-white text-xs p-1 rounded"
-                                defaultValue=""
-                            >
-                                <option value="" disabled>Mover a...</option>
-                                {tournament.categories
-                                    .filter(c => c._id !== category._id)
-                                    .map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
-                            </select>
-                        ) : (
-                            <button onClick={() => setMovingTeam(team._id)} className="bg-yellow-600 text-white px-2 py-1 text-xs rounded hover:bg-yellow-700">Mover</button>
-                        )}
-                        <button onClick={() => handleDelete(team._id, team.teamName)} className="bg-red-600 text-white px-2 py-1 text-xs rounded hover:bg-red-700">Eliminar</button>
-                    </div>
+                <div key={team._id} className="p-3 bg-gray-700/80 rounded-md text-sm border border-gray-600/50">
+                    {editingTeam === team._id ? (
+                        <div className="space-y-3 bg-gray-800 p-3 rounded border border-blue-500 animate-fade-in">
+                            <div className="flex justify-between items-center">
+                                <p className="font-bold text-xs text-blue-400">Editar Pareja #{index + 1}</p>
+                                <span className="text-xs text-gray-400">Se sincronizará en zonas y partidos</span>
+                            </div>
+                            <div>
+                                <label className="text-xs text-gray-400 block mb-1">Nombre Pareja</label>
+                                <input
+                                    type="text"
+                                    value={editForm.teamName}
+                                    onChange={e => setEditForm({ ...editForm, teamName: e.target.value })}
+                                    className="w-full p-2 bg-gray-700 rounded text-white text-xs"
+                                    placeholder="Ej: Pérez / Gómez"
+                                />
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <div>
+                                    <label className="text-xs text-gray-400 block mb-1">Jugador 1</label>
+                                    <input
+                                        type="text"
+                                        value={editForm.p1Name}
+                                        onChange={e => setEditForm({ ...editForm, p1Name: e.target.value })}
+                                        placeholder="Nombre Jugador 1"
+                                        className="w-full p-2 bg-gray-700 rounded text-white text-xs mb-1"
+                                    />
+                                    <input
+                                        type="text"
+                                        value={editForm.p1Phone}
+                                        onChange={e => setEditForm({ ...editForm, p1Phone: e.target.value })}
+                                        placeholder="Teléfono (ej: 3825...)"
+                                        className="w-full p-2 bg-gray-700 rounded text-white text-xs"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs text-gray-400 block mb-1">Jugador 2</label>
+                                    <input
+                                        type="text"
+                                        value={editForm.p2Name}
+                                        onChange={e => setEditForm({ ...editForm, p2Name: e.target.value })}
+                                        placeholder="Nombre Jugador 2"
+                                        className="w-full p-2 bg-gray-700 rounded text-white text-xs mb-1"
+                                    />
+                                    <input
+                                        type="text"
+                                        value={editForm.p2Phone}
+                                        onChange={e => setEditForm({ ...editForm, p2Phone: e.target.value })}
+                                        placeholder="Teléfono (ej: 3825...)"
+                                        className="w-full p-2 bg-gray-700 rounded text-white text-xs"
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex justify-end gap-2 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setEditingTeam(null)}
+                                    className="px-3 py-1 bg-gray-600 hover:bg-gray-500 text-white rounded text-xs"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => handleSaveEdit(team._id)}
+                                    className="px-3 py-1 bg-green-600 hover:bg-green-500 text-white font-bold rounded text-xs"
+                                >
+                                    Guardar Cambios
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div>
+                                <span className="font-semibold text-white">{index + 1}. {team.teamName}</span>
+                                {team.players && team.players.length > 0 && (
+                                    <p className="text-xs text-gray-400">
+                                        {team.players.map(p => `${p.playerName}${p.phoneNumber ? ` (${p.phoneNumber})` : ''}`).join(' • ')}
+                                    </p>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-2 self-end sm:self-auto">
+                                <button
+                                    onClick={() => handleStartEdit(team)}
+                                    className="bg-blue-600 text-white px-2.5 py-1 text-xs rounded hover:bg-blue-700 font-medium"
+                                >
+                                    Editar
+                                </button>
+                                {movingTeam === team._id ? (
+                                    <select
+                                        onChange={(e) => handleMove(team._id, e.target.value)}
+                                        onBlur={() => setMovingTeam(null)}
+                                        className="bg-gray-800 text-white text-xs p-1 rounded border border-gray-600"
+                                        defaultValue=""
+                                    >
+                                        <option value="" disabled>Mover a...</option>
+                                        {tournament.categories
+                                            .filter(c => c._id !== category._id)
+                                            .map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                                    </select>
+                                ) : (
+                                    <button onClick={() => setMovingTeam(team._id)} className="bg-yellow-600 text-white px-2 py-1 text-xs rounded hover:bg-yellow-700">Mover</button>
+                                )}
+                                <button onClick={() => handleDelete(team._id, team.teamName)} className="bg-red-600 text-white px-2 py-1 text-xs rounded hover:bg-red-700">Eliminar</button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             ))}
         </div>
     );
 }
 
-// --- Sub-componente para editar los resultados de un partido ---
+// --- Sub-componente para intercambiar parejas entre zonas (corrección de cruces) ---
+function SwapZoneModal({ category, onAction, onClose }) {
+    const zones = category.zones || [];
+    const [zoneAId, setZoneAId] = useState(zones[0]?._id || '');
+    const [zoneBId, setZoneBId] = useState(zones[1]?._id || zones[0]?._id || '');
+    
+    const zoneA = zones.find(z => z._id === zoneAId);
+    const zoneB = zones.find(z => z._id === zoneBId);
+
+    const [teamAId, setTeamAId] = useState(zoneA?.teams?.[0]?._id || '');
+    const [teamBId, setTeamBId] = useState(zoneB?.teams?.[0]?._id || '');
+
+    useEffect(() => {
+        if (zoneA && zoneA.teams?.length > 0) {
+            setTeamAId(zoneA.teams[0]._id);
+        }
+    }, [zoneAId]);
+
+    useEffect(() => {
+        if (zoneB && zoneB.teams?.length > 0) {
+            setTeamBId(zoneB.teams[0]._id);
+        }
+    }, [zoneBId]);
+
+    const handleConfirm = () => {
+        if (!zoneAId || !zoneBId || !teamAId || !teamBId) {
+            alert('Por favor selecciona las dos zonas y las dos parejas a intercambiar.');
+            return;
+        }
+        if (zoneAId === zoneBId) {
+            alert('Debes seleccionar dos zonas distintas para intercambiar parejas.');
+            return;
+        }
+        if (teamAId === teamBId) {
+            alert('Debes seleccionar parejas distintas.');
+            return;
+        }
+
+        const teamAName = zoneA?.teams?.find(t => t._id === teamAId)?.teamName || 'Pareja A';
+        const teamBName = zoneB?.teams?.find(t => t._id === teamBId)?.teamName || 'Pareja B';
+
+        if (window.confirm(`¿Confirmas intercambiar "${teamAName}" (${zoneA?.zoneName}) con "${teamBName}" (${zoneB?.zoneName})? Se actualizarán automáticamente sus partidos asignados.`)) {
+            onAction('swap-zone-teams', category._id, {
+                zoneAId,
+                teamAId,
+                zoneBId,
+                teamBId
+            });
+            onClose();
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/80 flex justify-center items-center z-50 p-4 animate-fade-in">
+            <div className="bg-gray-800 border border-gray-700 p-6 rounded-xl shadow-2xl w-full max-w-xl text-white">
+                <div className="flex justify-between items-center mb-4 border-b border-gray-700 pb-3">
+                    <h3 className="text-xl font-bold flex items-center gap-2">
+                        <span>🔀</span> Corregir Cruce / Intercambiar Parejas entre Zonas
+                    </h3>
+                    <button onClick={onClose} className="text-gray-400 hover:text-white text-lg">✕</button>
+                </div>
+                <p className="text-xs text-gray-300 mb-5">
+                    Permite corregir cruces o asignaciones erróneas de parejas entre grupos. Al intercambiar dos parejas entre zonas, sus partidos en la fase de grupos y la tabla de posiciones se actualizarán automáticamente.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                    <div className="bg-gray-900/80 p-3.5 rounded-lg border border-gray-700 space-y-2">
+                        <label className="text-xs font-semibold text-green-400 block">Zona 1</label>
+                        <select 
+                            value={zoneAId} 
+                            onChange={(e) => setZoneAId(e.target.value)}
+                            className="w-full bg-gray-800 text-white p-2 rounded text-sm border border-gray-700"
+                        >
+                            {zones.map(z => (
+                                <option key={z._id} value={z._id}>{z.zoneName}</option>
+                            ))}
+                        </select>
+
+                        <label className="text-xs font-semibold text-gray-300 block pt-1">Pareja de Zona 1</label>
+                        <select
+                            value={teamAId}
+                            onChange={(e) => setTeamAId(e.target.value)}
+                            className="w-full bg-gray-800 text-white p-2 rounded text-sm border border-gray-700"
+                        >
+                            {zoneA?.teams?.map(t => (
+                                <option key={t._id} value={t._id}>{t.teamName}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="bg-gray-900/80 p-3.5 rounded-lg border border-gray-700 space-y-2">
+                        <label className="text-xs font-semibold text-blue-400 block">Zona 2</label>
+                        <select 
+                            value={zoneBId} 
+                            onChange={(e) => setZoneBId(e.target.value)}
+                            className="w-full bg-gray-800 text-white p-2 rounded text-sm border border-gray-700"
+                        >
+                            {zones.map(z => (
+                                <option key={z._id} value={z._id}>{z.zoneName}</option>
+                            ))}
+                        </select>
+
+                        <label className="text-xs font-semibold text-gray-300 block pt-1">Pareja de Zona 2</label>
+                        <select
+                            value={teamBId}
+                            onChange={(e) => setTeamBId(e.target.value)}
+                            className="w-full bg-gray-800 text-white p-2 rounded text-sm border border-gray-700"
+                        >
+                            {zoneB?.teams?.map(t => (
+                                <option key={t._id} value={t._id}>{t.teamName}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+
+                <div className="flex gap-3">
+                    <button 
+                        type="button"
+                        onClick={onClose} 
+                        className="w-1/2 bg-gray-700 hover:bg-gray-600 text-white font-medium py-2.5 rounded-lg text-sm"
+                    >
+                        Cancelar
+                    </button>
+                    <button 
+                        type="button"
+                        onClick={handleConfirm} 
+                        className="w-1/2 bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-2.5 rounded-lg text-sm shadow-md"
+                    >
+                        Confirmar Intercambio
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// --- Sub-componente para editar los resultados de un partido y nombres de jugadores ---
 function MatchEditor({ tournamentId, categoryId, match, onAction, userRole }) {
     const [isEditing, setIsEditing] = useState(false);
-    const [teamAName, setTeamAName] = useState(match.teamA?.teamName || '');
-    const [teamBName, setTeamBName] = useState(match.teamB?.teamName || '');
+    const [teamAName, setTeamAName] = useState(match.teamA?.teamName || match.placeholderA || '');
+    const [teamBName, setTeamBName] = useState(match.teamB?.teamName || match.placeholderB || '');
+    
+    const [p1AName, setP1AName] = useState(match.teamA?.players?.[0]?.playerName || '');
+    const [p1APhone, setP1APhone] = useState(match.teamA?.players?.[0]?.phoneNumber || '');
+    const [p2AName, setP2AName] = useState(match.teamA?.players?.[1]?.playerName || '');
+    const [p2APhone, setP2APhone] = useState(match.teamA?.players?.[1]?.phoneNumber || '');
+
+    const [p1BName, setP1BName] = useState(match.teamB?.players?.[0]?.playerName || '');
+    const [p1BPhone, setP1BPhone] = useState(match.teamB?.players?.[0]?.phoneNumber || '');
+    const [p2BName, setP2BName] = useState(match.teamB?.players?.[1]?.playerName || '');
+    const [p2BPhone, setP2BPhone] = useState(match.teamB?.players?.[1]?.phoneNumber || '');
+
+    const [swapSides, setSwapSides] = useState(false);
+
     const [sets, setSets] = useState([
         { a: match.scoreA[0] !== undefined ? match.scoreA[0] : '', b: match.scoreB[0] !== undefined ? match.scoreB[0] : '' },
         { a: match.scoreA[1] !== undefined ? match.scoreA[1] : '', b: match.scoreB[1] !== undefined ? match.scoreB[1] : '' },
@@ -116,12 +385,51 @@ function MatchEditor({ tournamentId, categoryId, match, onAction, userRole }) {
     ]);
     const [time, setTime] = useState(match.matchTime || '');
     const [place, setPlace] = useState(match.matchPlace || '');
+    const [mapUrl, setMapUrl] = useState(match.matchMapUrl || '');
     const [status, setStatus] = useState(match.status || 'Pendiente');
+
+    useEffect(() => {
+        setTeamAName(match.teamA?.teamName || match.placeholderA || '');
+        setTeamBName(match.teamB?.teamName || match.placeholderB || '');
+        setP1AName(match.teamA?.players?.[0]?.playerName || '');
+        setP1APhone(match.teamA?.players?.[0]?.phoneNumber || '');
+        setP2AName(match.teamA?.players?.[1]?.playerName || '');
+        setP2APhone(match.teamA?.players?.[1]?.phoneNumber || '');
+        setP1BName(match.teamB?.players?.[0]?.playerName || '');
+        setP1BPhone(match.teamB?.players?.[0]?.phoneNumber || '');
+        setP2BName(match.teamB?.players?.[1]?.playerName || '');
+        setP2BPhone(match.teamB?.players?.[1]?.phoneNumber || '');
+        setSets([
+            { a: match.scoreA[0] !== undefined ? match.scoreA[0] : '', b: match.scoreB[0] !== undefined ? match.scoreB[0] : '' },
+            { a: match.scoreA[1] !== undefined ? match.scoreA[1] : '', b: match.scoreB[1] !== undefined ? match.scoreB[1] : '' },
+            { a: match.scoreA[2] !== undefined ? match.scoreA[2] : '', b: match.scoreB[2] !== undefined ? match.scoreB[2] : '' },
+        ]);
+        setTime(match.matchTime || '');
+        setPlace(match.matchPlace || '');
+        setMapUrl(match.matchMapUrl || '');
+        setStatus(match.status || 'Pendiente');
+    }, [match]);
 
     const handleSetChange = (setIndex, team, value) => {
         const newSets = [...sets];
         newSets[setIndex][team] = value;
         setSets(newSets);
+    };
+
+    const handleSwapSides = () => {
+        setSwapSides(prev => !prev);
+        const tmpTeamA = teamAName;
+        setTeamAName(teamBName);
+        setTeamBName(tmpTeamA);
+
+        const tmpP1A = p1AName; const tmpP1APh = p1APhone;
+        const tmpP2A = p2AName; const tmpP2APh = p2APhone;
+        setP1AName(p1BName); setP1APhone(p1BPhone);
+        setP2AName(p2BName); setP2APhone(p2BPhone);
+        setP1BName(tmpP1A); setP1BPhone(tmpP1APh);
+        setP2BName(tmpP2A); setP2BPhone(tmpP2APh);
+
+        setSets(prev => prev.map(s => ({ a: s.b, b: s.a })));
     };
 
     const handleUpdateScore = () => {
@@ -136,20 +444,31 @@ function MatchEditor({ tournamentId, categoryId, match, onAction, userRole }) {
             matchId: match._id,
             matchTime: time,
             matchPlace: place,
+            matchMapUrl: mapUrl,
             customTeamAName: teamAName,
-            customTeamBName: teamBName
+            customTeamBName: teamBName,
+            swapTeams: swapSides,
+            teamAPlayers: (p1AName || p2AName) ? [
+                { playerName: p1AName.trim(), phoneNumber: p1APhone.trim() },
+                { playerName: p2AName.trim(), phoneNumber: p2APhone.trim() }
+            ] : undefined,
+            teamBPlayers: (p1BName || p2BName) ? [
+                { playerName: p1BName.trim(), phoneNumber: p1BPhone.trim() },
+                { playerName: p2BName.trim(), phoneNumber: p2BPhone.trim() }
+            ] : undefined
         };
         onAction('update-match', categoryId, payload);
         setIsEditing(false);
     };
 
     const handleNotifyPlayer = (player, team, opponents) => {
-        if (!player.phoneNumber) {
-            alert(`Error: El jugador ${player.playerName} no tiene un número de teléfono registrado.`);
+        if (!player?.phoneNumber) {
+            alert(`Error: El jugador ${player?.playerName || ''} no tiene un número de teléfono registrado.`);
             return;
         }
 
-        const message = `¡Hola ${player.playerName}! Tu próximo partido del torneo ha sido programado:\n\n*Rivales:* ${opponents.teamName}\n*Lugar:* ${place}\n*Fecha/Hora:* ${time}\n\n¡Mucha suerte!`;
+        const opponentName = opponents?.teamName || 'Rival';
+        const message = `¡Hola ${player.playerName}! Tu próximo partido del torneo ha sido programado:\n\n*Rivales:* ${opponentName}\n*Lugar:* ${place || 'Cancha a confirmar'}\n*Fecha/Hora:* ${time || 'A confirmar'}\n\n¡Mucha suerte!`;
 
         let cleanPhone = player.phoneNumber.replace(/[^0-9]/g, '');
         if (cleanPhone.length > 8 && !cleanPhone.startsWith('54')) {
@@ -180,7 +499,20 @@ function MatchEditor({ tournamentId, categoryId, match, onAction, userRole }) {
             <div className="flex items-center justify-between p-2 border-b border-gray-700 text-sm hover:bg-gray-700/50">
                 <div className="flex-1 text-left">
                     <p className="text-white font-medium">{match.teamA?.teamName || match.placeholderA}</p>
-                    <p className="text-xs text-gray-400">{match.matchTime} - {match.matchPlace}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                        {match.matchTime && <span className="text-xs text-gray-400">{match.matchTime}</span>}
+                        {(match.matchPlace || match.matchMapUrl) && (
+                            <a
+                                href={getGoogleMapsUrl(match.matchMapUrl, match.matchPlace)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-emerald-400 hover:text-emerald-300 hover:underline inline-flex items-center gap-1 font-medium"
+                                title="Abrir ubicación en Google Maps"
+                            >
+                                <i className="fas fa-map-marker-alt text-red-400"></i> {match.matchPlace || 'Ver Maps'} ↗
+                            </a>
+                        )}
+                    </div>
                 </div>
                 <span className={`font-bold text-center flex-1 ${match.status === 'Finalizado' ? 'text-green-400' : 'text-yellow-400'}`}>
                     {match.status === 'Finalizado' ? match.scoreA.map((s, i) => `${s}-${match.scoreB[i]}`).join(' / ') : match.status}
@@ -195,60 +527,183 @@ function MatchEditor({ tournamentId, categoryId, match, onAction, userRole }) {
 
     return (
         <div className="p-4 bg-gray-900 rounded-lg my-2 space-y-3 animate-fade-in border border-blue-500">
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label className="text-xs text-gray-400 block mb-1">Nombre Equipo A</label>
-                    <input type="text" value={teamAName} onChange={(e) => setTeamAName(e.target.value)} className="w-full p-2 bg-gray-700 rounded-md text-white font-bold" placeholder="Equipo A" />
+            <div className="flex justify-between items-center pb-2 border-b border-gray-800">
+                <span className="text-xs font-bold text-blue-400">Edición de Partido y Nombres</span>
+                <button 
+                    type="button" 
+                    onClick={handleSwapSides}
+                    className="bg-purple-600 hover:bg-purple-500 text-white text-xs px-2.5 py-1 rounded flex items-center gap-1 transition"
+                    title="Invertir Pareja A con Pareja B"
+                >
+                    ⇄ Invertir Lados (A / B)
+                </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-800/60 p-3 rounded-lg border border-gray-700/60">
+                <div className="space-y-2">
+                    <label className="text-xs font-semibold text-green-400 block">Equipo A (Nombre de Pareja)</label>
+                    <input 
+                        type="text" 
+                        value={teamAName} 
+                        onChange={(e) => setTeamAName(e.target.value)} 
+                        className="w-full p-2 bg-gray-700 rounded-md text-white font-bold text-sm" 
+                        placeholder="Equipo A" 
+                    />
+                    <div className="pt-1">
+                        <label className="text-[11px] text-gray-400 block mb-0.5">Jugador 1</label>
+                        <div className="grid grid-cols-2 gap-1.5">
+                            <input 
+                                type="text" 
+                                value={p1AName} 
+                                onChange={e => setP1AName(e.target.value)} 
+                                placeholder="Nombre J1" 
+                                className="p-1.5 bg-gray-700 rounded text-xs text-white" 
+                            />
+                            <input 
+                                type="text" 
+                                value={p1APhone} 
+                                onChange={e => setP1APhone(e.target.value)} 
+                                placeholder="Teléfono" 
+                                className="p-1.5 bg-gray-700 rounded text-xs text-white" 
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="text-[11px] text-gray-400 block mb-0.5">Jugador 2</label>
+                        <div className="grid grid-cols-2 gap-1.5">
+                            <input 
+                                type="text" 
+                                value={p2AName} 
+                                onChange={e => setP2AName(e.target.value)} 
+                                placeholder="Nombre J2" 
+                                className="p-1.5 bg-gray-700 rounded text-xs text-white" 
+                            />
+                            <input 
+                                type="text" 
+                                value={p2APhone} 
+                                onChange={e => setP2APhone(e.target.value)} 
+                                placeholder="Teléfono" 
+                                className="p-1.5 bg-gray-700 rounded text-xs text-white" 
+                            />
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    <label className="text-xs text-gray-400 block mb-1 text-right">Nombre Equipo B</label>
-                    <input type="text" value={teamBName} onChange={(e) => setTeamBName(e.target.value)} className="w-full p-2 bg-gray-700 rounded-md text-white text-right font-bold" placeholder="Equipo B" />
+
+                <div className="space-y-2">
+                    <label className="text-xs font-semibold text-blue-400 block">Equipo B (Nombre de Pareja)</label>
+                    <input 
+                        type="text" 
+                        value={teamBName} 
+                        onChange={(e) => setTeamBName(e.target.value)} 
+                        className="w-full p-2 bg-gray-700 rounded-md text-white font-bold text-sm" 
+                        placeholder="Equipo B" 
+                    />
+                    <div className="pt-1">
+                        <label className="text-[11px] text-gray-400 block mb-0.5">Jugador 1</label>
+                        <div className="grid grid-cols-2 gap-1.5">
+                            <input 
+                                type="text" 
+                                value={p1BName} 
+                                onChange={e => setP1BName(e.target.value)} 
+                                placeholder="Nombre J1" 
+                                className="p-1.5 bg-gray-700 rounded text-xs text-white" 
+                            />
+                            <input 
+                                type="text" 
+                                value={p1BPhone} 
+                                onChange={e => setP1BPhone(e.target.value)} 
+                                placeholder="Teléfono" 
+                                className="p-1.5 bg-gray-700 rounded text-xs text-white" 
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="text-[11px] text-gray-400 block mb-0.5">Jugador 2</label>
+                        <div className="grid grid-cols-2 gap-1.5">
+                            <input 
+                                type="text" 
+                                value={p2BName} 
+                                onChange={e => setP2BName(e.target.value)} 
+                                placeholder="Nombre J2" 
+                                className="p-1.5 bg-gray-700 rounded text-xs text-white" 
+                            />
+                            <input 
+                                type="text" 
+                                value={p2BPhone} 
+                                onChange={e => setP2BPhone(e.target.value)} 
+                                placeholder="Teléfono" 
+                                className="p-1.5 bg-gray-700 rounded text-xs text-white" 
+                            />
+                        </div>
+                    </div>
                 </div>
-             </div>
+            </div>
              
-             <div className="grid grid-cols-2 gap-3">
-                <input type="text" value={time} onChange={(e) => setTime(e.target.value)} placeholder="Hora (ej: Viernes 21:00hs)" className="w-full p-2 bg-gray-700 rounded-md text-center text-white" />
-                <input type="text" value={place} onChange={(e) => setPlace(e.target.value)} placeholder="Lugar / Cancha" className="w-full p-2 bg-gray-700 rounded-md text-center text-white" />
-             </div>
+            <div className="space-y-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <input type="text" value={time} onChange={(e) => setTime(e.target.value)} placeholder="Hora (ej: Viernes 21:00hs)" className="w-full p-2 bg-gray-700 rounded-md text-center text-white text-xs" />
+                    <input type="text" value={place} onChange={(e) => setPlace(e.target.value)} placeholder="Lugar / Complejo / Cancha" className="w-full p-2 bg-gray-700 rounded-md text-center text-white text-xs" />
+                </div>
+                <div className="flex gap-2">
+                    <input 
+                        type="text" 
+                        value={mapUrl} 
+                        onChange={(e) => setMapUrl(e.target.value)} 
+                        placeholder="📍 Link o Dirección de Google Maps del complejo (para que lleguen fácil)" 
+                        className="flex-1 p-2 bg-gray-700 rounded-md text-white text-xs" 
+                    />
+                    {mapUrl && (
+                        <a
+                            href={getGoogleMapsUrl(mapUrl, place)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded text-xs font-semibold flex items-center gap-1 flex-shrink-0"
+                            title="Probar en Google Maps"
+                        >
+                            <i className="fas fa-external-link-alt"></i> Probar
+                        </a>
+                    )}
+                </div>
+            </div>
              
-             <div>
+            <div>
                 <label className="text-xs text-gray-400 block mb-1 text-center">Estado del Partido</label>
-                <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full p-2 bg-gray-700 rounded-md text-center text-white">
+                <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full p-2 bg-gray-700 rounded-md text-center text-white text-sm">
                     <option value="Pendiente">Pendiente</option>
                     <option value="En Juego">En Juego</option>
                     <option value="Finalizado">Finalizado</option>
                 </select>
             </div>
             
-             <div className="space-y-2">
-                 {[1, 2, 3].map((setNumber, index) => (
-                     <div key={setNumber} className="flex items-center justify-center gap-2">
+            <div className="space-y-2">
+                {[1, 2, 3].map((setNumber, index) => (
+                    <div key={setNumber} className="flex items-center justify-center gap-2">
                         <label className="text-xs text-gray-400 w-12">Set {setNumber}:</label>
                         <input type="number" value={sets[index].a} onChange={(e) => handleSetChange(index, 'a', e.target.value)} className="w-16 p-2 bg-gray-700 rounded-md text-center text-white" />
                         <span className="text-gray-500">-</span>
                         <input type="number" value={sets[index].b} onChange={(e) => handleSetChange(index, 'b', e.target.value)} className="w-16 p-2 bg-gray-700 rounded-md text-center text-white" />
-                     </div>
-                 ))}
-             </div>
+                    </div>
+                ))}
+            </div>
              
             <div className="flex gap-2 pt-2">
-                <button onClick={() => setIsEditing(false)} className="w-full bg-gray-600 py-2 rounded hover:bg-gray-500 text-white">Cancelar</button>
-                <button onClick={handleUpdateScore} className="w-full bg-green-600 text-white font-bold py-2 rounded hover:bg-green-700">Guardar Cambios</button>
+                <button onClick={() => setIsEditing(false)} className="w-full bg-gray-600 py-2 rounded hover:bg-gray-500 text-white text-sm">Cancelar</button>
+                <button onClick={handleUpdateScore} className="w-full bg-green-600 text-white font-bold py-2 rounded hover:bg-green-700 text-sm">Guardar Cambios</button>
             </div>
 
             {userRole === 'admin' && match.teamA && match.teamB && (
                 <div className="pt-4 mt-4 border-t border-gray-700 space-y-4">
                     <div>
-                        <p className="font-semibold text-white text-sm mb-2">Notificar a jugadores:</p>
+                        <p className="font-semibold text-white text-sm mb-2">Notificar a jugadores por WhatsApp:</p>
                         <div className="flex flex-wrap gap-2">
                             {match.teamA.players?.map(player => (
-                                <button key={player._id} onClick={() => handleNotifyPlayer(player, match.teamA, match.teamB)} disabled={!canNotify} className="bg-blue-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-blue-600 transition text-sm flex items-center disabled:bg-gray-600">
-                                    <i className="fab fa-whatsapp mr-2"></i> {player.playerName}
+                                <button key={player._id || player.playerName} onClick={() => handleNotifyPlayer(player, match.teamA, match.teamB)} disabled={!canNotify} className="bg-blue-500 text-white font-semibold py-1.5 px-3 rounded-lg hover:bg-blue-600 transition text-xs flex items-center disabled:bg-gray-600">
+                                    <i className="fab fa-whatsapp mr-1.5"></i> {player.playerName}
                                 </button>
                             ))}
                             {match.teamB.players?.map(player => (
-                                <button key={player._id} onClick={() => handleNotifyPlayer(player, match.teamB, match.teamA)} disabled={!canNotify} className="bg-blue-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-blue-600 transition text-sm flex items-center disabled:bg-gray-600">
-                                    <i className="fab fa-whatsapp mr-2"></i> {player.playerName}
+                                <button key={player._id || player.playerName} onClick={() => handleNotifyPlayer(player, match.teamB, match.teamA)} disabled={!canNotify} className="bg-blue-500 text-white font-semibold py-1.5 px-3 rounded-lg hover:bg-blue-600 transition text-xs flex items-center disabled:bg-gray-600">
+                                    <i className="fab fa-whatsapp mr-1.5"></i> {player.playerName}
                                 </button>
                             ))}
                         </div>
@@ -393,9 +848,114 @@ function FinishCategoryManager({ category, onAction }) {
     );
 }
 
+// --- Sub-componente para cargar la sede y ubicación Maps del complejo en una zona ---
+function ZoneVenueModal({ zone, categoryId, onAction, onClose }) {
+    const [place, setPlace] = useState(zone.zonePlace || '');
+    const [mapUrl, setMapUrl] = useState(zone.zoneMapUrl || '');
+    const [applyToMatches, setApplyToMatches] = useState(true);
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        onAction('update-zone-venue', categoryId, {
+            zoneId: zone._id,
+            zonePlace: place,
+            zoneMapUrl: mapUrl,
+            applyToMatches
+        });
+        onClose();
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/80 flex justify-center items-center z-50 p-4 animate-fade-in">
+            <div className="bg-gray-800 border border-gray-700 p-6 rounded-xl shadow-2xl w-full max-w-lg text-white space-y-4">
+                <div className="flex justify-between items-center border-b border-gray-700 pb-3">
+                    <h3 className="text-lg font-bold flex items-center gap-2">
+                        <i className="fas fa-map-marker-alt text-red-400"></i> Sede y Posición Maps - {zone.zoneName}
+                    </h3>
+                    <button onClick={onClose} className="text-gray-400 hover:text-white">✕</button>
+                </div>
+                <p className="text-xs text-gray-300">
+                    Carga el nombre del complejo y el link de Google Maps de esta zona para que jugadores y visitantes que no sean locales puedan llegar fácilmente guiados por el GPS.
+                </p>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label className="text-xs font-semibold text-gray-300 block mb-1">Nombre del Complejo / Sede</label>
+                        <input
+                            type="text"
+                            value={place}
+                            onChange={(e) => setPlace(e.target.value)}
+                            placeholder="Ej: Complejo San Martín / Canchas 1 y 2"
+                            className="w-full p-2.5 bg-gray-900 border border-gray-700 rounded-lg text-white text-sm"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="text-xs font-semibold text-gray-300 block mb-1">Link o Ubicación en Google Maps</label>
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                value={mapUrl}
+                                onChange={(e) => setMapUrl(e.target.value)}
+                                placeholder="Ej: https://maps.app.goo.gl/... o dirección"
+                                className="flex-1 p-2.5 bg-gray-900 border border-gray-700 rounded-lg text-white text-sm"
+                            />
+                            {mapUrl && (
+                                <a
+                                    href={getGoogleMapsUrl(mapUrl, place)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 flex-shrink-0"
+                                >
+                                    <i className="fas fa-external-link-alt"></i> Probar
+                                </a>
+                            )}
+                        </div>
+                        <span className="text-[11px] text-gray-400 mt-1 block">
+                            Puedes pegar el enlace para compartir de Google Maps o escribir la dirección.
+                        </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1">
+                        <input
+                            type="checkbox"
+                            id="applyToMatches"
+                            checked={applyToMatches}
+                            onChange={(e) => setApplyToMatches(e.target.checked)}
+                            className="rounded bg-gray-900 border-gray-700 text-emerald-500 focus:ring-0"
+                        />
+                        <label htmlFor="applyToMatches" className="text-xs text-gray-300 cursor-pointer">
+                            Aplicar automáticamente este complejo a los partidos de esta zona
+                        </label>
+                    </div>
+
+                    <div className="flex gap-3 pt-3">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="w-1/2 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-medium"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="submit"
+                            className="w-1/2 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-sm shadow-md"
+                        >
+                            Guardar Sede y Maps
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
 // --- Componente para gestionar una sola categoría ---
 function CategoryManager({ category, tournament, onAction, userRole }) {
     const [zonePreview, setZonePreview] = useState(null);
+    const [showSwapModal, setShowSwapModal] = useState(false);
+    const [showRegisteredTeams, setShowRegisteredTeams] = useState(false);
+    const [editingVenueZone, setEditingVenueZone] = useState(null);
     const isAdmin = userRole === 'admin';
 
     const areAllZoneMatchesFinished = useMemo(() => {
@@ -445,6 +1005,21 @@ function CategoryManager({ category, tournament, onAction, userRole }) {
                     onCancel={() => setZonePreview(null)}
                 />
             )}
+            {showSwapModal && (
+                <SwapZoneModal 
+                    category={category} 
+                    onAction={onAction} 
+                    onClose={() => setShowSwapModal(false)} 
+                />
+            )}
+            {editingVenueZone && (
+                <ZoneVenueModal
+                    zone={editingVenueZone}
+                    categoryId={category._id}
+                    onAction={onAction}
+                    onClose={() => setEditingVenueZone(null)}
+                />
+            )}
             <div className="mb-8 bg-gray-800/50 rounded-lg shadow-lg">
                 <div className="flex justify-between items-center bg-gray-900 p-4 rounded-t-lg">
                     <h3 className="text-2xl font-semibold text-green-400">{category.name} ({category.isManual ? 'Manual' : `${category.registeredPlayers.length} inscritos`})</h3>
@@ -460,8 +1035,27 @@ function CategoryManager({ category, tournament, onAction, userRole }) {
                             {category.status === 'Zonas Sorteadas' && areAllZoneMatchesFinished && (
                                 <button onClick={() => onAction('generate-playoffs', category._id)} className="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 transition">Calcular Clasificados y Generar Llave</button>
                             )}
-                             {category.status === 'En Juego' && <FinishCategoryManager category={category} onAction={onAction} />}
-                            {showRegistrationManagement && category.registeredPlayers.length > 0 && <RegisteredPlayersManager tournament={tournament} category={category} onAction={onAction} />}
+                            {category.status === 'En Juego' && <FinishCategoryManager category={category} onAction={onAction} />}
+                            {category.registeredPlayers && category.registeredPlayers.length > 0 && (
+                                <div className="bg-gray-900/60 p-4 rounded-lg border border-gray-700">
+                                    <div className="flex justify-between items-center cursor-pointer select-none" onClick={() => setShowRegisteredTeams(prev => !prev)}>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm font-bold text-gray-200">
+                                                Lista y Edición de Parejas ({category.registeredPlayers.length})
+                                            </span>
+                                            <span className="text-xs bg-blue-900/60 text-blue-300 px-2 py-0.5 rounded border border-blue-700">
+                                                Editable en cualquier momento
+                                            </span>
+                                        </div>
+                                        <button type="button" className="text-xs text-gray-400 hover:text-white font-medium">
+                                            {showRegisteredTeams || showRegistrationManagement ? 'Ocultar ▲' : 'Ver y Editar Parejas ▼'}
+                                        </button>
+                                    </div>
+                                    {(showRegisteredTeams || showRegistrationManagement) && (
+                                        <RegisteredPlayersManager tournament={tournament} category={category} onAction={onAction} />
+                                    )}
+                                </div>
+                            )}
                         </>
                     )}
 
@@ -471,16 +1065,56 @@ function CategoryManager({ category, tournament, onAction, userRole }) {
                     
                     {category.zones && category.zones.length > 0 && (
                         <div className="space-y-6">
-                            <h4 className="text-xl font-bold text-white border-b border-gray-700 pb-2">Fase de Grupos</h4>
+                            <div className="flex flex-col sm:flex-row justify-between sm:items-center border-b border-gray-700 pb-2 gap-2">
+                                <h4 className="text-xl font-bold text-white">Fase de Grupos</h4>
+                                {isAdmin && category.zones.length > 1 && (
+                                    <button 
+                                        type="button"
+                                        onClick={() => setShowSwapModal(true)} 
+                                        className="bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition shadow"
+                                        title="Corregir cruce o intercambio de parejas entre zonas"
+                                    >
+                                        <span>🔀</span> Corregir Cruce / Mover de Zona
+                                    </button>
+                                )}
+                            </div>
                             {category.zones.map(zone => (
                                 <div key={zone._id} className="p-4 border border-gray-700 rounded-lg bg-gray-800/30">
-                                    <div className="flex justify-between items-center mb-4">
-                                        <h4 className="text-xl font-bold text-white">{zone.zoneName}</h4>
-                                        {canAdvanceApaZone(zone) && (
-                                            <button onClick={() => onAction('advance-apa', category._id, { zoneId: zone._id })} className="bg-teal-500 text-white font-bold py-1 px-3 rounded-lg hover:bg-teal-600 transition text-sm">
-                                                Avanzar Zona APA
-                                            </button>
-                                        )}
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2 border-b border-gray-700/60 pb-3">
+                                        <div className="flex items-center gap-2.5 flex-wrap">
+                                            <h4 className="text-xl font-bold text-white">{zone.zoneName}</h4>
+                                            {(zone.zonePlace || zone.zoneMapUrl) && (
+                                                <a
+                                                    href={getGoogleMapsUrl(zone.zoneMapUrl, zone.zonePlace)}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-500/50 text-emerald-300 rounded-lg text-xs font-bold transition shadow-sm"
+                                                    title="Abrir ubicación del complejo en Google Maps"
+                                                >
+                                                    <i className="fas fa-map-marker-alt text-red-400"></i>
+                                                    <span>{zone.zonePlace || 'Complejo en Google Maps'}</span>
+                                                    <span className="text-[10px] bg-emerald-500/20 px-1 rounded text-emerald-200">Cómo llegar ↗</span>
+                                                </a>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            {isAdmin && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setEditingVenueZone(zone)}
+                                                    className="bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 font-medium transition"
+                                                    title="Configurar el complejo y ubicación de Google Maps para esta zona"
+                                                >
+                                                    <i className="fas fa-map-marked-alt text-emerald-400"></i>
+                                                    <span>{zone.zonePlace ? 'Editar Sede / Maps' : 'Cargar Lugar y Maps'}</span>
+                                                </button>
+                                            )}
+                                            {canAdvanceApaZone(zone) && (
+                                                <button onClick={() => onAction('advance-apa', category._id, { zoneId: zone._id })} className="bg-teal-500 text-white font-bold py-1 px-3 rounded-lg hover:bg-teal-600 transition text-sm">
+                                                    Avanzar Zona APA
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                     <div className="space-y-2">
                                         {zone.matches.map(match => (
@@ -562,6 +1196,9 @@ function TournamentDetails({ tournament, onBack }) {
                 response = await axios.post(`${url}/category/${categoryId}/save-manual-structure`, data);
             }
             else if (action === 'update-match') response = await axios.put(`${url}/category/${categoryId}/match/${data.matchId}`, data);
+            else if (action === 'edit-team') response = await axios.put(`${url}/category/${categoryId}/team/${data.teamId}`, data);
+            else if (action === 'update-zone-venue') response = await axios.put(`${url}/category/${categoryId}/zone/${data.zoneId}/venue`, data);
+            else if (action === 'swap-zone-teams') response = await axios.post(`${url}/category/${categoryId}/swap-zone-teams`, data);
             else if (action === 'delete-team') response = await axios.delete(`${url}/category/${categoryId}/team/${data.teamId}`);
             else if (action === 'move-team') response = await axios.post(`${url}/move-team`, { teamId: data.teamId, currentCategoryId: categoryId, newCategoryId: data.newCategoryId });
             else if (action === 'close-all-registrations') response = await axios.post(`${url}/close-all-registrations`);

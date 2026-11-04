@@ -27,6 +27,7 @@ const matchSchema = new mongoose.Schema({
     },
     matchTime: { type: String, default: '' },
     matchPlace: { type: String, default: '' },
+    matchMapUrl: { type: String, default: '' }, // Link o dirección de Google Maps
     matchOrder: { type: Number, default: 0 } // Para ordenar los partidos
 });
 
@@ -38,6 +39,8 @@ const playoffRoundSchema = new mongoose.Schema({
 
 const zoneSchema = new mongoose.Schema({
     zoneName: { type: String, required: true },
+    zonePlace: { type: String, default: '' }, // Sede / Complejo de la zona
+    zoneMapUrl: { type: String, default: '' }, // Ubicación en Google Maps
     teams: [teamSchema],
     matches: [matchSchema]
 });
