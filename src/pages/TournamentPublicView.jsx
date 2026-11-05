@@ -31,23 +31,57 @@ const MatchDisplay = ({ match }) => {
 
     return (
         <div className="relative group">
-            <button
+            <div
                 onClick={() => hasDetails && setShowDetails(!showDetails)}
-                className={`w-full bg-gray-900 p-3 rounded-md flex items-center justify-between text-sm transition-all duration-300 ${hasDetails ? 'cursor-pointer hover:bg-gray-700' : 'cursor-default'}`}
+                className={`w-full bg-gray-900 p-3 rounded-lg flex flex-col gap-2 text-sm transition-all duration-300 ${hasDetails ? 'cursor-pointer hover:bg-gray-800' : 'cursor-default'} border border-gray-800 hover:border-gray-700`}
             >
-                <div className={`w-2/5 text-center ${winner === 'A' ? 'font-bold text-primary' : 'text-text-primary'}`}>
-                    <p className="truncate">{match.teamA.teamName}</p>
-                    <p className="text-xs text-gray-400 mt-1">{match.status === 'Finalizado' ? formatScore(match.scoreA) : ' '}</p>
+                <div className="flex items-center justify-between">
+                    <div className={`w-2/5 text-center ${winner === 'A' ? 'font-bold text-primary' : 'text-text-primary'}`}>
+                        <p className="truncate">{match.teamA.teamName}</p>
+                        <p className="text-xs text-gray-400 mt-1">{match.status === 'Finalizado' ? formatScore(match.scoreA) : ' '}</p>
+                    </div>
+                    <div className="w-1/5 text-center font-bold text-gray-500">
+                        VS
+                    </div>
+                    <div className={`w-2/5 text-center ${winner === 'B' ? 'font-bold text-primary' : 'text-text-primary'}`}>
+                        <p className="truncate">{match.teamB.teamName}</p>
+                        <p className="text-xs text-gray-400 mt-1">{match.status === 'Finalizado' ? formatScore(match.scoreB) : ' '}</p>
+                    </div>
                 </div>
-                <div className="w-1/5 text-center font-bold text-gray-500">
-                    VS
-                </div>
-                <div className={`w-2/5 text-center ${winner === 'B' ? 'font-bold text-primary' : 'text-text-primary'}`}>
-                    <p className="truncate">{match.teamB.teamName}</p>
-                    <p className="text-xs text-gray-400 mt-1">{match.status === 'Finalizado' ? formatScore(match.scoreB) : ' '}</p>
-                </div>
-                {hasDetails && <i className="fas fa-clock text-blue-400 absolute right-2 top-1/2 -translate-y-1/2 transform transition-colors group-hover:text-blue-300"></i>}
-            </button>
+
+                {/* Visible para todos los jugadores y público general sin necesidad de contraseña */}
+                {(match.matchPlace || match.matchTime || match.matchMapUrl) && (
+                    <div className="pt-2 border-t border-gray-800/80 flex flex-wrap items-center justify-between gap-1.5 text-xs text-gray-400">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            {match.matchPlace && (
+                                <span className="flex items-center gap-1 text-emerald-400 font-medium">
+                                    <i className="fas fa-map-marker-alt text-red-400 text-xs"></i>
+                                    {match.matchPlace}
+                                </span>
+                            )}
+                            {match.matchTime && (
+                                <span className="flex items-center gap-1 text-blue-300 font-medium">
+                                    <i className="fas fa-clock text-xs"></i>
+                                    {match.matchTime}
+                                </span>
+                            )}
+                        </div>
+                        {(match.matchMapUrl || match.matchPlace) && (
+                            <a
+                                href={getGoogleMapsUrl(match.matchMapUrl, match.matchPlace)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-950 hover:bg-emerald-800 border border-emerald-500/50 text-emerald-300 text-[11px] font-bold transition shadow-sm ml-auto"
+                                title="Abrir ubicación en Google Maps"
+                            >
+                                <i className="fas fa-location-arrow text-emerald-400 text-[10px]"></i>
+                                <span>Cómo llegar ↗</span>
+                            </a>
+                        )}
+                    </div>
+                )}
+            </div>
             {showDetails && hasDetails && (
                  <div
                      className="absolute z-20 top-full left-1/2 -translate-x-1/2 mt-2 w-72 bg-gray-900 border border-primary/60 rounded-xl shadow-2xl p-4 text-center animate-fade-in"

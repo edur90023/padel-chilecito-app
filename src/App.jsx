@@ -100,6 +100,27 @@ const PublicLayout = () => {
 
     const closeMenu = () => setIsMenuOpen(false);
 
+    const handleForceUpdate = async () => {
+        try {
+            if ('caches' in window) {
+                const keys = await caches.keys();
+                await Promise.all(keys.map(k => caches.delete(k)));
+            }
+            if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                await Promise.all(registrations.map(r => r.unregister()));
+            }
+        } catch (e) {
+            console.error("Error al limpiar caché:", e);
+        }
+        window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now();
+    };
+
+    const isStandalone = typeof window !== 'undefined' && (
+        window.matchMedia('(display-mode: standalone)').matches || 
+        window.navigator.standalone === true
+    );
+
     return (
         <>
             <header className="bg-dark-secondary/90 backdrop-blur-sm border-b border-gray-700 shadow-lg sticky top-0 z-50">
@@ -152,8 +173,17 @@ const PublicLayout = () => {
                             )}
                         </div>
 
-                        {/* Botón menú móvil */}
-                        <div className="lg:hidden flex items-center">
+                        {/* Botón menú móvil y botón de actualizar */}
+                        <div className="lg:hidden flex items-center gap-1.5">
+                            {isStandalone && (
+                                <button
+                                    onClick={handleForceUpdate}
+                                    className="inline-flex items-center justify-center p-2 rounded-md text-emerald-400 hover:text-emerald-300 hover:bg-gray-700/60 focus:outline-none text-sm"
+                                    title="Actualizar aplicación"
+                                >
+                                    <i className="fas fa-sync-alt"></i>
+                                </button>
+                            )}
                             <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none">
                                 <i className={`fas ${isMenuOpen ? 'fa-times' : 'fa-bars'} text-xl`}></i>
                             </button>
@@ -174,6 +204,15 @@ const PublicLayout = () => {
                         <NavItem to="/contact" icon="fas fa-address-book" onClick={closeMenu}>Contacto</NavItem>
 
                         <div className="border-t border-gray-700 pt-4 mt-4 space-y-2">
+                             {/* Botón para forzar actualización inmediata en teléfonos móviles */}
+                             <button
+                                 onClick={handleForceUpdate}
+                                 className="flex items-center justify-center gap-2 w-full py-2.5 px-3 rounded-md text-xs font-semibold text-emerald-300 bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-500/40 transition shadow-sm"
+                                 title="Descargar la versión más reciente"
+                             >
+                                 <i className="fas fa-sync-alt text-xs"></i>
+                                 <span>Buscar Actualizaciones / Refrescar App</span>
+                             </button>
                              {installPrompt && (
                                  <button
                                      onClick={() => { handleInstall(); closeMenu(); }}
