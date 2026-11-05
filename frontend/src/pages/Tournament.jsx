@@ -11,6 +11,7 @@ function Tournament() {
     const [error, setError] = useState(null);
     const [showRegistrationForm, setShowRegistrationForm] = useState(false);
     const [selectedTournament, setSelectedTournament] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         const fetchTournaments = async () => {
@@ -38,6 +39,15 @@ function Tournament() {
         setSelectedTournament(null);
     };
 
+    const filteredTournaments = tournaments.filter(tournament => {
+        if (!searchTerm.trim()) return true;
+        const term = searchTerm.toLowerCase();
+        return (
+            tournament.name?.toLowerCase().includes(term) ||
+            tournament.categories?.some(cat => cat.name?.toLowerCase().includes(term))
+        );
+    });
+
     if (loading) {
         return <div className="loading-spinner mx-auto mt-10"></div>;
     }
@@ -48,11 +58,34 @@ function Tournament() {
 
     return (
         <div className="max-w-7xl mx-auto animate-fade-in">
-            <h2 className="text-3xl font-extrabold text-white text-center mb-8">Torneos</h2>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white text-center mb-2">Torneos de Pádel</h2>
+            <p className="text-gray-400 text-center text-sm mb-6 max-w-xl mx-auto">
+                Consulta los torneos en curso, llaves, horarios de partidos y tablas de posiciones.
+            </p>
 
-            {tournaments.length > 0 ? (
+            {/* Buscador de torneos */}
+            <div className="max-w-md mx-auto mb-8 relative">
+                <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Buscar torneo o categoría..."
+                    className="w-full pl-11 pr-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-emerald-500 text-sm shadow-inner"
+                />
+                {searchTerm && (
+                    <button
+                        onClick={() => setSearchTerm('')}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                    >
+                        &times;
+                    </button>
+                )}
+            </div>
+
+            {filteredTournaments.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {tournaments.map(tournament => {
+                    {filteredTournaments.map(tournament => {
                         const hasOpenRegistrations = tournament.categories.some(cat => cat.status === 'Inscripciones Abiertas');
                         let statusText, statusColor, actionButton;
 

@@ -14,6 +14,7 @@ import NotificationSender from './NotificationSender';
 import ProfessorManagement from './ProfessorManagement';
 import AccountSettings from './AccountSettings'; // Importação do novo componente
 import SiteSettingsManagement from './SiteSettingsManagement';
+import ComplexManagement from './ComplexManagement';
 
 function Admin() {
     const { logout } = useAuth();
@@ -56,6 +57,7 @@ function Admin() {
                     <button onClick={() => setActiveTab('news')} className={`px-3 py-3 font-medium text-sm rounded-t-lg transition-colors whitespace-nowrap ${activeTab === 'news' ? 'border-b-2 border-green-500 text-white' : 'text-gray-400'}`}><i className="fas fa-newspaper mr-2"></i>Noticias</button>
                     <button onClick={() => setActiveTab('ads')} className={`px-3 py-3 font-medium text-sm rounded-t-lg transition-colors whitespace-nowrap ${activeTab === 'ads' ? 'border-b-2 border-green-500 text-white' : 'text-gray-400'}`}><i className="fas fa-ad mr-2"></i>Ads</button>
                     <button onClick={() => setActiveTab('professors')} className={`px-3 py-3 font-medium text-sm rounded-t-lg transition-colors whitespace-nowrap ${activeTab === 'professors' ? 'border-b-2 border-green-500 text-white' : 'text-gray-400'}`}><i className="fas fa-chalkboard-teacher mr-2"></i>Profesores</button>
+                    <button onClick={() => setActiveTab('complexes')} className={`px-3 py-3 font-medium text-sm rounded-t-lg transition-colors whitespace-nowrap ${activeTab === 'complexes' ? 'border-b-2 border-green-500 text-white' : 'text-gray-400'}`}><i className="fas fa-map-marked-alt mr-2 text-emerald-400"></i>Complejos</button>
                     <button onClick={() => setActiveTab('settings')} className={`px-3 py-3 font-medium text-sm rounded-t-lg transition-colors whitespace-nowrap ${activeTab === 'settings' ? 'border-b-2 border-green-500 text-white' : 'text-gray-400'}`}><i className="fas fa-sliders-h mr-2 text-emerald-400"></i>Ajustes y Contacto</button>
                     <button onClick={() => setActiveTab('tools')} className={`px-3 py-3 font-medium text-sm rounded-t-lg transition-colors whitespace-nowrap ${activeTab === 'tools' ? 'border-b-2 border-green-500 text-white' : 'text-gray-400'}`}><i className="fas fa-tools mr-2"></i>Sistema</button>
                     <button onClick={() => setActiveTab('config')} className={`px-3 py-3 font-medium text-sm rounded-t-lg transition-colors whitespace-nowrap ${activeTab === 'config' ? 'border-b-2 border-green-500 text-white' : 'text-gray-400'}`}><i className="fas fa-cog mr-2"></i>Cuenta</button>
@@ -72,6 +74,7 @@ function Admin() {
                     {activeTab === 'news' && <NewsManagement />}
                     {activeTab === 'ads' && <AdManagement />}
                     {activeTab === 'professors' && <ProfessorManagement />}
+                    {activeTab === 'complexes' && <ComplexManagement />}
                     {activeTab === 'settings' && <SiteSettingsManagement />}
                     {activeTab === 'tools' && <SimulationTools />}
                     {activeTab === 'config' && <AccountSettings />}

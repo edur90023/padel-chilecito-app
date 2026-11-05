@@ -300,6 +300,206 @@ const WinnersDisplay = ({ finishers }) => {
     );
 };
 
+const PlayerMatchFinder = ({ tournament, onSelectCategory }) => {
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const matchedMatches = useMemo(() => {
+        if (!searchTerm.trim() || !tournament || !tournament.categories) return [];
+        const term = searchTerm.trim().toLowerCase();
+        const results = [];
+
+        tournament.categories.forEach(category => {
+            if (Array.isArray(category.zones)) {
+                category.zones.forEach(zone => {
+                    if (Array.isArray(zone.matches)) {
+                        zone.matches.forEach(match => {
+                            const nameA = match.teamA?.teamName?.toLowerCase() || '';
+                            const nameB = match.teamB?.teamName?.toLowerCase() || '';
+                            if (nameA.includes(term) || nameB.includes(term)) {
+                                results.push({
+                                    category,
+                                    zone,
+                                    round: null,
+                                    match,
+                                    matchType: `Zona: ${zone.zoneName}`,
+                                    venue: match.matchPlace || zone.zonePlace,
+                                    mapUrl: match.matchMapUrl || zone.zoneMapUrl,
+                                    isTeamA: nameA.includes(term)
+                                });
+                            }
+                        });
+                    }
+                });
+            }
+
+            if (Array.isArray(category.playoffRounds)) {
+                category.playoffRounds.forEach(round => {
+                    if (Array.isArray(round.matches)) {
+                        round.matches.forEach(match => {
+                            const nameA = match.teamA?.teamName?.toLowerCase() || '';
+                            const nameB = match.teamB?.teamName?.toLowerCase() || '';
+                            if (nameA.includes(term) || nameB.includes(term)) {
+                                results.push({
+                                    category,
+                                    zone: null,
+                                    round,
+                                    match,
+                                    matchType: `Playoffs: ${round.roundName}`,
+                                    venue: match.matchPlace,
+                                    mapUrl: match.matchMapUrl,
+                                    isTeamA: nameA.includes(term)
+                                });
+                            }
+                        });
+                    }
+                });
+            }
+        });
+
+        return results;
+    }, [searchTerm, tournament]);
+
+    return (
+        <div className="bg-gradient-to-r from-gray-900 via-gray-850 to-gray-900 border border-emerald-500/40 rounded-2xl p-5 sm:p-6 mb-8 shadow-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                <div>
+                    <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                        <i className="fas fa-search-location text-emerald-400"></i>
+                        <span>¿A qué hora juegas? Busca tu partido</span>
+                    </h3>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                        Escribe tu nombre, apellido o el de tu pareja para ver cancha, horario y cómo llegar en Google Maps.
+                    </p>
+                </div>
+            </div>
+
+            <div className="relative">
+                <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-emerald-400"></i>
+                <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Escribe tu nombre o apellido (ej: Gomez, Lucas, Martinez)..."
+                    className="w-full pl-11 pr-10 py-3 bg-gray-950/90 border border-gray-700 focus:border-emerald-500 rounded-xl text-white placeholder-gray-500 text-sm focus:outline-none transition shadow-inner"
+                />
+                {searchTerm && (
+                    <button
+                        onClick={() => setSearchTerm('')}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white text-sm"
+                    >
+                        &times;
+                    </button>
+                )}
+            </div>
+
+            {/* Resultados */}
+            {searchTerm.trim().length > 1 && (
+                <div className="mt-5 space-y-3 animate-fade-in">
+                    <div className="flex items-center justify-between text-xs text-gray-400 px-1">
+                        <span>Resultados encontrados: <strong className="text-white">{matchedMatches.length}</strong></span>
+                        {matchedMatches.length > 0 && (
+                            <span className="text-emerald-400 font-medium">Partidos programados o jugados</span>
+                        )}
+                    </div>
+
+                    {matchedMatches.length === 0 ? (
+                        <div className="p-4 bg-gray-950/60 rounded-xl text-center text-xs text-gray-400 border border-gray-800">
+                            No se encontraron partidos para <strong>"{searchTerm}"</strong> en este torneo. Verifica cómo está registrado tu nombre.
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {matchedMatches.map((item, idx) => {
+                                const { match, category, matchType, venue, mapUrl, isTeamA } = item;
+                                const isFinished = match.status === 'Finalizado';
+                                const mapsLink = getGoogleMapsUrl(mapUrl, venue);
+
+                                return (
+                                    <div
+                                        key={match._id || idx}
+                                        className="bg-gray-950/90 border border-gray-800 hover:border-emerald-500/60 rounded-xl p-4 flex flex-col justify-between gap-3 shadow-md transition"
+                                    >
+                                        <div className="flex items-center justify-between gap-2 border-b border-gray-800/80 pb-2">
+                                            <button
+                                                onClick={() => onSelectCategory && onSelectCategory(category)}
+                                                className="text-[11px] font-bold text-emerald-400 bg-emerald-950/80 hover:bg-emerald-900 px-2 py-0.5 rounded border border-emerald-500/30 transition"
+                                                title="Filtrar por esta categoría"
+                                            >
+                                                {category.name}
+                                            </button>
+                                            <span className="text-[11px] text-gray-400 font-medium">
+                                                {matchType}
+                                            </span>
+                                        </div>
+
+                                        {/* Equipos */}
+                                        <div className="space-y-1.5 py-1">
+                                            <div className={`flex items-center justify-between text-sm ${isTeamA ? 'text-emerald-300 font-bold' : 'text-gray-300'}`}>
+                                                <span className="truncate flex items-center gap-1.5">
+                                                    {isTeamA && <i className="fas fa-arrow-right text-[10px] text-emerald-400"></i>}
+                                                    {match.teamA?.teamName}
+                                                </span>
+                                                {isFinished && (
+                                                    <span className="text-xs font-mono font-bold text-gray-300 ml-2">
+                                                        {match.scoreA?.join('-')}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className={`flex items-center justify-between text-sm ${!isTeamA ? 'text-emerald-300 font-bold' : 'text-gray-300'}`}>
+                                                <span className="truncate flex items-center gap-1.5">
+                                                    {!isTeamA && <i className="fas fa-arrow-right text-[10px] text-emerald-400"></i>}
+                                                    {match.teamB?.teamName}
+                                                </span>
+                                                {isFinished && (
+                                                    <span className="text-xs font-mono font-bold text-gray-300 ml-2">
+                                                        {match.scoreB?.join('-')}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Sede, Horario y Maps */}
+                                        <div className="pt-2 border-t border-gray-800/80 flex flex-wrap items-center justify-between gap-2 text-xs">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                {venue && (
+                                                    <span className="text-emerald-400 font-medium flex items-center gap-1">
+                                                        <i className="fas fa-map-pin text-red-400 text-xs"></i>
+                                                        <span className="truncate max-w-[150px]">{venue}</span>
+                                                    </span>
+                                                )}
+                                                {match.matchTime && (
+                                                    <span className="text-blue-300 font-medium flex items-center gap-1">
+                                                        <i className="fas fa-clock text-xs"></i>
+                                                        {match.matchTime}
+                                                    </span>
+                                                )}
+                                                {!match.matchTime && !isFinished && (
+                                                    <span className="text-gray-500 italic">Horario a confirmar</span>
+                                                )}
+                                            </div>
+
+                                            {(venue || mapUrl) && (
+                                                <a
+                                                    href={mapsLink}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold transition shadow-sm ml-auto"
+                                                >
+                                                    <i className="fas fa-location-arrow text-[10px]"></i>
+                                                    <span>Cómo llegar ↗</span>
+                                                </a>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
 function TournamentPublicView() {
     const { id } = useParams();
     const [tournament, setTournament] = useState(null);
@@ -337,6 +537,9 @@ function TournamentPublicView() {
                 <h1 className="text-4xl font-extrabold text-text-primary">{tournament.name}</h1>
                 <p className="text-text-secondary mt-2">Fecha: {new Date(tournament.startDate).toLocaleDateString()} - Estado: <span className="font-semibold">{tournament.status}</span></p>
             </div>
+
+            {/* Buscador de partidos para jugadores */}
+            <PlayerMatchFinder tournament={tournament} onSelectCategory={setSelectedCategory} />
 
             <div className="flex flex-wrap border-b border-gray-700 mb-6">
                 {tournament.categories.map(category => (

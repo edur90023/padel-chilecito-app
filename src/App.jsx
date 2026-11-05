@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import axios from './api/axiosConfig'; // Importación corregida para usar la URL de Render
 import { useInstallPWA } from './hooks/useInstallPWA';
 import NotificationManager from './components/NotificationManager';
+import AutoUpdater from './components/AutoUpdater';
 const Analytics = () => null;
 
 import Admin from './components/Admin';
@@ -17,6 +18,7 @@ import Contact from './pages/Contact';
 import CommunityPage from './pages/CommunityPage';
 import ProfessorsPage from './pages/ProfessorsPage';
 import LivePage from './pages/LivePage';
+import ComplexesPage from './pages/ComplexesPage';
 import OperatorPage from './pages/OperatorPage';
 import OperatorTournamentView from './pages/OperatorTournamentView';
 
@@ -142,6 +144,7 @@ const PublicLayout = () => {
                                 <NavItem to="/gallery" icon="fas fa-images">Galería</NavItem>
                                 {siteSettings.isRankingEnabled && <NavItem to="/standings" icon="fas fa-star">Rankings</NavItem>}
                                 <NavItem to="/profesores" icon="fas fa-chalkboard-teacher">Profesores</NavItem>
+                                <NavItem to="/complejos" icon="fas fa-map-marked-alt">Complejos</NavItem>
                                 <NavItem to="/contact" icon="fas fa-address-book">Contacto</NavItem>
                             </div>
                         </div>
@@ -201,6 +204,7 @@ const PublicLayout = () => {
                         <NavItem to="/gallery" icon="fas fa-images" onClick={closeMenu}>Galería</NavItem>
                         {siteSettings.isRankingEnabled && <NavItem to="/standings" icon="fas fa-star" onClick={closeMenu}>Rankings</NavItem>}
                         <NavItem to="/profesores" icon="fas fa-chalkboard-teacher" onClick={closeMenu}>Profesores</NavItem>
+                        <NavItem to="/complejos" icon="fas fa-map-marked-alt" onClick={closeMenu}>Complejos</NavItem>
                         <NavItem to="/contact" icon="fas fa-address-book" onClick={closeMenu}>Contacto</NavItem>
 
                         <div className="border-t border-gray-700 pt-4 mt-4 space-y-2">
@@ -250,6 +254,7 @@ const PublicLayout = () => {
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/community" element={siteSettings.isCommunityEnabled ? <CommunityPage /> : <DisabledSection title="Comunidad" />} />
                     <Route path="/profesores" element={<ProfessorsPage />} />
+                    <Route path="/complejos" element={<ComplexesPage />} />
                 </Routes>
             </main>
             <NotificationManager />
@@ -269,6 +274,7 @@ function App() {
                     <Route path="/*" element={<PublicLayout />} />
                 </Routes>
             </Router>
+            <AutoUpdater />
             <Analytics />
         </AuthProvider>
     );
