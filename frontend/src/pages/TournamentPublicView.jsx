@@ -174,7 +174,109 @@ const ZoneStandings = ({ zone }) => {
     );
 };
 
+const BracketMatchItem = ({ match }) => {
+    const [showDetails, setShowDetails] = useState(false);
+    const winner = getMatchWinner(match);
+    const hasDetails = Boolean(match.matchTime || match.matchPlace || match.matchMapUrl);
+    const mapsLink = getGoogleMapsUrl(match.matchMapUrl, match.matchPlace);
+
+    return (
+        <div className="relative">
+            <div 
+                className={`bracket-match transition-all duration-200 ${hasDetails ? 'cursor-pointer hover:ring-2 hover:ring-primary/60' : ''}`}
+                onClick={() => hasDetails && setShowDetails(!showDetails)}
+            >
+                <div className={`bracket-team ${winner === 'A' ? 'winner' : ''}`}>
+                    <span className="team-name" title={match.teamA?.teamName}>{match.teamA?.teamName || 'A definir'}</span>
+                    <span className="team-score">{match.status === 'Finalizado' ? match.scoreA?.join('-') : ''}</span>
+                </div>
+                <div className={`bracket-team ${winner === 'B' ? 'winner' : ''}`}>
+                    <span className="team-name" title={match.teamB?.teamName}>{match.teamB?.teamName || 'A definir'}</span>
+                    <span className="team-score">{match.status === 'Finalizado' ? match.scoreB?.join('-') : ''}</span>
+                </div>
+
+                {/* Sede, Horario y botón Google Maps visible para usuarios y jugadores */}
+                {hasDetails && (
+                    <div className="bracket-info">
+                        <div className="flex items-center gap-1.5 flex-wrap truncate max-w-[68%]">
+                            {match.matchPlace && (
+                                <span className="text-emerald-400 font-semibold truncate flex items-center gap-1" title={match.matchPlace}>
+                                    <i className="fas fa-map-marker-alt text-red-400 text-[10px] flex-shrink-0"></i>
+                                    <span className="truncate">{match.matchPlace}</span>
+                                </span>
+                            )}
+                            {match.matchTime && (
+                                <span className="text-blue-300 font-semibold flex items-center gap-1">
+                                    <i className="fas fa-clock text-[10px] flex-shrink-0"></i>
+                                    <span>{match.matchTime}</span>
+                                </span>
+                            )}
+                        </div>
+
+                        {(match.matchMapUrl || match.matchPlace) && (
+                            <a
+                                href={mapsLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-950 hover:bg-emerald-800 border border-emerald-500/50 text-emerald-300 text-[10px] font-bold transition shadow-sm ml-auto"
+                                title="Abrir ubicación en Google Maps"
+                            >
+                                <i className="fas fa-location-arrow text-[9px]"></i>
+                                <span>Maps ↗</span>
+                            </a>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* Popover detallado al hacer clic */}
+            {showDetails && hasDetails && (
+                <div
+                    className="absolute z-50 top-full left-1/2 -translate-x-1/2 mt-2 w-72 bg-gray-900 border border-primary/70 rounded-xl shadow-2xl p-4 text-center animate-fade-in"
+                    onClick={(e) => { e.stopPropagation(); setShowDetails(false); }}
+                >
+                    <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1 font-semibold">Detalles del Partido</p>
+                    <p className="text-sm font-bold text-white mb-2">{match.teamA?.teamName} vs {match.teamB?.teamName}</p>
+                    {match.matchPlace && (
+                        <p className="font-bold text-emerald-400 text-sm flex items-center justify-center gap-1.5">
+                            <i className="fas fa-map-pin text-red-400 text-xs"></i>
+                            {match.matchPlace}
+                        </p>
+                    )}
+                    {match.matchTime && (
+                        <p className="text-blue-300 text-sm mt-1 flex items-center justify-center gap-1.5">
+                            <i className="fas fa-clock text-blue-400 text-xs"></i>
+                            {match.matchTime}
+                        </p>
+                    )}
+                    {(match.matchMapUrl || match.matchPlace) && (
+                        <a
+                            href={mapsLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="mt-3 inline-flex items-center justify-center gap-1.5 w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition shadow-md"
+                        >
+                            <i className="fas fa-map-marked-alt text-sm"></i>
+                            <span>Cómo llegar en Google Maps ↗</span>
+                        </a>
+                    )}
+                    <button
+                        onClick={() => setShowDetails(false)}
+                        className="absolute top-1.5 right-2 text-gray-400 hover:text-white text-lg"
+                    >
+                        &times;
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+};
+
 const PlayoffBracket = ({ rounds }) => {
+    const [viewMode, setViewMode] = useState('bracket');
+
     if (!rounds || rounds.length === 0) {
         return <p className="text-gray-500">La llave de playoffs aún no ha sido generada.</p>;
     }
@@ -184,68 +286,85 @@ const PlayoffBracket = ({ rounds }) => {
     const otherRounds = rounds.filter(r => r.roundName !== 'Final' && r.roundName !== 'Tercer y Cuarto Puesto');
 
     return (
-        <div className="bracket-container">
-            <div className="bracket-scroll">
-                {otherRounds.map(round => (
-                    <div key={round._id} className="bracket-round">
-                        <h4 className="bracket-round-title">{round.roundName}</h4>
-                        <div className="bracket-matches">
-                            {round.matches.map(match => {
-                                const winner = getMatchWinner(match);
-                                return (
-                                    <div key={match._id} className="bracket-match">
-                                        <div className={`bracket-team ${winner === 'A' ? 'winner' : ''}`}>
-                                            <span className="team-name">{match.teamA.teamName}</span>
-                                            <span className="team-score">{match.status === 'Finalizado' ? match.scoreA.join('-') : ''}</span>
-                                        </div>
-                                        <div className={`bracket-team ${winner === 'B' ? 'winner' : ''}`}>
-                                            <span className="team-name">{match.teamB.teamName}</span>
-                                            <span className="team-score">{match.status === 'Finalizado' ? match.scoreB.join('-') : ''}</span>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                ))}
-                {(finalRound || thirdPlaceRound) && (
-                    <div className="bracket-round">
-                        <h4 className="bracket-round-title">Rondas Finales</h4>
-                        <div className="bracket-matches">
-                            {finalRound && (
-                                <>
-                                    <h5 className="bracket-match-subtitle">Final</h5>
-                                    <div className="bracket-match">
-                                        <div className={`bracket-team ${getMatchWinner(finalRound.matches[0]) === 'A' ? 'winner' : ''}`}>
-                                            <span className="team-name">{finalRound.matches[0].teamA.teamName}</span>
-                                            <span className="team-score">{finalRound.matches[0].status === 'Finalizado' ? finalRound.matches[0].scoreA.join('-') : ''}</span>
-                                        </div>
-                                        <div className={`bracket-team ${getMatchWinner(finalRound.matches[0]) === 'B' ? 'winner' : ''}`}>
-                                            <span className="team-name">{finalRound.matches[0].teamB.teamName}</span>
-                                            <span className="team-score">{finalRound.matches[0].status === 'Finalizado' ? finalRound.matches[0].scoreB.join('-') : ''}</span>
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-                            {thirdPlaceRound && (
-                                <>
-                                    <h5 className="bracket-match-subtitle">3er y 4to Puesto</h5>
-                                    <div className="bracket-match">
-                                        <div className={`bracket-team ${getMatchWinner(thirdPlaceRound.matches[0]) === 'A' ? 'winner' : ''}`}>
-                                            <span className="team-name">{thirdPlaceRound.matches[0].teamA.teamName}</span>
-                                            <span className="team-score">{thirdPlaceRound.matches[0].status === 'Finalizado' ? thirdPlaceRound.matches[0].scoreA.join('-') : ''}</span>
-                                        </div>
-                                        <div className={`bracket-team ${getMatchWinner(thirdPlaceRound.matches[0]) === 'B' ? 'winner' : ''}`}>
-                                            <span className="team-name">{thirdPlaceRound.matches[0].teamB.teamName}</span>
-                                            <span className="team-score">{thirdPlaceRound.matches[0].status === 'Finalizado' ? thirdPlaceRound.matches[0].scoreB.join('-') : ''}</span>
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    </div>
-                )}
+        <div className="space-y-4 my-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gray-900/60 p-3 rounded-xl border border-gray-800">
+                <h4 className="text-lg font-bold text-white flex items-center gap-2">
+                    <i className="fas fa-sitemap text-primary"></i>
+                    <span>Fase de Playoffs</span>
+                </h4>
+                <div className="flex items-center gap-1 bg-gray-800 p-1 rounded-lg self-start sm:self-auto text-xs font-semibold">
+                    <button
+                        type="button"
+                        onClick={() => setViewMode('bracket')}
+                        className={`px-3 py-1.5 rounded-md transition flex items-center gap-1.5 ${viewMode === 'bracket' ? 'bg-primary text-dark-primary font-bold shadow' : 'text-gray-400 hover:text-white'}`}
+                    >
+                        <i className="fas fa-project-diagram"></i>
+                        <span>Llave (Gráfico)</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setViewMode('list')}
+                        className={`px-3 py-1.5 rounded-md transition flex items-center gap-1.5 ${viewMode === 'list' ? 'bg-primary text-dark-primary font-bold shadow' : 'text-gray-400 hover:text-white'}`}
+                    >
+                        <i className="fas fa-list-ul"></i>
+                        <span>Cronograma (Lista)</span>
+                    </button>
+                </div>
             </div>
+
+            {viewMode === 'list' ? (
+                /* Modo lista detallada con tarjetas MatchDisplay */
+                <div className="space-y-6 animate-fade-in">
+                    {rounds.map((round) => (
+                        <div key={round._id} className="bg-dark-secondary p-5 rounded-xl border border-gray-800">
+                            <h5 className="text-base font-bold text-primary mb-3 flex items-center gap-2">
+                                <i className="fas fa-trophy text-xs text-yellow-500"></i>
+                                {round.roundName}
+                            </h5>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {round.matches.map((match, idx) => (
+                                    <MatchDisplay key={match._id || idx} match={match} />
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                /* Modo gráfico de llave clásica */
+                <div className="bracket-container">
+                    <div className="bracket-scroll">
+                        {otherRounds.map(round => (
+                            <div key={round._id} className="bracket-round">
+                                <h4 className="bracket-round-title">{round.roundName}</h4>
+                                <div className="bracket-matches">
+                                    {round.matches.map(match => (
+                                        <BracketMatchItem key={match._id} match={match} />
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                        {(finalRound || thirdPlaceRound) && (
+                            <div className="bracket-round">
+                                <h4 className="bracket-round-title">Rondas Finales</h4>
+                                <div className="bracket-matches">
+                                    {finalRound && (
+                                        <>
+                                            <h5 className="bracket-match-subtitle">Final</h5>
+                                            <BracketMatchItem match={finalRound.matches[0]} />
+                                        </>
+                                    )}
+                                    {thirdPlaceRound && (
+                                        <>
+                                            <h5 className="bracket-match-subtitle">3er y 4to Puesto</h5>
+                                            <BracketMatchItem match={thirdPlaceRound.matches[0]} />
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
