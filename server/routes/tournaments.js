@@ -294,7 +294,11 @@ router.post('/:tournamentId/category/:categoryId/preview-zones', auth(['admin'])
         if (!['Inscripciones Abiertas', 'Inscripciones Cerradas'].includes(category.status)) {
             return res.status(400).json({ error: 'Solo se puede sortear zonas antes de que el torneo comience.' });
         }
-        const previewZones = TournamentManager.generateZones(category.registeredPlayers, category);
+        const settings = {
+            ...category.toObject(),
+            ...req.body
+        };
+        const previewZones = TournamentManager.generateZones(category.registeredPlayers, settings);
         res.status(200).json({ message: 'Previsualización de zonas generada.', zones: previewZones });
     } catch (error) {
         res.status(500).json({ error: 'Error al previsualizar las zonas.', details: error.message });
@@ -312,7 +316,14 @@ router.post('/:tournamentId/category/:categoryId/draw-zones', auth(['admin']), a
         if (category.status !== 'Inscripciones Cerradas') {
             return res.status(400).json({ error: 'Las inscripciones deben estar cerradas para poder sortear las zonas.' });
         }
-        const zones = TournamentManager.generateZones(category.registeredPlayers, category);
+        const settings = {
+            ...category.toObject(),
+            ...req.body
+        };
+        if (req.body.zonePlaySystem !== undefined) {
+            category.zonePlaySystem = req.body.zonePlaySystem;
+        }
+        const zones = TournamentManager.generateZones(category.registeredPlayers, settings);
         category.zones = zones;
         category.status = 'Zonas Sorteadas';
         await tournament.save();
@@ -661,61 +672,19 @@ router.post('/:tournamentId/category/:categoryId/generate-playoffs', auth(['admi
         if (!category) return res.status(404).json({ error: 'Categoría no encontrada.' });
         if (category.status !== 'Zonas Sorteadas') return res.status(400).json({ error: 'La llave solo puede generarse cuando las zonas han finalizado.' });
         
-        const calculateStandings = (zone) => {
-            const stats = {};
-            zone.teams.forEach(t => {
-                if (t && t._id) {
-                    stats[t._id.toString()] = { team: t, p: 0, w: 0, l: 0, sf: 0, sc: 0, gf: 0, gc: 0, pts: 0 };
-                }
-            });
-            zone.matches.forEach(m => {
-                if (m.status !== 'Finalizado' || !m.teamA?._id || !m.teamB?._id) return;
-                const teamAId = m.teamA._id.toString();
-                const teamBId = m.teamB._id.toString();
-                if (!stats[teamAId] || !stats[teamBId]) return;
-                
-                const statsA = stats[teamAId];
-                const statsB = stats[teamBId];
-                statsA.p++; statsB.p++;
-                let setsA = 0, setsB = 0;
-                m.scoreA.forEach((s, i) => { if (s > m.scoreB[i]) setsA++; else setsB++; });
-                statsA.sf += setsA; statsA.sc += setsB;
-                statsB.sf += setsB; statsB.sc += setsA;
-                statsA.gf += m.scoreA.reduce((a, b) => a + b, 0);
-                statsA.gc += m.scoreB.reduce((a, b) => a + b, 0);
-                statsB.gf += m.scoreB.reduce((a, b) => a + b, 0);
-                statsB.gc += m.scoreA.reduce((a, b) => a + b, 0);
-                if (setsA > setsB) {
-                    statsA.w++; statsA.pts += 2;
-                    statsB.l++; statsB.pts += 1;
-                } else {
-                    statsB.w++; statsB.pts += 2;
-                    statsA.l++; statsA.pts += 1;
-                }
-            });
-
-            return Object.values(stats).sort((a, b) => {
-                if (b.pts !== a.pts) return b.pts - a.pts;
-                const diffSetsA = a.sf - a.sc;
-                const diffSetsB = b.sf - b.sc;
-                if (diffSetsB !== diffSetsA) return diffSetsB - diffSetsA;
-                return (b.gf - b.gc) - (a.gf - a.gc);
-            });
-        };
-        
         let qualifiedTeams = [];
         if (category.zones.length === 1) {
-            const sortedStandings = calculateStandings(category.zones[0]);
+            const sortedStandings = TournamentManager.calculateZoneStandings(category.zones[0]);
             qualifiedTeams = sortedStandings.slice(0, 4).map((standing, index) => ({
-                team: standing.team.toObject(),
+                team: standing.team.toObject ? standing.team.toObject() : standing.team,
                 sourceZone: category.zones[0].zoneName.replace('Zona ', ''),
                 rank: index + 1
             }));
         } else {
             for (const z of category.zones) {
-                const standings = calculateStandings(z);
-                if (standings[0]) qualifiedTeams.push({ team: standings[0].team.toObject(), sourceZone: z.zoneName.replace('Zona ', ''), rank: 1 });
-                if (standings[1]) qualifiedTeams.push({ team: standings[1].team.toObject(), sourceZone: z.zoneName.replace('Zona ', ''), rank: 2 });
+                const standings = TournamentManager.calculateZoneStandings(z);
+                if (standings[0]) qualifiedTeams.push({ team: standings[0].team.toObject ? standings[0].team.toObject() : standings[0].team, sourceZone: z.zoneName.replace('Zona ', ''), rank: 1 });
+                if (standings[1]) qualifiedTeams.push({ team: standings[1].team.toObject ? standings[1].team.toObject() : standings[1].team, sourceZone: z.zoneName.replace('Zona ', ''), rank: 2 });
             }
         }
         
@@ -775,6 +744,77 @@ router.post('/:tournamentId/category/:categoryId/add-team', auth(['admin']), asy
         res.status(201).json({ message: 'Pareja añadida exitosamente', tournament: updatedTournament });
     } catch (error) {
         res.status(500).json({ error: 'Error en el servidor al añadir la pareja.' });
+    }
+});
+
+// AÑADIR PAREJA FUERA DE TÉRMINO / REASIGNAR A ZONA
+router.post('/:tournamentId/category/:categoryId/add-late-team', auth(['admin']), async (req, res) => {
+    try {
+        const { tournamentId, categoryId } = req.params;
+        const { player1Name, player1Phone, player2Name, player2Phone, zoneIndex, createNewZone } = req.body;
+        if (!player1Name || !player2Name) return res.status(400).json({ error: 'El nombre de ambos jugadores es requerido.' });
+        const tournament = await Tournament.findById(tournamentId);
+        if (!tournament) return res.status(404).json({ error: 'Torneo no encontrado.' });
+        const category = tournament.categories.id(categoryId);
+        if (!category) return res.status(404).json({ error: 'Categoría no encontrada.' });
+
+        const p1LastName = player1Name.trim().split(' ').pop() || 'Jugador1';
+        const p2LastName = player2Name.trim().split(' ').pop() || 'Jugador2';
+        const newTeam = {
+            _id: new mongoose.Types.ObjectId(),
+            teamName: `${p1LastName} / ${p2LastName}`,
+            players: [
+                { playerName: player1Name.trim(), phoneNumber: player1Phone ? player1Phone.trim() : '' },
+                { playerName: player2Name.trim(), phoneNumber: player2Phone ? player2Phone.trim() : '' }
+            ]
+        };
+
+        category.registeredPlayers.push(newTeam);
+
+        // Si ya existen zonas creadas en la categoría
+        if (category.zones && category.zones.length > 0) {
+            if (createNewZone) {
+                const nextChar = String.fromCharCode(65 + category.zones.length);
+                category.zones.push({
+                    zoneName: `Zona ${nextChar}`,
+                    teams: [newTeam],
+                    matches: []
+                });
+            } else {
+                const targetIdx = Number(zoneIndex);
+                if (isNaN(targetIdx) || targetIdx < 0 || targetIdx >= category.zones.length) {
+                    return res.status(400).json({ error: 'Zona seleccionada inválida.' });
+                }
+                const targetZone = category.zones[targetIdx];
+                const existingTeams = [...targetZone.teams];
+                targetZone.teams.push(newTeam);
+
+                let nextOrder = targetZone.matches && targetZone.matches.length > 0
+                    ? Math.max(...targetZone.matches.map(m => m.matchOrder || 0)) + 1
+                    : 1;
+
+                // Generar partidos contra los equipos ya presentes en esa zona
+                existingTeams.forEach(otherTeam => {
+                    targetZone.matches.push({
+                        teamA: otherTeam,
+                        teamB: newTeam,
+                        scoreA: [],
+                        scoreB: [],
+                        status: 'Pendiente',
+                        matchOrder: nextOrder++
+                    });
+                });
+            }
+        }
+
+        const updatedTournament = await tournament.save();
+        res.status(201).json({
+            message: 'Pareja fuera de término añadida y asignada con éxito.',
+            tournament: updatedTournament
+        });
+    } catch (error) {
+        console.error("Error al añadir pareja fuera de término:", error);
+        res.status(500).json({ error: 'Error en el servidor al añadir la pareja.', details: error.message });
     }
 });
 

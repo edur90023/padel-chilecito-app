@@ -112,35 +112,95 @@ const ZoneStandings = ({ zone }) => {
     const sortedStandings = useMemo(() => {
         const standings = {};
         zone.teams.forEach(team => {
-            standings[team._id] = {
-                teamName: team.teamName, played: 0, won: 0, lost: 0,
-                setsFor: 0, setsAgainst: 0, gamesFor: 0, gamesAgainst: 0, points: 0
+            const id = team._id ? team._id.toString() : team.teamName;
+            standings[id] = {
+                teamId: id,
+                teamName: team.teamName, 
+                played: 0, 
+                won: 0, 
+                lost: 0,
+                setsFor: 0, 
+                setsAgainst: 0, 
+                gamesFor: 0, 
+                gamesAgainst: 0, 
+                points: 0
             };
         });
+
+        const directMap = {};
+
         zone.matches.forEach(match => {
-            if (match.status !== 'Finalizado' || !match.scoreA || match.scoreA.length === 0) return;
-            const statsA = standings[match.teamA._id];
-            const statsB = standings[match.teamB._id];
+            if (match.status !== 'Finalizado' || !match.scoreA || match.scoreA.length === 0 || !match.teamA || !match.teamB) return;
+            const idA = match.teamA._id ? match.teamA._id.toString() : match.teamA.teamName;
+            const idB = match.teamB._id ? match.teamB._id.toString() : match.teamB.teamName;
+            const statsA = standings[idA];
+            const statsB = standings[idB];
             if (!statsA || !statsB) return;
-            const winner = getMatchWinner(match);
+
             statsA.played++;
             statsB.played++;
-            statsA.gamesFor += match.scoreA.reduce((a, b) => a + b, 0);
-            statsA.gamesAgainst += match.scoreB.reduce((a, b) => a + b, 0);
-            statsB.gamesFor += match.scoreB.reduce((a, b) => a + b, 0);
-            statsB.gamesAgainst += match.scoreA.reduce((a, b) => a + b, 0);
-            if (winner === 'A') {
-                statsA.won++; statsA.points += 2; statsB.lost++; statsB.points += 1;
-            } else if (winner === 'B') {
-                statsB.won++; statsB.points += 2; statsA.lost++; statsA.points += 1;
+
+            let setsA = 0, setsB = 0;
+            match.scoreA.forEach((s, i) => {
+                const scB = (match.scoreB && match.scoreB[i]) || 0;
+                if (s > scB) setsA++;
+                else if (scB > s) setsB++;
+            });
+
+            statsA.setsFor += setsA; statsA.setsAgainst += setsB;
+            statsB.setsFor += setsB; statsB.setsAgainst += setsA;
+
+            const gamesA = match.scoreA.reduce((a, b) => a + b, 0);
+            const gamesB = match.scoreB.reduce((a, b) => a + b, 0);
+            statsA.gamesFor += gamesA; statsA.gamesAgainst += gamesB;
+            statsB.gamesFor += gamesB; statsB.gamesAgainst += gamesA;
+
+            if (!directMap[idA]) directMap[idA] = {};
+            if (!directMap[idB]) directMap[idB] = {};
+
+            if (setsA > setsB) {
+                statsA.won++; statsA.points += 2; 
+                statsB.lost++; statsB.points += 1;
+                directMap[idA][idB] = 1;
+                directMap[idB][idA] = -1;
+            } else {
+                statsB.won++; statsB.points += 2; 
+                statsA.lost++; statsA.points += 1;
+                directMap[idA][idB] = -1;
+                directMap[idB][idA] = 1;
             }
         });
-        return Object.values(standings).sort((a, b) => {
+
+        const list = Object.values(standings);
+
+        return list.sort((a, b) => {
+            // 1. Puntos
             if (b.points !== a.points) return b.points - a.points;
-            const diffA = a.gamesFor - a.gamesAgainst;
-            const diffB = b.gamesFor - b.gamesAgainst;
-            if (diffB !== diffA) return diffB - diffA;
+
+            // 2. Enfrentamiento directo entre 2 parejas (APA Art. 6 Inc. f)
+            const samePtsCount = list.filter(item => item.points === a.points).length;
+            if (samePtsCount === 2 && directMap[a.teamId] && directMap[a.teamId][b.teamId] !== undefined) {
+                return directMap[a.teamId][b.teamId] === 1 ? -1 : 1;
+            }
+
+            // 3. Diferencia de sets (APA Art. 6 Inc. f1)
+            const diffSetsA = a.setsFor - a.setsAgainst;
+            const diffSetsB = b.setsFor - b.setsAgainst;
+            if (diffSetsB !== diffSetsA) return diffSetsB - diffSetsA;
+
+            // 4. Diferencia de games
+            const diffGamesA = a.gamesFor - a.gamesAgainst;
+            const diffGamesB = b.gamesFor - b.gamesAgainst;
+            if (diffGamesB !== diffGamesA) return diffGamesB - diffGamesA;
+
+            // 5. Games a favor
             if (b.gamesFor !== a.gamesFor) return b.gamesFor - a.gamesFor;
+
+            // 6. Desempate directo residual
+            if (directMap[a.teamId] && directMap[a.teamId][b.teamId] !== undefined) {
+                return directMap[a.teamId][b.teamId] === 1 ? -1 : 1;
+            }
+
             return 0;
         });
     }, [zone]);
@@ -154,7 +214,7 @@ const ZoneStandings = ({ zone }) => {
                         <th className="p-2">Equipo</th>
                         <th className="p-2 text-center">Pts</th><th className="p-2 text-center">PJ</th>
                         <th className="p-2 text-center">PG</th><th className="p-2 text-center">PP</th>
-                        <th className="p-2 text-center">DG</th>
+                        <th className="p-2 text-center">DS</th><th className="p-2 text-center">DG</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -165,6 +225,7 @@ const ZoneStandings = ({ zone }) => {
                             <td className="p-2 text-center">{team.played}</td>
                             <td className="p-2 text-center">{team.won}</td>
                             <td className="p-2 text-center">{team.lost}</td>
+                            <td className="p-2 text-center">{team.setsFor - team.setsAgainst}</td>
                             <td className="p-2 text-center">{team.gamesFor - team.gamesAgainst}</td>
                         </tr>
                     ))}

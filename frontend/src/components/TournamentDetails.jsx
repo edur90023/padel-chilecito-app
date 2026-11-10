@@ -11,31 +11,323 @@ export const getGoogleMapsUrl = (mapUrl, placeName) => {
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query + (query.toLowerCase().includes('chilecito') ? '' : ' Chilecito La Rioja'))}`;
 };
 
-// --- Sub-componente para la Previsualización de Zonas ---
-function ZonesPreview({ zones, onConfirm, onCancel }) {
+// --- Sub-componente para la Previsualización de Zonas con Configuración Oficial APA ---
+function ZonesPreview({ zones, category, onConfirm, onCancel, onRefreshPreview }) {
+    const totalTeams = category?.registeredPlayers?.length || 0;
+    const remainder = totalTeams % 3;
+
+    const [leftoverOption, setLeftoverOption] = useState(
+        remainder === 1 ? 'apa_four' : (remainder === 2 ? 'apa_four' : 'apa_four')
+    );
+    const [zonePlaySystem, setZonePlaySystem] = useState(category?.zonePlaySystem || false);
+
+    const handleOptionChange = (option) => {
+        setLeftoverOption(option);
+        if (onRefreshPreview) {
+            onRefreshPreview({ leftoverOption: option, zonePlaySystem });
+        }
+    };
+
+    const handleSystemChange = (enabled) => {
+        setZonePlaySystem(enabled);
+        if (onRefreshPreview) {
+            onRefreshPreview({ leftoverOption, zonePlaySystem: enabled });
+        }
+    };
+
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4 animate-fade-in">
-            <div className="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-                <h3 className="text-2xl font-bold text-white mb-4">Previsualización del Sorteo de Zonas</h3>
-                <p className="text-gray-400 mb-6">Así es como se distribuirán las parejas. Si estás de acuerdo, confirma para guardar los cambios.</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {zones.map(zone => (
-                        <div key={zone.zoneName} className="bg-gray-900 p-4 rounded-lg">
-                            <h4 className="font-bold text-lg text-green-400 mb-3">{zone.zoneName}</h4>
-                            <ul className="space-y-2">
-                                {zone.teams.map((team, index) => (
-                                    <li key={team._id || index} className="text-white bg-gray-700 px-3 py-2 rounded-md text-sm">
-                                        {team.teamName}
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50 p-4 animate-fade-in backdrop-blur-sm">
+            <div className="bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-4xl max-h-[92vh] overflow-y-auto border border-gray-700">
+                <div className="flex justify-between items-center mb-3">
+                    <h3 className="text-2xl font-bold text-white flex items-center gap-2">
+                        <span>🏆</span> Previsualización del Sorteo de Zonas
+                    </h3>
+                    <span className="text-xs bg-green-900/60 text-green-300 px-3 py-1 rounded-full border border-green-700 font-semibold">
+                        {totalTeams} Parejas Inscriptas
+                    </span>
+                </div>
+
+                <p className="text-gray-300 text-sm mb-4">
+                    Prioridad reglamentaria: <strong className="text-green-400">Zonas de 3 parejas</strong> (Reglamento Oficial APA 2025).
+                </p>
+
+                {/* Opciones especiales para sobrantes reglamentarios */}
+                {remainder !== 0 && totalTeams >= 4 && (
+                    <div className="bg-gray-900/80 p-4 rounded-lg border border-amber-500/40 mb-6 space-y-3">
+                        <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
+                            <span>⚠️</span> Situación Especial: Sobran {remainder} pareja{remainder > 1 ? 's' : ''} para completar múltiplos de 3
+                        </div>
+
+                        {remainder === 1 && (
+                            <div className="space-y-2 text-xs">
+                                <label className="flex items-start gap-2 text-gray-200 cursor-pointer p-2 rounded bg-gray-800/80 hover:bg-gray-800 border border-gray-700">
+                                    <input 
+                                        type="radio" 
+                                        name="leftoverOption" 
+                                        value="apa_four" 
+                                        checked={leftoverOption === 'apa_four'} 
+                                        onChange={() => handleOptionChange('apa_four')}
+                                        className="mt-0.5 text-blue-500"
+                                    />
+                                    <div>
+                                        <strong className="text-green-400">Reglamento Oficial APA (Art. 5 Inc. e):</strong> Confeccionar <strong>1 zona de 4 parejas</strong> (siendo obligatoriamente la última zona) y el resto de 3.
+                                    </div>
+                                </label>
+                                <label className="flex items-start gap-2 text-gray-200 cursor-pointer p-2 rounded bg-gray-800/80 hover:bg-gray-800 border border-gray-700">
+                                    <input 
+                                        type="radio" 
+                                        name="leftoverOption" 
+                                        value="direct_bye" 
+                                        checked={leftoverOption === 'direct_bye'} 
+                                        onChange={() => handleOptionChange('direct_bye')}
+                                        className="mt-0.5 text-blue-500"
+                                    />
+                                    <div>
+                                        <strong className="text-blue-400">Pase Directo a Playoffs:</strong> 1 pareja clasifica directo a la siguiente fase y se conforman todas zonas de 3 parejas puras.
+                                    </div>
+                                </label>
+                            </div>
+                        )}
+
+                        {remainder === 2 && (
+                            <div className="space-y-2 text-xs">
+                                <label className="flex items-start gap-2 text-gray-200 cursor-pointer p-2 rounded bg-gray-800/80 hover:bg-gray-800 border border-gray-700">
+                                    <input 
+                                        type="radio" 
+                                        name="leftoverOption" 
+                                        value="apa_four" 
+                                        checked={leftoverOption === 'apa_four'} 
+                                        onChange={() => handleOptionChange('apa_four')}
+                                        className="mt-0.5 text-blue-500"
+                                    />
+                                    <div>
+                                        <strong className="text-green-400">Reglamento Oficial APA (Art. 5 Inc. e):</strong> Confeccionar <strong>2 zonas de 4 parejas</strong> (siendo obligatoriamente las dos últimas zonas) y el resto de 3.
+                                    </div>
+                                </label>
+                                <label className="flex items-start gap-2 text-gray-200 cursor-pointer p-2 rounded bg-gray-800/80 hover:bg-gray-800 border border-gray-700">
+                                    <input 
+                                        type="radio" 
+                                        name="leftoverOption" 
+                                        value="two_pair_zone" 
+                                        checked={leftoverOption === 'two_pair_zone'} 
+                                        onChange={() => handleOptionChange('two_pair_zone')}
+                                        className="mt-0.5 text-blue-500"
+                                    />
+                                    <div>
+                                        <strong className="text-purple-400">Modalidad Reducida / Fin de Semana:</strong> Confeccionar <strong>1 zona de 2 parejas</strong> al final y el resto de 3 (juegan 1 partido directo para definir 1º y 2º).
+                                    </div>
+                                </label>
+                            </div>
+                        )}
+
+                        <div className="pt-2 border-t border-gray-800">
+                            <label className="flex items-center gap-2 text-xs text-gray-200 cursor-pointer">
+                                <input 
+                                    type="checkbox" 
+                                    checked={zonePlaySystem} 
+                                    onChange={e => handleSystemChange(e.target.checked)} 
+                                    className="h-4 w-4 text-green-500 rounded bg-gray-700 border-gray-600"
+                                />
+                                <span>
+                                    <strong>Usar Sistema Oficial APA en zonas de 4:</strong> cruces programados 1vs3 y 2vs4 con ganador vs ganador y perdedor vs perdedor (4 partidos por zona).
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                )}
+
+                {remainder === 0 && (
+                    <div className="bg-green-950/40 border border-green-700/50 p-3 rounded-lg text-xs text-green-300 mb-6 flex items-center gap-2">
+                        <span>✅</span> Cantidad exacta de parejas ({totalTeams}): Se confeccionarán {totalTeams / 3} zonas perfectas de 3 parejas cada una.
+                    </div>
+                )}
+
+                {/* Vista previa de las zonas */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {zones.map((zone, idx) => (
+                        <div key={zone.zoneName || idx} className="bg-gray-900/90 p-4 rounded-lg border border-gray-700/80 shadow">
+                            <div className="flex justify-between items-center mb-2">
+                                <h4 className="font-bold text-base text-green-400">{zone.zoneName}</h4>
+                                <span className="text-xs bg-gray-800 text-gray-300 px-2 py-0.5 rounded border border-gray-700">
+                                    {zone.teams.length} parejas
+                                </span>
+                            </div>
+                            <ul className="space-y-1.5">
+                                {zone.teams.map((team, tIdx) => (
+                                    <li key={team._id || tIdx} className="text-white bg-gray-800/90 px-3 py-1.5 rounded text-xs flex justify-between items-center border border-gray-700/50">
+                                        <span className="font-medium truncate">{team.teamName}</span>
+                                        <span className="text-[10px] text-gray-400 ml-2">Pos. {tIdx + 1}</span>
                                     </li>
                                 ))}
                             </ul>
                         </div>
                     ))}
                 </div>
+
                 <div className="flex gap-4 mt-8">
-                    <button onClick={onCancel} className="w-full bg-gray-600 text-white font-bold py-3 rounded-lg hover:bg-gray-500 transition">Cancelar</button>
-                    <button onClick={onConfirm} className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">Confirmar y Guardar Zonas</button>
+                    <button onClick={onCancel} className="w-full bg-gray-700 text-white font-bold py-3 rounded-lg hover:bg-gray-600 transition text-sm">
+                        Cancelar
+                    </button>
+                    <button 
+                        onClick={() => onConfirm({ leftoverOption, zonePlaySystem })} 
+                        className="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition text-sm shadow-lg shadow-green-900/30"
+                    >
+                        Confirmar y Guardar Zonas
+                    </button>
                 </div>
+            </div>
+        </div>
+    );
+}
+
+// --- Sub-componente para añadir parejas fuera de término / reasignar ---
+function AddLateTeamModal({ category, onAction, onClose }) {
+    const [p1Name, setP1Name] = useState('');
+    const [p1Phone, setP1Phone] = useState('');
+    const [p2Name, setP2Name] = useState('');
+    const [p2Phone, setP2Phone] = useState('');
+    const [assignmentMode, setAssignmentMode] = useState('existing'); // 'existing' | 'new'
+    const [selectedZoneIndex, setSelectedZoneIndex] = useState(0);
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        onAction('add-late-team', category._id, {
+            player1Name: p1Name,
+            player1Phone: p1Phone,
+            player2Name: p2Name,
+            player2Phone: p2Phone,
+            zoneIndex: selectedZoneIndex,
+            createNewZone: assignmentMode === 'new'
+        });
+        onClose();
+    };
+
+    const hasZones = category?.zones && category.zones.length > 0;
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50 p-4 animate-fade-in backdrop-blur-sm">
+            <div className="bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-lg border border-gray-700">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                        <span>➕</span> Añadir Pareja Fuera de Término
+                    </h3>
+                    <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+                </div>
+
+                <p className="text-xs text-gray-300 mb-4">
+                    Permite incorporar una pareja de último momento tras el cierre o sorteo de zonas. Podrás sumarla a una zona existente (generando sus partidos automáticamente) o abrir una nueva zona.
+                </p>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="bg-gray-900/60 p-3 rounded-lg border border-gray-700 space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div>
+                                <label className="text-[11px] text-gray-400 font-medium">Jugador 1 *</label>
+                                <input 
+                                    type="text" 
+                                    value={p1Name} 
+                                    onChange={e => setP1Name(e.target.value)} 
+                                    placeholder="Nombre completo" 
+                                    required 
+                                    className="w-full p-2 bg-gray-700 rounded text-xs text-white border border-gray-600 focus:outline-none focus:border-green-500" 
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[11px] text-gray-400 font-medium">Teléfono Jugador 1</label>
+                                <input 
+                                    type="text" 
+                                    value={p1Phone} 
+                                    onChange={e => setP1Phone(e.target.value)} 
+                                    placeholder="Opcional" 
+                                    className="w-full p-2 bg-gray-700 rounded text-xs text-white border border-gray-600 focus:outline-none focus:border-green-500" 
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div>
+                                <label className="text-[11px] text-gray-400 font-medium">Jugador 2 *</label>
+                                <input 
+                                    type="text" 
+                                    value={p2Name} 
+                                    onChange={e => setP2Name(e.target.value)} 
+                                    placeholder="Nombre completo" 
+                                    required 
+                                    className="w-full p-2 bg-gray-700 rounded text-xs text-white border border-gray-600 focus:outline-none focus:border-green-500" 
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[11px] text-gray-400 font-medium">Teléfono Jugador 2</label>
+                                <input 
+                                    type="text" 
+                                    value={p2Phone} 
+                                    onChange={e => setP2Phone(e.target.value)} 
+                                    placeholder="Opcional" 
+                                    className="w-full p-2 bg-gray-700 rounded text-xs text-white border border-gray-600 focus:outline-none focus:border-green-500" 
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {hasZones && (
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-200">¿Dónde asignar esta pareja?</label>
+                            
+                            <div className="space-y-2">
+                                <label className="flex items-start gap-2 p-2 bg-gray-900/60 rounded border border-gray-700 cursor-pointer">
+                                    <input 
+                                        type="radio" 
+                                        name="assignmentMode" 
+                                        value="existing" 
+                                        checked={assignmentMode === 'existing'} 
+                                        onChange={() => setAssignmentMode('existing')}
+                                        className="mt-1 text-green-500"
+                                    />
+                                    <div className="flex-1">
+                                        <span className="text-xs font-semibold text-white block">Sumar a una zona existente</span>
+                                        {assignmentMode === 'existing' && (
+                                            <select 
+                                                value={selectedZoneIndex} 
+                                                onChange={e => setSelectedZoneIndex(Number(e.target.value))}
+                                                className="mt-2 w-full p-2 bg-gray-800 text-white rounded text-xs border border-gray-600"
+                                            >
+                                                {category.zones.map((zone, zIdx) => (
+                                                    <option key={zone._id || zIdx} value={zIdx}>
+                                                        {zone.zoneName} — Tiene {zone.teams.length} pareja{zone.teams.length !== 1 ? 's' : ''} (pasará a {zone.teams.length + 1})
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        )}
+                                    </div>
+                                </label>
+
+                                <label className="flex items-start gap-2 p-2 bg-gray-900/60 rounded border border-gray-700 cursor-pointer">
+                                    <input 
+                                        type="radio" 
+                                        name="assignmentMode" 
+                                        value="new" 
+                                        checked={assignmentMode === 'new'} 
+                                        onChange={() => setAssignmentMode('new')}
+                                        className="mt-1 text-green-500"
+                                    />
+                                    <div>
+                                        <span className="text-xs font-semibold text-white block">Crear una nueva zona</span>
+                                        <span className="text-[11px] text-gray-400">Se abrirá Zona {String.fromCharCode(65 + category.zones.length)} con esta pareja.</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="flex gap-3 pt-2">
+                        <button type="button" onClick={onClose} className="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-2.5 rounded-lg text-xs transition">
+                            Cancelar
+                        </button>
+                        <button type="submit" className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 rounded-lg text-xs transition shadow-md">
+                            Guardar Pareja
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     );
@@ -720,9 +1012,12 @@ const ZoneStandings = ({ zone }) => {
         const stats = {};
         zone.teams.forEach(t => {
             if (t && t._id) {
-                stats[t._id.toString()] = { teamName: t.teamName, p: 0, w: 0, l: 0, sf: 0, sc: 0, gf: 0, gc: 0, pts: 0 };
+                stats[t._id.toString()] = { teamId: t._id.toString(), teamName: t.teamName, p: 0, w: 0, l: 0, sf: 0, sc: 0, gf: 0, gc: 0, pts: 0 };
             }
         });
+
+        const directMap = {};
+
         zone.matches.forEach(m => {
             if (m.status !== 'Finalizado' || !m.teamA?._id || !m.teamB?._id) return;
             const teamAId = m.teamA._id.toString();
@@ -735,8 +1030,9 @@ const ZoneStandings = ({ zone }) => {
             
             let setsA = 0, setsB = 0;
             m.scoreA.forEach((s, i) => { 
-                if (s > m.scoreB[i]) setsA++; 
-                else if (m.scoreB[i] > s) setsB++; 
+                const scB = m.scoreB[i] || 0;
+                if (s > scB) setsA++; 
+                else if (scB > s) setsB++; 
             });
             
             statsA.sf += setsA; statsA.sc += setsB;
@@ -745,21 +1041,52 @@ const ZoneStandings = ({ zone }) => {
             statsA.gc += m.scoreB.reduce((a, b) => a + b, 0);
             statsB.gf += m.scoreB.reduce((a, b) => a + b, 0);
             statsB.gc += m.scoreA.reduce((a, b) => a + b, 0);
-            
+
+            if (!directMap[teamAId]) directMap[teamAId] = {};
+            if (!directMap[teamBId]) directMap[teamBId] = {};
+
             if (setsA > setsB) {
                 statsA.w++; statsA.pts += 2;
                 statsB.l++; statsB.pts += 1;
+                directMap[teamAId][teamBId] = 1;
+                directMap[teamBId][teamAId] = -1;
             } else {
                 statsB.w++; statsB.pts += 2;
                 statsA.l++; statsA.pts += 1;
+                directMap[teamAId][teamBId] = -1;
+                directMap[teamBId][teamAId] = 1;
             }
         });
-        return Object.values(stats).sort((a, b) => {
+
+        const list = Object.values(stats);
+
+        return list.sort((a, b) => {
+            // 1. Puntos
             if (b.pts !== a.pts) return b.pts - a.pts;
+
+            // 2. Enfrentamiento directo si hay 2 parejas empatadas (APA Art. 6 Inc. f)
+            const samePtsCount = list.filter(item => item.pts === a.pts).length;
+            if (samePtsCount === 2 && directMap[a.teamId] && directMap[a.teamId][b.teamId] !== undefined) {
+                return directMap[a.teamId][b.teamId] === 1 ? -1 : 1;
+            }
+
+            // 3. Diferencia de sets
             const diffA = a.sf - a.sc; const diffB = b.sf - b.sc;
             if (diffB !== diffA) return diffB - diffA;
+
+            // 4. Diferencia de games
             const gameDiffA = a.gf - a.gc; const gameDiffB = b.gf - b.gc;
-            return gameDiffB - gameDiffA;
+            if (gameDiffB !== gameDiffA) return gameDiffB - gameDiffA;
+
+            // 5. Games a favor
+            if (b.gf !== a.gf) return b.gf - a.gf;
+
+            // 6. Desempate directo residual
+            if (directMap[a.teamId] && directMap[a.teamId][b.teamId] !== undefined) {
+                return directMap[a.teamId][b.teamId] === 1 ? -1 : 1;
+            }
+
+            return 0;
         });
     }, [zone]);
 
@@ -956,6 +1283,7 @@ function CategoryManager({ category, tournament, onAction, userRole }) {
     const [showSwapModal, setShowSwapModal] = useState(false);
     const [showRegisteredTeams, setShowRegisteredTeams] = useState(false);
     const [editingVenueZone, setEditingVenueZone] = useState(null);
+    const [showLateTeamModal, setShowLateTeamModal] = useState(false);
     const isAdmin = userRole === 'admin';
 
     const areAllZoneMatchesFinished = useMemo(() => {
@@ -978,9 +1306,9 @@ function CategoryManager({ category, tournament, onAction, userRole }) {
         return lastRound.matches.every(match => match.status === 'Finalizado');
     }, [category]);
     
-    const handlePreviewZones = () => onAction('preview-zones', category._id);
-    const handleConfirmDrawZones = () => {
-        onAction('draw-zones', category._id);
+    const handlePreviewZones = (customSettings = {}) => onAction('preview-zones', category._id, customSettings);
+    const handleConfirmDrawZones = (settings = {}) => {
+        onAction('draw-zones', category._id, settings);
         setZonePreview(null);
     };
     
@@ -1001,8 +1329,17 @@ function CategoryManager({ category, tournament, onAction, userRole }) {
             {zonePreview && (
                 <ZonesPreview
                     zones={zonePreview}
+                    category={category}
                     onConfirm={handleConfirmDrawZones}
                     onCancel={() => setZonePreview(null)}
+                    onRefreshPreview={handlePreviewZones}
+                />
+            )}
+            {showLateTeamModal && (
+                <AddLateTeamModal
+                    category={category}
+                    onAction={onAction}
+                    onClose={() => setShowLateTeamModal(false)}
                 />
             )}
             {showSwapModal && (
@@ -1030,7 +1367,19 @@ function CategoryManager({ category, tournament, onAction, userRole }) {
                         <>
                             {category.status === 'Inscripciones Abiertas' && <AddTeamForm categoryId={category._id} onAction={onAction} />}
                             {category.status === 'Inscripciones Cerradas' && (
-                                <button onClick={handlePreviewZones} className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition">Previsualizar Sorteo de Zonas</button>
+                                <button onClick={() => handlePreviewZones()} className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition">
+                                    Previsualizar Sorteo de Zonas (Reglamento APA)
+                                </button>
+                            )}
+                            {/* Botón para incorporar parejas de último momento fuera de término */}
+                            {['Inscripciones Cerradas', 'Zonas Sorteadas', 'En Juego'].includes(category.status) && (
+                                <button 
+                                    type="button" 
+                                    onClick={() => setShowLateTeamModal(true)} 
+                                    className="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition text-sm shadow"
+                                >
+                                    <span>➕</span> Añadir Pareja Fuera de Término / Asignar a Zona
+                                </button>
                             )}
                             {category.status === 'Zonas Sorteadas' && areAllZoneMatchesFinished && (
                                 <button onClick={() => onAction('generate-playoffs', category._id)} className="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 transition">Calcular Clasificados y Generar Llave</button>
@@ -1186,7 +1535,7 @@ function TournamentDetails({ tournament, onBack }) {
             const url = `/tournaments/${currentTournament._id}`;
             
             if (action === 'preview-zones') {
-                response = await axios.post(`${url}/category/${categoryId}/preview-zones`, {});
+                response = await axios.post(`${url}/category/${categoryId}/preview-zones`, data || {});
                 setCurrentTournament(prev => ({ ...prev, previewData: { categoryId, zones: response.data.zones } }));
                 setLoading(false);
                 return; 
@@ -1203,10 +1552,12 @@ function TournamentDetails({ tournament, onBack }) {
             else if (action === 'move-team') response = await axios.post(`${url}/move-team`, { teamId: data.teamId, currentCategoryId: categoryId, newCategoryId: data.newCategoryId });
             else if (action === 'close-all-registrations') response = await axios.post(`${url}/close-all-registrations`);
             else if (action === 'add-team') response = await axios.post(`${url}/category/${categoryId}/add-team`, data);
+            else if (action === 'add-late-team') response = await axios.post(`${url}/category/${categoryId}/add-late-team`, data);
+            else if (action === 'draw-zones') response = await axios.post(`${url}/category/${categoryId}/draw-zones`, data || {});
             else if (action === 'advance-playoffs') response = await axios.post(`${url}/category/${categoryId}/advance-playoffs`);
             else if (action === 'finish') response = await axios.post(`${url}/category/${categoryId}/finish`, data);
             else if (action === 'advance-apa') response = await axios.post(`${url}/category/${categoryId}/zone/${data.zoneId}/advance-apa`);
-            else response = await axios.post(`${url}/category/${categoryId}/${action}`, {});
+            else response = await axios.post(`${url}/category/${categoryId}/${action}`, data || {});
             
             if(response.data.tournament) {
                 const newTournament = { ...response.data.tournament, previewData: null };
