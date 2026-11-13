@@ -33,31 +33,75 @@ function LoginPage() {
 
     return (
         <div className="login-page-container flex items-center justify-center min-h-screen p-4">
-            <div className="w-full max-w-md p-8 space-y-6 bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl shadow-green-500/10 animate-fade-in">
-                <div className="text-center">
-                       <h2 className="text-4xl font-extrabold text-white">PÁDEL CHILECITO</h2>
-                       <p className="mt-2 text-gray-400">Acceso de Administrador</p>
+            <div className="w-full max-w-md p-6 sm:p-8 space-y-6 bg-slate-900/95 border border-slate-800 rounded-2xl shadow-2xl shadow-emerald-500/10 animate-fade-in">
+                <div className="text-center space-y-2">
+                    <img
+                        src="/logo.png"
+                        alt="Red Padel LR"
+                        className="w-20 h-20 rounded-full object-cover mx-auto border-2 border-emerald-500/60 shadow-lg shadow-emerald-500/20"
+                    />
+                    <h2 className="text-3xl font-title font-extrabold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent tracking-wide">
+                        RED PADEL LR
+                    </h2>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-emerald-400/90">
+                        Grupo Padel Chilecito • Acceso Administrador
+                    </p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    {error && <p className="text-sm text-center text-red-400 bg-red-900/50 p-3 rounded-lg border border-red-700/50">{String(error)}</p>}
+                    {error && (
+                        <p className="text-sm text-center text-red-400 bg-red-950/60 p-3 rounded-xl border border-red-700/50">
+                            {String(error)}
+                        </p>
+                    )}
                     <div>
-                        <label htmlFor="username" className="text-sm font-medium text-gray-400">Usuario</label>
-                        <input id="username" type="text" value={username} onChange={(e) => setUsername(e.target.value)} required className="w-full px-4 py-3 mt-1.5 text-gray-200 bg-gray-900 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition" placeholder="PadelCHI" />
+                        <label htmlFor="username" className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                            Usuario
+                        </label>
+                        <input
+                            id="username"
+                            type="text"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            required
+                            className="w-full px-4 py-3 mt-1.5 text-slate-100 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 transition text-sm"
+                            placeholder="Usuario administrador"
+                        />
                     </div>
                     <div>
-                        <label htmlFor="password" className="text-sm font-medium text-gray-400">Contraseña</label>
-                        <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="w-full px-4 py-3 mt-1.5 text-gray-200 bg-gray-900 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition" placeholder="••••••••" />
+                        <label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                            Contraseña
+                        </label>
+                        <input
+                            id="password"
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            className="w-full px-4 py-3 mt-1.5 text-slate-100 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 transition text-sm"
+                            placeholder="••••••••"
+                        />
                     </div>
                     <div className="space-y-2.5 pt-2">
-                        <button type="submit" disabled={loading} className="w-full px-4 py-3 font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-green-500 transition-all transform hover:scale-[1.02] disabled:bg-gray-600 disabled:cursor-not-allowed">
-                            {loading ? <div className="w-6 h-6 border-2 border-white border-dashed rounded-full animate-spin mx-auto"></div> : 'Iniciar Sesión'}
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full px-4 py-3 font-bold text-slate-950 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-xl hover:opacity-95 focus:outline-none transition shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {loading ? <div className="w-5 h-5 border-2 border-slate-950 border-dashed rounded-full animate-spin mx-auto"></div> : 'Iniciar Sesión'}
                         </button>
-                        <Link to="/" className="block w-full text-center px-4 py-2.5 font-semibold text-gray-300 bg-gray-700 rounded-lg hover:bg-gray-600 focus:outline-none transition">
+                        <Link
+                            to="/"
+                            className="block w-full text-center px-4 py-2.5 text-sm font-semibold text-slate-300 bg-slate-800 rounded-xl hover:bg-slate-700 transition"
+                        >
                             Volver al Inicio
                         </Link>
                     </div>
                 </form>
+
+                <p className="text-center text-[11px] text-slate-500">
+                    La Rioja, Argentina • Red Padel LR
+                </p>
             </div>
         </div>
     );

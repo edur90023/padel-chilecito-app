@@ -211,7 +211,7 @@ export default function ComplexManagement() {
                         <i className="fas fa-map-marked-alt text-emerald-400"></i> Gestión de Complejos y Canchas
                     </h2>
                     <p className="text-xs text-gray-400 mt-1">
-                        Registra los complejos de pádel de Chilecito, sus canchas, fotos, teléfono, WhatsApp y ubicación GPS.
+                        Registra los complejos de pádel de La Rioja, sus canchas, fotos, teléfono, WhatsApp y ubicación GPS.
                     </p>
                 </div>
                 <button
@@ -411,13 +411,13 @@ export default function ComplexManagement() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1">
-                                        Dirección Física en Chilecito
+                                        Dirección Física (Localidad / Provincia)
                                     </label>
                                     <input
                                         type="text"
                                         value={formData.address}
                                         onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                                        placeholder="Ej: Av. San Martín 450, Chilecito"
+                                        placeholder="Ej: Av. San Martín 450, La Rioja"
                                         className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3.5 py-2 text-white text-sm focus:outline-none focus:border-emerald-500"
                                     />
                                 </div>

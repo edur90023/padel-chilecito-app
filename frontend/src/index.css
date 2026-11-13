@@ -5,79 +5,86 @@
 @tailwind utilities;
 
 body {
-    @apply bg-dark-primary text-text-secondary font-sans;
+    background-color: #0B1120;
+    background-image: radial-gradient(ellipse 80% 45% at 50% -15%, rgba(16, 185, 129, 0.14), rgba(6, 182, 212, 0.06), transparent);
+    background-attachment: fixed;
+    @apply text-text-secondary font-sans;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    -webkit-tap-highlight-color: transparent;
 }
 
 /* Estilo para un scrollbar más moderno */
 ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
 }
 ::-webkit-scrollbar-track {
-    background: #1F2937;
+    background: #0B1120;
 }
 ::-webkit-scrollbar-thumb {
-    background: #374151;
+    background: #1E293B;
     border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-    background: #4B5563;
+    background: #10B981;
 }
 
 /* --- ESTILOS PARA LA LLAVE GRÁFICA (BRACKET) --- */
 .bracket-container {
-    background-color: #1f2937; /* bg-gray-800 */
-    border-radius: 0.5rem;
-    padding: 1rem; /* Padding un poco más pequeño para móvil */
-    overflow-x: auto; /* Permite scroll horizontal */
-    -webkit-overflow-scrolling: touch; /* Suaviza el scroll en iOS */
-    white-space: nowrap; /* Evita que los elementos de ronda salten de línea */
+    background-color: #111827;
+    border: 1px solid #1F2937;
+    border-radius: 0.75rem;
+    padding: 0.85rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
 }
 
 .bracket-scroll {
     display: flex;
-    gap: 1.5rem; /* Espacio entre rondas, un poco más compacto */
-    padding-bottom: 0.5rem; /* Espacio para la barra de scroll */
+    gap: 1.5rem;
+    padding-bottom: 0.5rem;
 }
 
 .bracket-round {
-    display: inline-flex; /* Usar inline-flex para que no salte de línea */
+    display: inline-flex;
     flex-direction: column;
-    gap: 1.5rem; /* Espacio vertical entre partidos */
-    width: 220px; /* Ancho ajustado para sede, horario y maps */
-    flex-shrink: 0; /* Evita que las rondas se encojan */
-    justify-content: space-around; /* Distribuye el espacio verticalmente */
-    vertical-align: top; /* Alinea las rondas en la parte superior */
+    gap: 1.5rem;
+    width: 220px;
+    flex-shrink: 0;
+    justify-content: space-around;
+    vertical-align: top;
 }
 
 .bracket-round-title {
-    font-size: 1rem; /* Más pequeño para móvil */
+    font-size: 0.95rem;
     font-weight: 700;
-    color: #f9fafb; /* text-white */
+    color: #F8FAFC;
     text-align: center;
-    margin-bottom: 0.5rem; /* Espacio reducido */
-    padding: 0.25rem 0;
-    background-color: #374151; /* Fondo para el título */
-    border-radius: 0.25rem;
+    margin-bottom: 0.5rem;
+    padding: 0.35rem 0.5rem;
+    background-color: #1E293B;
+    border: 1px solid #334155;
+    border-radius: 0.5rem;
 }
 
 .bracket-match {
-    background-color: #374151; /* bg-gray-700 */
-    border-radius: 0.375rem;
+    background-color: #1E293B;
+    border: 1px solid #334155;
+    border-radius: 0.5rem;
     position: relative;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); /* Sombra ligera */
+    box-shadow: 0 4px 10px -2px rgba(0, 0, 0, 0.35);
 }
 
 .bracket-info {
     padding: 0.35rem 0.5rem;
-    background-color: #111827;
-    border-top: 1px solid #4b5563;
-    border-bottom-left-radius: 0.375rem;
-    border-bottom-right-radius: 0.375rem;
+    background-color: #0B1120;
+    border-top: 1px solid #334155;
+    border-bottom-left-radius: 0.5rem;
+    border-bottom-right-radius: 0.5rem;
     display: flex;
     align-items: center;
     justify-content: space-between;

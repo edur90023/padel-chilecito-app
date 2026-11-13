@@ -120,7 +120,7 @@ function RegistrationForm({ tournament, onClose }) {
                     <div className="form-group">
                         <label className="block text-gray-400 mb-2">Nombre del Club (Opcional):</label>
                         {/* --- ¡NUEVO CAMPO! --- */}
-                        <input type="text" name="club" value={formData.club} onChange={handleChange} placeholder="Ej: Club Atlético Chilecito" className="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg text-white" />
+                        <input type="text" name="club" value={formData.club} onChange={handleChange} placeholder="Ej: Club / Localidad (La Rioja)" className="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg text-white" />
                     </div>
 
                     <button type="submit" disabled={loading} className="w-full mt-6 bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition disabled:bg-gray-600">

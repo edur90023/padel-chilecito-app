@@ -110,20 +110,20 @@ function LivePage() {
                     Transmisión en Directo
                 </div>
                 <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
-                    Pádel Chilecito en Vivo
+                    Red Padel LR en Vivo
                 </h1>
                 <p className="mt-2 text-sm sm:text-base text-gray-300 max-w-xl mx-auto">
-                    Sigue todos los partidos, finales y resultados en directo.
+                    Transmisiones oficiales de Grupo Padel Chilecito — La Rioja, Argentina. Sigue todos los partidos y finales en directo.
                 </p>
 
-                {/* Botón de suscripción a YouTube (solicitado por el usuario) */}
+                {/* Botón de suscripción a YouTube */}
                 <div className="mt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
                     <a 
                         href={subscribeUrl} 
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-6 rounded-full transition-all transform hover:scale-105 flex items-center gap-2.5 shadow-xl shadow-red-600/30 text-sm sm:text-base group"
-                        title="Suscríbete al canal de YouTube de Pádel Chilecito"
+                        title="Suscríbete al canal de YouTube de Red Padel LR / Grupo Padel Chilecito"
                     >
                         <i className="fab fa-youtube text-2xl group-hover:animate-bounce"></i>
                         <span>SUSCRIBIRSE AL CANAL</span>

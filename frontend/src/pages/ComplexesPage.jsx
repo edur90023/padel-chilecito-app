@@ -6,15 +6,15 @@ const getMapsUrl = (mapsUrl, address, name) => {
     if (mapsUrl && (mapsUrl.startsWith('http://') || mapsUrl.startsWith('https://'))) {
         return mapsUrl;
     }
-    const query = mapsUrl || address || `${name} Chilecito La Rioja`;
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query + (query.toLowerCase().includes('chilecito') ? '' : ' Chilecito La Rioja'))}`;
+    const query = mapsUrl || address || `${name} La Rioja Argentina`;
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query + (query.toLowerCase().includes('la rioja') ? '' : ' La Rioja Argentina'))}`;
 };
 
 // Formateador de WhatsApp
 const formatWhatsAppUrl = (phone, name) => {
     if (!phone) return null;
     const cleanNumber = phone.replace(/\D/g, '');
-    const message = encodeURIComponent(`¡Hola! Te contacto desde la app de Pádel Chilecito para consultar sobre canchas y turnos en ${name}.`);
+    const message = encodeURIComponent(`¡Hola! Te contacto desde Red Padel LR (Grupo Padel Chilecito) para consultar sobre canchas y turnos en ${name}.`);
     return `https://wa.me/${cleanNumber}?text=${message}`;
 };
 
@@ -68,10 +68,10 @@ export default function ComplexesPage() {
             {/* Cabecera */}
             <div className="text-center max-w-3xl mx-auto mb-10">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-bold uppercase tracking-wider mb-3">
-                    <i className="fas fa-map-marked-alt"></i> Sedes y Canchas
+                    <i className="fas fa-map-marked-alt"></i> Sedes y Canchas • Red Padel LR
                 </div>
                 <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
-                    Complejos de Pádel en Chilecito
+                    Complejos de Pádel en La Rioja
                 </h1>
                 <p className="mt-3 text-base text-gray-300">
                     Encuentra dónde jugar, consulta la disponibilidad de canchas, comunícate por WhatsApp y llega fácilmente con Google Maps.

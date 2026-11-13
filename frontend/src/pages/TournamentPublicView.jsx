@@ -10,8 +10,8 @@ const getGoogleMapsUrl = (mapUrl, placeName) => {
     if (mapUrl && (mapUrl.startsWith('http://') || mapUrl.startsWith('https://'))) {
         return mapUrl;
     }
-    const query = mapUrl || placeName || 'Pádel Chilecito La Rioja';
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query + (query.toLowerCase().includes('chilecito') ? '' : ' Chilecito La Rioja'))}`;
+    const query = mapUrl || placeName || 'Pádel La Rioja Argentina';
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query + (query.toLowerCase().includes('la rioja') ? '' : ' La Rioja Argentina'))}`;
 };
 
 const getMatchWinner = (match) => {

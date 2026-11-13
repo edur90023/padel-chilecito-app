@@ -8,24 +8,25 @@ export default {
   ],
   theme: {
     extend: {
-      // --- ¡NUEVAS LÍNEAS! ---
       fontFamily: {
         'title': ['"Exo 2"', 'sans-serif'],
       },
-      // --- (El resto de tus colores y temas se mantienen igual) ---
+      // Paleta Opción A: Nocturno Esmeralda & Cian
       colors: {
-        'dark-primary': '#111827',
-        'dark-secondary': '#1F2937',
+        'dark-primary': '#0B1120',
+        'dark-secondary': '#111827',
         'primary': '#10B981',
         'primary-dark': '#059669',
+        'accent': '#06B6D4',
+        'accent-dark': '#0891B2',
         'secondary': '#FBBF24',
-        'text-primary': '#F9FAFB',
-        'text-secondary': '#9CA3AF',
+        'text-primary': '#F8FAFC',
+        'text-secondary': '#94A3B8',
         'danger': '#EF4444',
       },
       boxShadow: {
-        'primary': '0 4px 14px 0 rgba(16, 185, 129, 0.39)',
-        'primary-hover': '0 6px 20px 0 rgba(16, 185, 129, 0.5)',
+        'primary': '0 4px 14px 0 rgba(16, 185, 129, 0.35)',
+        'primary-hover': '0 6px 20px 0 rgba(6, 182, 212, 0.45)',
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in-out',

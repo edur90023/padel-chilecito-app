@@ -29,9 +29,9 @@ let memorySettings = {
         whatsapp: '+5493825625422',
         instagram: '@PadelChilecito',
         instagramUrl: 'https://www.instagram.com/padelchilecito',
-        address: 'Chilecito, La Rioja, Argentina',
+        address: 'La Rioja, Argentina',
         hours: 'Lunes a Domingo de 08:00 a 00:00 hs',
-        description: 'Punto de encuentro del pádel en Chilecito. Contáctanos para inscripciones, consultas sobre categorías, clases o eventos especiales.'
+        description: 'Red Padel LR (Grupo Padel Chilecito) — Punto de encuentro del pádel en La Rioja, Argentina. Contáctanos para inscripciones, consultas sobre categorías, clases o eventos especiales.'
     }
 };
 

@@ -315,7 +315,7 @@ function SiteSettingsManagement() {
                             type="text"
                             value={settings.contact.address}
                             onChange={(e) => handleContactChange('address', e.target.value)}
-                            placeholder="Ej: Chilecito, La Rioja, Argentina"
+                            placeholder="Ej: La Rioja, Argentina"
                             className="w-full p-3 bg-gray-900 border border-gray-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                         />
                     </div>

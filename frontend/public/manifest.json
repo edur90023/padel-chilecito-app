@@ -1,14 +1,14 @@
 {
   "id": "/",
-  "name": "Pádel Chilecito",
-  "short_name": "PádelChilecito",
-  "description": "Aplicación oficial de torneos, resultados y comunidad de Pádel en Chilecito, La Rioja.",
+  "name": "Red Padel LR",
+  "short_name": "Red Padel LR",
+  "description": "Plataforma oficial de torneos, llaves, complejos y rankings de pádel en La Rioja, Argentina. Grupo Padel Chilecito.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#111827",
-  "theme_color": "#111827",
+  "background_color": "#0B1120",
+  "theme_color": "#0B1120",
   "icons": [
     {
       "src": "/pwa-192x192.png",
@@ -21,6 +21,12 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "/pwa-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

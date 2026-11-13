@@ -484,16 +484,10 @@ class TournamentManager {
         const winners = lastRound.matches.map(getMatchWinner);
         const teamsForNextRound = [...(lastRound.teamsWithByes || []), ...winners];
 
-        // Semifinales a Final + 3er puesto
+        // Semifinales a Final (sin partido de 3er y 4to puesto)
         if (lastRound.roundName === 'Semifinales') {
-            const losers = lastRound.matches.map(m => {
-                const w = getMatchWinner(m);
-                return String(w._id) === String(m.teamA._id) ? m.teamB : m.teamA;
-            });
-
             return [
-                { roundName: 'Final', matches: [{ teamA: winners[0], teamB: winners[1], scoreA: [], scoreB: [], status: 'Pendiente' }], teamsWithByes: [] },
-                { roundName: 'Tercer y Cuarto Puesto', matches: [{ teamA: losers[0], teamB: losers[1], scoreA: [], scoreB: [], status: 'Pendiente' }], teamsWithByes: [] }
+                { roundName: 'Final', matches: [{ teamA: winners[0], teamB: winners[1], scoreA: [], scoreB: [], status: 'Pendiente' }], teamsWithByes: [] }
             ];
         }
 

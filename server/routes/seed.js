@@ -161,14 +161,7 @@ router.post('/tournament', isAuthenticated, async (req, res) => {
                  finalRound.matches[0].scoreB = [4, 4];
             }
 
-            const thirdPlaceRound = category.playoffRounds.find(r => r.roundName === 'Tercer y Cuarto Puesto');
-             if (thirdPlaceRound && thirdPlaceRound.matches[0]) {
-                 thirdPlaceRound.matches[0].status = 'Finalizado';
-                 thirdPlaceRound.matches[0].scoreA = [6, 6];
-                 thirdPlaceRound.matches[0].scoreB = [3, 3];
-            }
-
-            if (finalRound && thirdPlaceRound) {
+            if (finalRound && finalRound.matches[0]) {
                 const getWinnerLoser = (match) => {
                     if (!match || match.status !== 'Finalizado') return {};
                     let setsA = 0;
@@ -178,14 +171,11 @@ router.post('/tournament', isAuthenticated, async (req, res) => {
                     return { winner, loser };
                 };
                 const { winner: champion, loser: runnerUp } = getWinnerLoser(finalRound.matches[0]);
-                const { winner: thirdPlace, loser: fourthPlace } = getWinnerLoser(thirdPlaceRound.matches[0]);
 
-                if (champion && runnerUp && thirdPlace && fourthPlace) {
+                if (champion && runnerUp) {
                     category.finishers = [
                         { position: 1, team: champion },
-                        { position: 2, team: runnerUp },
-                        { position: 3, team: thirdPlace },
-                        { position: 4, team: fourthPlace }
+                        { position: 2, team: runnerUp }
                     ];
                 }
             }

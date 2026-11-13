@@ -7,8 +7,8 @@ export const getGoogleMapsUrl = (mapUrl, placeName) => {
     if (mapUrl && (mapUrl.startsWith('http://') || mapUrl.startsWith('https://'))) {
         return mapUrl;
     }
-    const query = mapUrl || placeName || 'Pádel Chilecito La Rioja';
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query + (query.toLowerCase().includes('chilecito') ? '' : ' Chilecito La Rioja'))}`;
+    const query = mapUrl || placeName || 'Pádel La Rioja Argentina';
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query + (query.toLowerCase().includes('la rioja') ? '' : ' La Rioja Argentina'))}`;
 };
 
 // --- Sub-componente para la Previsualización de Zonas con Configuración Oficial APA ---
@@ -1116,12 +1116,8 @@ const ZoneStandings = ({ zone }) => {
 // --- Sub-componente para gestionar la finalización de la categoría ---
 function FinishCategoryManager({ category, onAction }) {
     const finalRound = category.playoffRounds.find(r => r.roundName === 'Final');
-    const thirdPlaceRound = category.playoffRounds.find(r => r.roundName === 'Tercer y Cuarto Puesto');
-    
     const finalMatch = finalRound?.matches[0];
-    const thirdPlaceMatch = thirdPlaceRound?.matches[0];
-    
-    const canFinish = finalMatch?.status === 'Finalizado' && (!thirdPlaceRound || thirdPlaceMatch?.status === 'Finalizado');
+    const canFinish = finalMatch?.status === 'Finalizado';
 
     if (!finalMatch) return null;
 
@@ -1136,27 +1132,19 @@ function FinishCategoryManager({ category, onAction }) {
 
     const handleFinishCategory = () => {
         const { winner: champion, loser: runnerUp } = getWinnerLoser(finalMatch);
-        const { winner: thirdPlace, loser: fourthPlace } = getWinnerLoser(thirdPlaceMatch);
         
         if (!champion || !runnerUp) {
             alert("Aún faltan resultados para finalizar la categoría.");
             return;
         }
         
-        const confirmationMessage = `
-            ¿Confirmar los siguientes resultados?
-            - Campeón: ${champion.teamName}
-            - Subcampeón: ${runnerUp.teamName}
-            ${thirdPlace ? `- 3er Puesto: ${thirdPlace.teamName}` : ''}
-        `;
+        const confirmationMessage = `¿Confirmar los siguientes resultados?\n- 1° Puesto (Campeón): ${champion.teamName}\n- 2° Puesto (Subcampeón): ${runnerUp.teamName}`;
 
         if (window.confirm(confirmationMessage)) {
             const finishers = [
                 { position: 1, team: champion },
                 { position: 2, team: runnerUp }
             ];
-            if (thirdPlace) finishers.push({ position: 3, team: thirdPlace });
-            if (fourthPlace) finishers.push({ position: 4, team: fourthPlace });
             
             onAction('finish', category._id, { finishers });
         }

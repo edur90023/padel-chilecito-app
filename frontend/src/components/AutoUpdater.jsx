@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
 // Versión embebida en este paquete de código del frontend
-const LOCAL_VERSION = '1.2.0';
+const LOCAL_VERSION = '1.3.0';
 
 export default function AutoUpdater() {
     const [updateAvailable, setUpdateAvailable] = useState(false);
@@ -75,7 +75,7 @@ export default function AutoUpdater() {
         return (
             <div className="fixed bottom-4 right-4 z-50 bg-emerald-600 text-white text-xs px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 animate-bounce">
                 <i className="fas fa-sync-alt animate-spin"></i>
-                <span>Actualizando Pádel Chilecito a la última versión...</span>
+                <span>Actualizando Red Padel LR a la última versión...</span>
             </div>
         );
     }

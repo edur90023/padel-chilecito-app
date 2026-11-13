@@ -1,30 +1,37 @@
-// frontend/src/hooks/useInstallPWA.js
-
 import { useState, useEffect } from 'react';
 
 export const useInstallPWA = () => {
     const [installPrompt, setInstallPrompt] = useState(null);
     const [isAppInstalled, setIsAppInstalled] = useState(false);
+    const [isIOS, setIsIOS] = useState(false);
 
     useEffect(() => {
-        // Verifica si la app ya está instalada al cargar
-        if (window.matchMedia('(display-mode: standalone)').matches) {
+        // Verifica si la app ya está ejecutándose instalada (Android o iPhone Safari)
+        const standalone =
+            window.matchMedia('(display-mode: standalone)').matches ||
+            window.navigator.standalone === true;
+
+        if (standalone) {
             setIsAppInstalled(true);
         }
 
+        // Detecta dispositivos iPhone / iPad (iOS / iPadOS)
+        const ua = window.navigator.userAgent.toLowerCase();
+        const iosDevice =
+            /iphone|ipad|ipod/.test(ua) ||
+            (window.navigator.platform === 'MacIntel' && window.navigator.maxTouchPoints > 1);
+        setIsIOS(iosDevice);
+
         const handleBeforeInstallPrompt = (event) => {
-            // Previene que el navegador muestre su propio mini-banner
             event.preventDefault();
-            // Guarda el evento para que podamos activarlo más tarde
             setInstallPrompt(event);
         };
 
         window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-        // Escucha el evento que se dispara cuando la app se instala con éxito
         const handleAppInstalled = () => {
             setIsAppInstalled(true);
-            setInstallPrompt(null); // Ya no necesitamos el prompt
+            setInstallPrompt(null);
         };
 
         window.addEventListener('appinstalled', handleAppInstalled);
@@ -37,14 +44,22 @@ export const useInstallPWA = () => {
 
     const handleInstall = async () => {
         if (!installPrompt) {
-            return;
+            return false;
         }
-        // Muestra el diálogo de instalación del navegador
-        const result = await installPrompt.prompt();
-        // El prompt se usa una sola vez, así que lo limpiamos
+        await installPrompt.prompt();
+        const choice = await installPrompt.userChoice;
+        if (choice && choice.outcome === 'accepted') {
+            setIsAppInstalled(true);
+        }
         setInstallPrompt(null);
+        return true;
     };
 
-    // Devolvemos el estado y la función para que el componente los use
-    return { installPrompt: !isAppInstalled && installPrompt, handleInstall };
+    return {
+        installPrompt: !isAppInstalled && installPrompt,
+        isIOS,
+        isStandalone: isAppInstalled,
+        canInstall: !isAppInstalled && (Boolean(installPrompt) || isIOS),
+        handleInstall
+    };
 };

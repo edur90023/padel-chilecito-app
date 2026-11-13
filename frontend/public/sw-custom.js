@@ -1,12 +1,12 @@
-// padel-chilecito-app/frontend/public/sw-custom.js
+// public/sw-custom.js
 
 self.addEventListener('push', event => {
-    const data = event.data.json(); // Parsea los datos JSON que enviaste desde el servidor
+    const data = event.data.json();
 
-    const title = data.title || 'Padel Chilecito';
+    const title = data.title || 'Red Padel LR';
     const options = {
         body: data.body,
-        icon: data.icon || '/pwa-192x192.png', // Usa el icono de los datos o uno por defecto
+        icon: data.icon || '/pwa-192x192.png',
         badge: '/pwa-192x192.png'
     };
 
