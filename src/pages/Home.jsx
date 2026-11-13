@@ -3,15 +3,20 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 
 const NewsCard = ({ post }) => (
-    <div className="bg-slate-900/90 border border-slate-800 rounded-2xl shadow-lg overflow-hidden hover:border-emerald-500/40 transition-all duration-300">
+    <div className="w-full min-w-0 bg-slate-900/90 border border-slate-800 rounded-2xl shadow-lg overflow-hidden hover:border-emerald-500/40 transition-all duration-300">
         {post.imageUrl && (
-            <div className="overflow-hidden h-44 sm:h-52">
-                <img src={post.imageUrl} alt={post.title} className="w-full h-full object-cover" />
+            <div className="w-full bg-slate-950/90 border-b border-slate-800/80 flex items-center justify-center p-1.5 sm:p-2 overflow-hidden">
+                <img
+                    src={post.imageUrl}
+                    alt={post.title}
+                    className="block max-w-full w-auto h-auto max-h-[68vh] sm:max-h-[540px] object-contain mx-auto rounded-xl"
+                    loading="lazy"
+                />
             </div>
         )}
-        <div className="p-4 sm:p-6">
-            <h3 className="text-lg sm:text-xl font-bold text-white mb-2 leading-snug">{post.title}</h3>
-            <p className="text-sm text-slate-300 mb-3 leading-relaxed">{post.content}</p>
+        <div className="p-4 sm:p-6 min-w-0">
+            <h3 className="text-lg sm:text-xl font-bold text-white mb-2 leading-snug break-words">{post.title}</h3>
+            <p className="text-sm text-slate-300 mb-3 leading-relaxed break-words whitespace-pre-line">{post.content}</p>
             <span className="text-xs font-medium text-cyan-400/90">
                 <i className="far fa-calendar-alt mr-1"></i>
                 {new Date(post.date).toLocaleDateString()}
@@ -21,8 +26,18 @@ const NewsCard = ({ post }) => (
 );
 
 const AdBanner = ({ ad }) => (
-    <a href={ad.linkUrl} target="_blank" rel="noopener noreferrer" className="block rounded-2xl overflow-hidden shadow-lg border border-slate-800 group">
-        <img src={ad.imageUrl} alt="Patrocinador" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+    <a
+        href={ad.linkUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block w-full min-w-0 rounded-2xl overflow-hidden shadow-lg border border-slate-800 bg-slate-950/90 p-1.5 sm:p-2 group"
+    >
+        <img
+            src={ad.imageUrl}
+            alt="Patrocinador"
+            className="block max-w-full w-auto h-auto max-h-[55vh] sm:max-h-[420px] object-contain mx-auto rounded-xl transition-transform duration-300 group-hover:scale-[1.02]"
+            loading="lazy"
+        />
     </a>
 );
 
@@ -64,21 +79,21 @@ function Home() {
     if (error) return <div className="text-red-400 text-center mt-10">{error}</div>;
 
     return (
-        <div className="space-y-6 sm:space-y-8 animate-fade-in">
+        <div className="w-full min-w-0 space-y-6 sm:space-y-8 animate-fade-in">
             {/* Tarjeta de bienvenida compacta y accesible en celulares */}
-            <section className="bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/50 border border-slate-800 rounded-2xl p-5 sm:p-7 shadow-xl">
+            <section className="w-full min-w-0 bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/50 border border-slate-800 rounded-2xl p-4 sm:p-7 shadow-xl">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3.5 sm:gap-4 min-w-0">
                         <img
                             src="/logo.png"
                             alt="Red Padel LR"
-                            className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border border-emerald-500/50 shadow-lg flex-shrink-0"
+                            className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl object-contain border border-emerald-500/50 shadow-lg flex-shrink-0 bg-slate-950"
                         />
-                        <div>
+                        <div className="min-w-0">
                             <span className="inline-block text-[10px] sm:text-xs font-bold uppercase tracking-wider text-cyan-400 mb-1">
                                 Grupo Padel Chilecito • La Rioja, Argentina
                             </span>
-                            <h1 className="text-2xl sm:text-3xl font-title font-extrabold text-white tracking-tight">
+                            <h1 className="text-xl sm:text-3xl font-title font-extrabold text-white tracking-tight">
                                 Bienvenidos a <span className="text-emerald-400">Red Padel LR</span>
                             </h1>
                             <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-xl">
@@ -107,7 +122,7 @@ function Home() {
             </section>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8">
-                <section className="lg:col-span-8">
+                <section className="lg:col-span-8 min-w-0">
                     <h2 className="text-xl sm:text-2xl font-extrabold text-white mb-4 border-b border-slate-800 pb-2 flex items-center gap-2">
                         <i className="fas fa-newspaper text-emerald-400"></i>
                         <span>Noticias y Novedades</span>
@@ -124,8 +139,8 @@ function Home() {
                 </section>
 
                 {ads.length > 0 && (
-                    <aside className="lg:col-span-4">
-                        <div className="lg:sticky lg:top-24">
+                    <aside className="lg:col-span-4 min-w-0">
+                        <div className="lg:sticky lg:top-24 min-w-0">
                             <h3 className="text-lg sm:text-xl font-bold text-white mb-4 flex items-center gap-2">
                                 <i className="fas fa-handshake text-cyan-400"></i>
                                 <span>Patrocinadores</span>

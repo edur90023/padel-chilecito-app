@@ -199,7 +199,7 @@ const PublicLayout = () => {
     };
 
     return (
-        <div className="min-h-screen flex flex-col">
+        <div className="min-h-screen flex flex-col w-full overflow-x-hidden">
             <IOSInstallModal isOpen={showIOSGuide} onClose={() => setShowIOSGuide(false)} />
 
             {/* Encabezado Principal */}
@@ -348,7 +348,7 @@ const PublicLayout = () => {
             </header>
 
             {/* Contenido principal */}
-            <main className="flex-1 content px-3 py-5 sm:p-8 max-w-7xl w-full mx-auto">
+            <main className="flex-1 content px-3 py-5 sm:p-8 max-w-7xl w-full min-w-0 overflow-x-hidden mx-auto">
                 <Routes>
                     <Route path="/live" element={<LivePage />} />
                     <Route path="/" element={<Home />} />
