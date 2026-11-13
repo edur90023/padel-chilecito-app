@@ -77,53 +77,53 @@ function RegistrationForm({ tournament, onClose }) {
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-start overflow-y-auto z-50 animate-fade-in p-4 pt-12">
-            <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md relative mb-8">
-                <button className="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl" onClick={onClose}>&times;</button>
-                <h3 className="text-2xl font-bold text-white mb-6 text-center">Inscribirse en {tournament.name}</h3>
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex justify-center items-start overflow-y-auto z-50 animate-fade-in p-4 pt-12">
+            <div className="glass-modal p-6 sm:p-8 rounded-2xl w-full max-w-md relative mb-8">
+                <button className="absolute top-4 right-4 text-slate-400 hover:text-white text-2xl transition" onClick={onClose}>&times;</button>
+                <h3 className="text-2xl font-bold text-white mb-6 text-center pr-4">Inscribirse en {tournament.name}</h3>
                 
-                {error && <p className="bg-red-900/50 text-red-400 p-3 rounded-lg mb-4 text-center">{error}</p>}
-                {success && <p className="bg-green-900/50 text-green-400 p-3 rounded-lg mb-4 text-center">{success}</p>}
+                {error && <p className="bg-red-900/50 text-red-300 border border-red-500/40 p-3 rounded-xl mb-4 text-center text-sm">{error}</p>}
+                {success && <p className="bg-emerald-950/70 text-emerald-300 border border-emerald-500/40 p-3 rounded-xl mb-4 text-center text-sm">{success}</p>}
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="form-group">
-                        <label className="block text-gray-400 mb-2">Categoría:</label>
-                        <select value={selectedCategory} onChange={handleCategoryChange} required className="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500">
-                            <option value="" disabled>Selecciona una categoría...</option>
+                        <label className="block text-slate-300 text-sm mb-2">Categoría:</label>
+                        <select value={selectedCategory} onChange={handleCategoryChange} required className="w-full p-3 glass-subcard rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <option value="" disabled className="bg-slate-900">Selecciona una categoría...</option>
                             {categories.map((cat, index) => (
-                                <option key={index} value={cat.name}>{cat.name}</option>
+                                <option key={index} value={cat.name} className="bg-slate-900">{cat.name}</option>
                             ))}
                         </select>
                     </div>
                     
-                    <h4 className="text-lg font-semibold text-green-400 border-t border-gray-700 pt-4">Jugador 1</h4>
+                    <h4 className="text-base font-bold text-emerald-400 border-t border-white/10 pt-4">Jugador 1</h4>
                     <div className="form-group">
-                        <label className="block text-gray-400 mb-2">Nombre y Apellido:</label>
-                        <input type="text" name="player1Name" value={formData.player1Name} onChange={handleChange} required className="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg text-white" />
+                        <label className="block text-slate-300 text-sm mb-1.5">Nombre y Apellido:</label>
+                        <input type="text" name="player1Name" value={formData.player1Name} onChange={handleChange} required className="w-full p-3 glass-subcard rounded-xl text-white focus:outline-none focus:border-emerald-500" />
                     </div>
                     <div className="form-group">
-                        <label className="block text-gray-400 mb-2">Teléfono:</label>
-                        <input type="tel" name="player1Phone" value={formData.player1Phone} onChange={handleChange} required className="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg text-white" />
-                    </div>
-
-                    <h4 className="text-lg font-semibold text-green-400 border-t border-gray-700 pt-4">Jugador 2</h4>
-                    <div className="form-group">
-                        <label className="block text-gray-400 mb-2">Nombre y Apellido:</label>
-                        <input type="text" name="player2Name" value={formData.player2Name} onChange={handleChange} required className="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg text-white" />
-                    </div>
-                    <div className="form-group">
-                        <label className="block text-gray-400 mb-2">Teléfono:</label>
-                        <input type="tel" name="player2Phone" value={formData.player2Phone} onChange={handleChange} required className="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg text-white" />
+                        <label className="block text-slate-300 text-sm mb-1.5">Teléfono:</label>
+                        <input type="tel" name="player1Phone" value={formData.player1Phone} onChange={handleChange} required className="w-full p-3 glass-subcard rounded-xl text-white focus:outline-none focus:border-emerald-500" />
                     </div>
 
-                    <h4 className="text-lg font-semibold text-green-400 border-t border-gray-700 pt-4">Club o Localidad</h4>
+                    <h4 className="text-base font-bold text-emerald-400 border-t border-white/10 pt-4">Jugador 2</h4>
                     <div className="form-group">
-                        <label className="block text-gray-400 mb-2">Nombre del Club (Opcional):</label>
+                        <label className="block text-slate-300 text-sm mb-1.5">Nombre y Apellido:</label>
+                        <input type="text" name="player2Name" value={formData.player2Name} onChange={handleChange} required className="w-full p-3 glass-subcard rounded-xl text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+                    <div className="form-group">
+                        <label className="block text-slate-300 text-sm mb-1.5">Teléfono:</label>
+                        <input type="tel" name="player2Phone" value={formData.player2Phone} onChange={handleChange} required className="w-full p-3 glass-subcard rounded-xl text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+
+                    <h4 className="text-base font-bold text-emerald-400 border-t border-white/10 pt-4">Club o Localidad</h4>
+                    <div className="form-group">
+                        <label className="block text-slate-300 text-sm mb-1.5">Nombre del Club (Opcional):</label>
                         {/* --- ¡NUEVO CAMPO! --- */}
-                        <input type="text" name="club" value={formData.club} onChange={handleChange} placeholder="Ej: Club / Localidad (La Rioja)" className="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg text-white" />
+                        <input type="text" name="club" value={formData.club} onChange={handleChange} placeholder="Ej: Club / Localidad (La Rioja)" className="w-full p-3 glass-subcard rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500" />
                     </div>
 
-                    <button type="submit" disabled={loading} className="w-full mt-6 bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition disabled:bg-gray-600">
+                    <button type="submit" disabled={loading} className="w-full mt-6 bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 font-extrabold py-3 px-4 rounded-xl hover:opacity-95 transition disabled:opacity-50 shadow-lg shadow-emerald-500/20">
                         {loading ? 'Inscribiendo...' : 'Enviar Inscripción y Notificar'}
                     </button>
                 </form>

@@ -41,24 +41,24 @@ function PostForm({ onPostCreated }) {
     };
 
     return (
-        <form onSubmit={handleSubmit} className="bg-gray-800 p-6 rounded-lg mt-12 space-y-4">
+        <form onSubmit={handleSubmit} className="glass-panel p-6 rounded-2xl mt-12 space-y-4">
             <h3 className="text-xl font-bold text-white">Publicar un Nuevo Anuncio</h3>
-            {error && <p className="text-red-400 bg-red-900/50 p-2 rounded">{error}</p>}
-            {success && <p className="text-green-400 bg-green-900/50 p-2 rounded">{success}</p>}
+            {error && <p className="text-red-400 bg-red-900/50 p-2 rounded-xl">{error}</p>}
+            {success && <p className="text-emerald-300 bg-emerald-950/60 p-2 rounded-xl">{success}</p>}
             <div>
-                <label className="block text-gray-400 mb-2">Tipo de Anuncio</label>
-                <select name="postType" value={formData.postType} onChange={handleChange} className="w-full p-2 bg-gray-700 rounded-md">
-                    <option>Busco Compañero</option>
-                    <option>Ofrezco Servicio</option>
+                <label className="block text-slate-300 text-sm mb-2">Tipo de Anuncio</label>
+                <select name="postType" value={formData.postType} onChange={handleChange} className="w-full p-2.5 glass-subcard text-white rounded-xl focus:outline-none focus:border-emerald-500">
+                    <option className="bg-slate-900">Busco Compañero</option>
+                    <option className="bg-slate-900">Ofrezco Servicio</option>
                     {/* --- ¡OPCIÓN AÑADIDA! --- */}
-                    <option>Venta / Permuta</option>
+                    <option className="bg-slate-900">Venta / Permuta</option>
                 </select>
             </div>
-            <input type="text" name="title" value={formData.title} onChange={handleChange} placeholder="Título (ej: Vendo paleta Head Delta)" required className="w-full p-2 bg-gray-700 rounded-md" />
-            <textarea name="description" value={formData.description} onChange={handleChange} placeholder="Descripción (ej: 3 meses de uso, excelente estado...)" required rows="4" className="w-full p-2 bg-gray-700 rounded-md"></textarea>
-            <input type="text" name="contactInfo" value={formData.contactInfo} onChange={handleChange} placeholder="Información de Contacto (WhatsApp, etc.)" required className="w-full p-2 bg-gray-700 rounded-md" />
-            <input type="text" name="authorName" value={formData.authorName} onChange={handleChange} placeholder="Tu Nombre (Opcional)" className="w-full p-2 bg-gray-700 rounded-md" />
-            <button type="submit" disabled={loading} className="w-full bg-green-600 font-bold py-3 rounded-lg hover:bg-green-700 transition disabled:bg-gray-600">
+            <input type="text" name="title" value={formData.title} onChange={handleChange} placeholder="Título (ej: Vendo paleta Head Delta)" required className="w-full p-2.5 glass-subcard text-white placeholder-slate-400 rounded-xl focus:outline-none focus:border-emerald-500" />
+            <textarea name="description" value={formData.description} onChange={handleChange} placeholder="Descripción (ej: 3 meses de uso, excelente estado...)" required rows="4" className="w-full p-2.5 glass-subcard text-white placeholder-slate-400 rounded-xl focus:outline-none focus:border-emerald-500"></textarea>
+            <input type="text" name="contactInfo" value={formData.contactInfo} onChange={handleChange} placeholder="Información de Contacto (WhatsApp, etc.)" required className="w-full p-2.5 glass-subcard text-white placeholder-slate-400 rounded-xl focus:outline-none focus:border-emerald-500" />
+            <input type="text" name="authorName" value={formData.authorName} onChange={handleChange} placeholder="Tu Nombre (Opcional)" className="w-full p-2.5 glass-subcard text-white placeholder-slate-400 rounded-xl focus:outline-none focus:border-emerald-500" />
+            <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 font-extrabold py-3 rounded-xl hover:opacity-95 transition disabled:opacity-50 shadow-lg shadow-emerald-500/20">
                 {loading ? 'Publicando...' : 'Publicar Anuncio'}
             </button>
         </form>
@@ -111,16 +111,16 @@ function CommunityPage() {
             {!loading && !error && (
                 <div className="space-y-6">
                     {posts.map(post => (
-                        <div key={post._id} className="bg-gray-800 p-5 rounded-lg shadow-lg border-l-4 border-green-500">
-                            <span className={`text-xs font-bold uppercase py-1 px-2 rounded-full mb-2 inline-block ${getPostStyle(post.postType)}`}>
+                        <div key={post._id} className="glass-card p-5 rounded-2xl border-l-4 border-l-emerald-400">
+                            <span className={`text-xs font-bold uppercase py-1 px-2.5 rounded-full mb-2 inline-block ${getPostStyle(post.postType)}`}>
                                 {post.postType}
                             </span>
                             <h3 className="text-xl font-bold text-white">{post.title}</h3>
-                            <p className="text-gray-400 my-2">{post.description}</p>
-                            <div className="mt-4 pt-4 border-t border-gray-700 text-sm">
-                                <p className="text-white font-semibold">Contacto: <span className="text-green-400">{post.contactInfo}</span></p>
-                                {post.authorName && <p className="text-gray-500">Publicado por: {post.authorName}</p>}
-                                <p className="text-gray-500 text-xs mt-1">{new Date(post.createdAt).toLocaleString()}</p>
+                            <p className="text-slate-300 my-2">{post.description}</p>
+                            <div className="mt-4 pt-4 border-t border-white/10 text-sm">
+                                <p className="text-white font-semibold">Contacto: <span className="text-emerald-400">{post.contactInfo}</span></p>
+                                {post.authorName && <p className="text-slate-400">Publicado por: {post.authorName}</p>}
+                                <p className="text-slate-500 text-xs mt-1">{new Date(post.createdAt).toLocaleString()}</p>
                             </div>
                         </div>
                     ))}

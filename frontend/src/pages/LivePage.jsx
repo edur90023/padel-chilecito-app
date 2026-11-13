@@ -138,9 +138,9 @@ function LivePage() {
             {isLiveActive ? (
                 <div className="space-y-6">
                     {/* Reproductor de Video Embebido */}
-                    <div className="bg-gray-900 rounded-2xl overflow-hidden shadow-2xl border border-gray-700">
+                    <div className="glass-panel rounded-2xl overflow-hidden">
                         {/* Barra informativa de la transmisión actual */}
-                        <div className="bg-gray-800/90 px-4 sm:px-6 py-3 border-b border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="bg-slate-950/50 px-4 sm:px-6 py-3 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                             <div className="flex items-center gap-2.5">
                                 <span className="flex h-3 w-3 relative">
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
@@ -196,7 +196,7 @@ function LivePage() {
                                         href={stream.url}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="p-4 rounded-xl border border-gray-700 hover:border-red-500 bg-gray-800/90 hover:bg-gray-800 transition-all shadow-md group block"
+                                        className="p-4 rounded-2xl glass-card hover:border-red-500/60 transition-all group block"
                                     >
                                         <div className="flex items-center justify-between mb-2">
                                             <span className="font-bold text-white text-base group-hover:text-red-400 transition-colors truncate">
@@ -229,9 +229,9 @@ function LivePage() {
                 </div>
             ) : (
                 /* Estado sin transmisión activa */
-                <div className="bg-gray-800/80 border border-gray-700 p-8 sm:p-12 rounded-2xl text-center mt-6 shadow-xl">
-                    <div className="w-20 h-20 bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4 border border-gray-700">
-                        <i className="fas fa-video-slash text-4xl text-gray-500"></i>
+                <div className="glass-panel p-8 sm:p-12 rounded-2xl text-center mt-6">
+                    <div className="w-20 h-20 glass-subcard rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i className="fas fa-video-slash text-4xl text-slate-400"></i>
                     </div>
                     <h2 className="text-2xl sm:text-3xl font-bold text-white">No hay transmisión en vivo en este momento</h2>
                     <p className="text-gray-400 mt-2 max-w-md mx-auto text-sm sm:text-base">

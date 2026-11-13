@@ -71,21 +71,21 @@ function Tournament() {
                         }
 
                         return (
-                            <div key={tournament._id} className="bg-gray-800 rounded-lg shadow-xl p-6 flex flex-col hover:bg-gray-700 transition-colors duration-300">
+                            <div key={tournament._id} className="glass-card rounded-2xl p-6 flex flex-col hover:border-emerald-400/40 transition-all duration-300">
                                 <h3 className="text-2xl font-bold text-white mb-2">{tournament.name}</h3>
-                                <p className="text-gray-400 mb-1"><strong>Fecha:</strong> {new Date(tournament.startDate).toLocaleDateString()}</p>
-                                <p className="text-gray-400 mb-4"><strong>Categorías:</strong> {tournament.categories.map(cat => cat.name).join(', ')}</p>
+                                <p className="text-slate-300 mb-1"><strong>Fecha:</strong> {new Date(tournament.startDate).toLocaleDateString()}</p>
+                                <p className="text-slate-300 mb-4"><strong>Categorías:</strong> {tournament.categories.map(cat => cat.name).join(', ')}</p>
                                 <div className="flex-grow"></div>
-                                <span className={`inline-block mb-4 px-3 py-1 text-sm font-semibold rounded-full self-start ${statusColor}`}>{statusText}</span>
+                                <span className={`inline-block mb-4 px-3 py-1 text-xs font-bold rounded-full self-start ${statusColor}`}>{statusText}</span>
                                 {hasOpenRegistrations ? (
                                     <button
-                                        className="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition z-10"
+                                        className="w-full bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 font-extrabold py-3 px-4 rounded-xl hover:opacity-95 transition z-10"
                                         onClick={() => handleRegisterClick(tournament)}
                                     >
                                         Inscribirse
                                     </button>
                                 ) : (
-                                    <Link to={`/tournaments/${tournament._id}`} className="text-center text-gray-300 font-medium bg-gray-700/50 py-3 rounded-lg mt-auto hover:bg-gray-700 transition">
+                                    <Link to={`/tournaments/${tournament._id}`} className="text-center text-white font-semibold glass-subcard py-3 rounded-xl mt-auto hover:bg-white/10 transition">
                                         Ver Zonas y Resultados
                                     </Link>
                                 )}
@@ -94,8 +94,8 @@ function Tournament() {
                     })}
                 </div>
             ) : (
-                <div className="bg-gray-800 p-8 rounded-lg text-center">
-                    <p className="text-gray-400">No hay torneos programados en este momento.</p>
+                <div className="glass-panel p-8 rounded-2xl text-center">
+                    <p className="text-slate-300">No hay torneos programados en este momento.</p>
                 </div>
             )}
 

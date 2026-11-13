@@ -71,12 +71,12 @@ const MobileBottomTab = ({ to, icon, label }) => (
 );
 
 const DisabledSection = ({ title }) => (
-    <div className="max-w-xl mx-auto my-12 bg-slate-900/90 border border-slate-800 p-8 rounded-2xl text-center shadow-xl">
-        <div className="w-16 h-16 bg-slate-950 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-800">
+    <div className="max-w-xl mx-auto my-12 glass-panel p-8 rounded-2xl text-center">
+        <div className="w-16 h-16 glass-subcard rounded-full flex items-center justify-center mx-auto mb-4">
             <i className="fas fa-lock text-amber-400 text-2xl"></i>
         </div>
         <h2 className="text-2xl font-bold text-white mb-2">Sección {title} Temporalmente Inactiva</h2>
-        <p className="text-slate-400 text-sm mb-6">
+        <p className="text-slate-300 text-sm mb-6">
             El administrador ha pausado la visibilidad de esta sección. Estará disponible nuevamente pronto.
         </p>
         <Link to="/" className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 font-bold rounded-xl hover:opacity-90 transition">
@@ -89,11 +89,11 @@ const DisabledSection = ({ title }) => (
 const IOSInstallModal = ({ isOpen, onClose }) => {
     if (!isOpen) return null;
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
-            <div className="w-full max-w-sm bg-slate-900 border border-emerald-500/40 rounded-2xl p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4 animate-fade-in">
+            <div className="w-full max-w-sm glass-modal rounded-2xl p-6">
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
-                        <img src="/apple-touch-icon.png" alt="Red Padel LR" className="w-11 h-11 rounded-xl border border-slate-700" />
+                        <img src="/apple-touch-icon.png" alt="Red Padel LR" className="w-11 h-11 rounded-xl border border-white/15" />
                         <div>
                             <h3 className="text-base font-extrabold text-white">Instalar Red Padel LR</h3>
                             <p className="text-[11px] text-cyan-400 font-semibold">Para iPhone / iPad (Safari)</p>
@@ -102,26 +102,26 @@ const IOSInstallModal = ({ isOpen, onClose }) => {
                     <button onClick={onClose} className="text-slate-400 hover:text-white text-xl leading-none">&times;</button>
                 </div>
 
-                <div className="space-y-3 text-xs text-slate-300">
-                    <div className="flex items-start gap-3 bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+                <div className="space-y-3 text-xs text-slate-200">
+                    <div className="flex items-start gap-3 glass-subcard p-3 rounded-xl">
                         <span className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center flex-shrink-0">1</span>
                         <p>
                             En la barra inferior de <strong>Safari</strong>, toca el botón{' '}
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-800 text-cyan-300 rounded font-semibold">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-800/80 text-cyan-300 rounded font-semibold border border-white/10">
                                 <i className="fas fa-share-square"></i> Compartir
                             </span>.
                         </p>
                     </div>
-                    <div className="flex items-start gap-3 bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+                    <div className="flex items-start gap-3 glass-subcard p-3 rounded-xl">
                         <span className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center flex-shrink-0">2</span>
                         <p>
                             Desliza hacia abajo y selecciona{' '}
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-800 text-white rounded font-semibold">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-800/80 text-white rounded font-semibold border border-white/10">
                                 <i className="fas fa-plus-square"></i> Agregar a inicio
                             </span>.
                         </p>
                     </div>
-                    <div className="flex items-start gap-3 bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+                    <div className="flex items-start gap-3 glass-subcard p-3 rounded-xl">
                         <span className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center flex-shrink-0">3</span>
                         <p>
                             Toca <strong>Agregar</strong> arriba a la derecha. ¡Listo! Se guardará con el ícono de <strong>Red Padel LR</strong>.
@@ -203,7 +203,7 @@ const PublicLayout = () => {
             <IOSInstallModal isOpen={showIOSGuide} onClose={() => setShowIOSGuide(false)} />
 
             {/* Encabezado Principal */}
-            <header className="bg-dark-primary/90 backdrop-blur-md border-b border-slate-800/90 shadow-lg sticky top-0 z-50">
+            <header className="bg-slate-950/65 backdrop-blur-xl border-b border-white/10 shadow-lg sticky top-0 z-50">
                 <nav className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16 gap-3">
                         {/* Marca y Logo */}
@@ -298,7 +298,7 @@ const PublicLayout = () => {
 
                 {/* Menú desplegable móvil organizado */}
                 {isMenuOpen && (
-                    <div className="lg:hidden p-4 space-y-3 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 max-h-[82vh] overflow-y-auto">
+                    <div className="lg:hidden p-4 space-y-3 bg-slate-950/85 backdrop-blur-xl border-t border-white/10 max-h-[82vh] overflow-y-auto">
                         <div className="grid grid-cols-2 gap-2">
                             {isLiveEnabled && <NavItem to="/live" icon="fas fa-video text-red-500" onClick={closeMenu}>En Vivo</NavItem>}
                             <NavItem to="/" icon="fas fa-home" onClick={closeMenu}>Inicio</NavItem>
@@ -364,45 +364,35 @@ const PublicLayout = () => {
             </main>
 
             {/* Pie de Página Institucional */}
-            <footer className="bg-slate-950/90 border-t border-slate-800/80 mt-8 pb-20 lg:pb-8">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                    <div className="flex flex-col md:flex-row items-center justify-between gap-6 text-center md:text-left">
+            <footer className="bg-slate-950/60 backdrop-blur-xl border-t border-white/10 mt-8 pb-20 lg:pb-8">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-7">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
                         <div className="flex flex-col sm:flex-row items-center gap-3.5">
                             <img
                                 src="/logo.png"
                                 alt="Red Padel LR"
-                                className="w-12 h-12 rounded-full object-cover border border-emerald-500/40 shadow-md"
+                                className="w-11 h-11 rounded-full object-cover border border-emerald-500/40 shadow-md"
                             />
                             <div>
-                                <p className="font-title font-extrabold text-lg bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
+                                <p className="font-title font-extrabold text-base bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
                                     RED PADEL LR
                                 </p>
                                 <p className="text-xs text-slate-300 font-medium">
                                     Una plataforma del <strong className="text-emerald-400">Grupo Padel Chilecito</strong>
                                 </p>
-                                <p className="text-[11px] text-slate-500 mt-0.5">
-                                    La Rioja, Argentina • Gestión oficial de torneos y complejos
-                                </p>
                             </div>
                         </div>
 
-                        <div className="flex flex-wrap items-center justify-center gap-4 text-xs font-semibold text-slate-400">
-                            <Link to="/tournaments" className="hover:text-emerald-400 transition">Torneos</Link>
-                            <Link to="/complejos" className="hover:text-emerald-400 transition">Complejos</Link>
-                            {siteSettings.isRankingEnabled && <Link to="/standings" className="hover:text-emerald-400 transition">Rankings</Link>}
-                            <Link to="/contact" className="hover:text-emerald-400 transition">Contacto</Link>
+                        <div className="text-[11px] text-slate-400 sm:text-right">
+                            <p>© {new Date().getFullYear()} Red Padel LR — Todos los derechos reservados.</p>
+                            <p className="text-slate-500 mt-0.5">La Rioja, Argentina</p>
                         </div>
-                    </div>
-
-                    <div className="mt-6 pt-4 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-slate-500">
-                        <span>© {new Date().getFullYear()} Red Padel LR — Grupo Padel Chilecito. Todos los derechos reservados.</span>
-                        <span>La Rioja, Argentina</span>
                     </div>
                 </div>
             </footer>
 
             {/* Barra de acceso rápido en celulares */}
-            <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 backdrop-blur-md border-t border-slate-800 flex items-center justify-around h-14 px-2 pb-[env(safe-area-inset-bottom)]">
+            <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/75 backdrop-blur-xl border-t border-white/10 flex items-center justify-around h-14 px-2 pb-[env(safe-area-inset-bottom)]">
                 <MobileBottomTab to="/" icon="fas fa-home" label="Inicio" />
                 <MobileBottomTab to="/tournaments" icon="fas fa-trophy" label="Torneos" />
                 <MobileBottomTab to="/complejos" icon="fas fa-map-marked-alt" label="Complejos" />

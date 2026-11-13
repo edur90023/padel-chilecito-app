@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 
 const NewsCard = ({ post }) => (
-    <div className="w-full min-w-0 bg-slate-900/90 border border-slate-800 rounded-2xl shadow-lg overflow-hidden hover:border-emerald-500/40 transition-all duration-300">
+    <div className="w-full min-w-0 glass-card rounded-2xl overflow-hidden hover:border-emerald-400/40 transition-all duration-300">
         {post.imageUrl && (
-            <div className="w-full bg-slate-950/90 border-b border-slate-800/80 flex items-center justify-center p-1.5 sm:p-2 overflow-hidden">
+            <div className="w-full bg-slate-950/60 border-b border-white/10 flex items-center justify-center p-1.5 sm:p-2 overflow-hidden">
                 <img
                     src={post.imageUrl}
                     alt={post.title}
@@ -30,7 +30,7 @@ const AdBanner = ({ ad }) => (
         href={ad.linkUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="block w-full min-w-0 rounded-2xl overflow-hidden shadow-lg border border-slate-800 bg-slate-950/90 p-1.5 sm:p-2 group"
+        className="block w-full min-w-0 glass-card rounded-2xl overflow-hidden p-1.5 sm:p-2 group hover:border-cyan-400/40 transition-all duration-300"
     >
         <img
             src={ad.imageUrl}
@@ -80,14 +80,17 @@ function Home() {
 
     return (
         <div className="w-full min-w-0 space-y-6 sm:space-y-8 animate-fade-in">
-            {/* Tarjeta de bienvenida compacta y accesible en celulares */}
-            <section className="w-full min-w-0 bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/50 border border-slate-800 rounded-2xl p-4 sm:p-7 shadow-xl">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
+            {/* Tarjeta de bienvenida esmerilada con acceso directo a Torneos */}
+            <section className="w-full min-w-0 glass-panel rounded-2xl p-4 sm:p-7 relative overflow-hidden">
+                <div className="pointer-events-none absolute -top-20 -right-20 w-56 h-56 rounded-full bg-emerald-500/15 blur-3xl"></div>
+                <div className="pointer-events-none absolute -bottom-20 -left-20 w-56 h-56 rounded-full bg-cyan-500/10 blur-3xl"></div>
+
+                <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-5">
                     <div className="flex items-center gap-3.5 sm:gap-4 min-w-0">
                         <img
                             src="/logo.png"
                             alt="Red Padel LR"
-                            className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl object-contain border border-emerald-500/50 shadow-lg flex-shrink-0 bg-slate-950"
+                            className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl object-contain border border-emerald-500/50 shadow-lg flex-shrink-0 bg-slate-950/70"
                         />
                         <div className="min-w-0">
                             <span className="inline-block text-[10px] sm:text-xs font-bold uppercase tracking-wider text-cyan-400 mb-1">
@@ -102,20 +105,13 @@ function Home() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 sm:flex items-center gap-2.5 flex-shrink-0">
+                    <div className="flex items-center flex-shrink-0">
                         <Link
                             to="/tournaments"
-                            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 font-extrabold text-xs sm:text-sm shadow-lg shadow-emerald-500/20 hover:opacity-95 transition"
+                            className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 font-extrabold text-sm shadow-lg shadow-emerald-500/25 hover:opacity-95 transition"
                         >
                             <i className="fas fa-trophy"></i>
-                            <span>Torneos</span>
-                        </Link>
-                        <Link
-                            to="/complejos"
-                            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 font-bold text-xs sm:text-sm transition"
-                        >
-                            <i className="fas fa-map-marked-alt text-cyan-400"></i>
-                            <span>Complejos</span>
+                            <span>Ir a Torneos</span>
                         </Link>
                     </div>
                 </div>
@@ -123,7 +119,7 @@ function Home() {
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8">
                 <section className="lg:col-span-8 min-w-0">
-                    <h2 className="text-xl sm:text-2xl font-extrabold text-white mb-4 border-b border-slate-800 pb-2 flex items-center gap-2">
+                    <h2 className="text-xl sm:text-2xl font-extrabold text-white mb-4 border-b border-white/10 pb-2 flex items-center gap-2">
                         <i className="fas fa-newspaper text-emerald-400"></i>
                         <span>Noticias y Novedades</span>
                     </h2>
@@ -132,7 +128,7 @@ function Home() {
                             {posts.map(post => <NewsCard key={post._id} post={post} />)}
                         </div>
                     ) : (
-                        <div className="bg-slate-900/90 border border-slate-800 p-8 rounded-2xl text-center">
+                        <div className="glass-card p-8 rounded-2xl text-center">
                             <p className="text-slate-400 text-sm">No hay noticias para mostrar.</p>
                         </div>
                     )}

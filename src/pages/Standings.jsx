@@ -81,17 +81,17 @@ function Standings() {
 
             {/* Selector de Torneo */}
             <div className="max-w-md mx-auto mb-8">
-                <label htmlFor="tournament-select" className="block text-sm font-medium text-gray-300 mb-2">
+                <label htmlFor="tournament-select" className="block text-sm font-medium text-slate-300 mb-2">
                     Selecciona un Torneo
                 </label>
                 <select
                     id="tournament-select"
                     value={selectedTournamentId}
                     onChange={(e) => setSelectedTournamentId(e.target.value)}
-                    className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-green-500"
+                    className="w-full glass-subcard text-white rounded-xl p-3 focus:outline-none focus:border-emerald-500"
                 >
-                    <option value="">-- Elige un torneo --</option>
-                    {tournaments.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
+                    <option value="" className="bg-slate-900">-- Elige un torneo --</option>
+                    {tournaments.map(t => <option key={t._id} value={t._id} className="bg-slate-900">{t.name}</option>)}
                 </select>
             </div>
 
@@ -102,32 +102,32 @@ function Standings() {
                 <div className="space-y-12">
                     {selectedTournament.categories.map(category => (
                         <div key={category.name}>
-                            <h3 className="text-2xl font-bold text-green-400 mb-4">{category.name}</h3>
-                            <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg shadow-lg overflow-hidden">
+                            <h3 className="text-2xl font-bold text-emerald-400 mb-4">{category.name}</h3>
+                            <div className="glass-panel rounded-2xl overflow-hidden">
                                 {rankings[category.name] && rankings[category.name].length > 0 ? (
                                     <table className="min-w-full text-left">
-                                        <thead className="bg-gray-700/50">
+                                        <thead className="bg-white/[0.04] border-b border-white/10">
                                             <tr>
-                                                <th className="p-4 w-16 font-semibold text-sm text-gray-300 uppercase tracking-wider text-center">Pos.</th>
-                                                <th className="p-4 font-semibold text-sm text-gray-300 uppercase tracking-wider">Jugador</th>
-                                                <th className="p-4 w-24 font-semibold text-sm text-gray-300 uppercase tracking-wider text-right">Puntos</th>
+                                                <th className="p-4 w-16 font-semibold text-sm text-slate-300 uppercase tracking-wider text-center">Pos.</th>
+                                                <th className="p-4 font-semibold text-sm text-slate-300 uppercase tracking-wider">Jugador</th>
+                                                <th className="p-4 w-24 font-semibold text-sm text-slate-300 uppercase tracking-wider text-right">Puntos</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-gray-700">
+                                        <tbody className="divide-y divide-white/10">
                                             {rankings[category.name].map((entry, index) => (
-                                                <tr key={entry._id} className={`transition hover:bg-gray-700/50 border-l-4 ${getMedalColor(index)}`}>
+                                                <tr key={entry._id} className={`transition hover:bg-white/[0.04] border-l-4 ${getMedalColor(index)}`}>
                                                     <td className="p-4 font-bold text-lg text-center">{index + 1}</td>
                                                     <td className="p-4">
                                                         <p className="font-medium text-white">{`${entry.player.lastName}, ${entry.player.firstName}`}</p>
-                                                        <p className="text-sm text-gray-400">DNI: {entry.player.dni}</p>
+                                                        <p className="text-sm text-slate-400">DNI: {entry.player.dni}</p>
                                                     </td>
-                                                    <td className="p-4 font-bold text-green-400 text-right text-lg">{entry.points}</td>
+                                                    <td className="p-4 font-bold text-emerald-400 text-right text-lg">{entry.points}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                     </table>
                                 ) : (
-                                    <p className="p-6 text-center text-gray-400">No hay datos de ranking para esta categoría todavía.</p>
+                                    <p className="p-6 text-center text-slate-300">No hay datos de ranking para esta categoría todavía.</p>
                                 )}
                             </div>
                         </div>

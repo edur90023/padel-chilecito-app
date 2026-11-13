@@ -79,13 +79,13 @@ export default function ComplexesPage() {
 
                 {/* Buscador de complejos */}
                 <div className="mt-6 relative max-w-md mx-auto">
-                    <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-emerald-400"></i>
                     <input
                         type="text"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         placeholder="Buscar por complejo, dirección o servicio..."
-                        className="w-full pl-11 pr-4 py-3 bg-gray-800/90 border border-gray-700 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-emerald-500 transition shadow-inner text-sm"
+                        className="w-full pl-11 pr-4 py-3 glass-subcard rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500 transition text-sm"
                     />
                     {searchTerm && (
                         <button
@@ -107,10 +107,10 @@ export default function ComplexesPage() {
                     {error}
                 </div>
             ) : filteredComplexes.length === 0 ? (
-                <div className="bg-gray-800/60 border border-gray-700 rounded-2xl p-10 text-center max-w-md mx-auto">
-                    <i className="fas fa-building text-4xl text-gray-500 mb-3"></i>
+                <div className="glass-panel rounded-2xl p-10 text-center max-w-md mx-auto">
+                    <i className="fas fa-building text-4xl text-slate-400 mb-3"></i>
                     <h3 className="text-lg font-bold text-white">No se encontraron complejos</h3>
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className="text-xs text-slate-300 mt-1">
                         Intenta con otra palabra clave o limpia el buscador.
                     </p>
                 </div>
@@ -129,7 +129,7 @@ export default function ComplexesPage() {
                         return (
                             <div
                                 key={complex._id}
-                                className="bg-gray-900 border border-gray-800 hover:border-emerald-500/60 rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 flex flex-col group"
+                                className="glass-card hover:border-emerald-400/60 rounded-2xl overflow-hidden transition-all duration-300 flex flex-col group"
                             >
                                 {/* Imagen miniatura */}
                                 <div className="relative aspect-video w-full overflow-hidden bg-gray-800 cursor-pointer" onClick={() => openDetails(complex)}>
@@ -240,11 +240,11 @@ export default function ComplexesPage() {
             {/* MODAL DETALLES DEL COMPLEJO */}
             {selectedComplex && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in overflow-y-auto"
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fade-in overflow-y-auto"
                     onClick={closeDetails}
                 >
                     <div
-                        className="bg-gray-900 border border-gray-700 rounded-2xl max-w-2xl w-full my-8 overflow-hidden shadow-2xl relative"
+                        className="glass-modal rounded-2xl max-w-2xl w-full my-8 overflow-hidden relative"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Botón cerrar */}
@@ -326,7 +326,7 @@ export default function ComplexesPage() {
 
                             {/* Descripción */}
                             {selectedComplex.description && (
-                                <div className="text-sm text-gray-300 leading-relaxed bg-gray-800/50 p-4 rounded-xl border border-gray-800">
+                                <div className="text-sm text-slate-200 leading-relaxed glass-subcard p-4 rounded-xl">
                                     {selectedComplex.description}
                                 </div>
                             )}
@@ -334,40 +334,40 @@ export default function ComplexesPage() {
                             {/* Ficha de Información clave */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                                 {selectedComplex.address && (
-                                    <div className="bg-gray-800/80 p-3 rounded-xl border border-gray-700/80 flex items-start gap-2.5">
+                                    <div className="glass-subcard p-3 rounded-xl flex items-start gap-2.5">
                                         <i className="fas fa-map-marker-alt text-red-400 text-base mt-0.5"></i>
                                         <div>
-                                            <span className="font-bold text-gray-400 block">Dirección</span>
+                                            <span className="font-bold text-slate-400 block">Dirección</span>
                                             <span className="text-white font-medium">{selectedComplex.address}</span>
                                         </div>
                                     </div>
                                 )}
 
                                 {selectedComplex.openingHours && (
-                                    <div className="bg-gray-800/80 p-3 rounded-xl border border-gray-700/80 flex items-start gap-2.5">
-                                        <i className="fas fa-clock text-blue-400 text-base mt-0.5"></i>
+                                    <div className="glass-subcard p-3 rounded-xl flex items-start gap-2.5">
+                                        <i className="fas fa-clock text-cyan-400 text-base mt-0.5"></i>
                                         <div>
-                                            <span className="font-bold text-gray-400 block">Horarios</span>
+                                            <span className="font-bold text-slate-400 block">Horarios</span>
                                             <span className="text-white font-medium">{selectedComplex.openingHours}</span>
                                         </div>
                                     </div>
                                 )}
 
                                 {selectedComplex.phone && (
-                                    <div className="bg-gray-800/80 p-3 rounded-xl border border-gray-700/80 flex items-start gap-2.5">
+                                    <div className="glass-subcard p-3 rounded-xl flex items-start gap-2.5">
                                         <i className="fas fa-phone-alt text-emerald-400 text-base mt-0.5"></i>
                                         <div>
-                                            <span className="font-bold text-gray-400 block">Teléfono</span>
+                                            <span className="font-bold text-slate-400 block">Teléfono</span>
                                             <span className="text-white font-medium">{selectedComplex.phone}</span>
                                         </div>
                                     </div>
                                 )}
 
                                 {selectedComplex.instagram && (
-                                    <div className="bg-gray-800/80 p-3 rounded-xl border border-gray-700/80 flex items-start gap-2.5">
+                                    <div className="glass-subcard p-3 rounded-xl flex items-start gap-2.5">
                                         <i className="fab fa-instagram text-pink-400 text-base mt-0.5"></i>
                                         <div>
-                                            <span className="font-bold text-gray-400 block">Instagram</span>
+                                            <span className="font-bold text-slate-400 block">Instagram</span>
                                             <a
                                                 href={`https://instagram.com/${selectedComplex.instagram.replace('@', '')}`}
                                                 target="_blank"

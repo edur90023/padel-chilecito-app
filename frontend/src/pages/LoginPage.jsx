@@ -33,7 +33,7 @@ function LoginPage() {
 
     return (
         <div className="login-page-container flex items-center justify-center min-h-screen p-4">
-            <div className="w-full max-w-md p-6 sm:p-8 space-y-6 bg-slate-900/95 border border-slate-800 rounded-2xl shadow-2xl shadow-emerald-500/10 animate-fade-in">
+            <div className="w-full max-w-md p-6 sm:p-8 space-y-6 glass-modal rounded-2xl animate-fade-in">
                 <div className="text-center space-y-2">
                     <img
                         src="/logo.png"
@@ -55,7 +55,7 @@ function LoginPage() {
                         </p>
                     )}
                     <div>
-                        <label htmlFor="username" className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                        <label htmlFor="username" className="text-xs font-semibold uppercase tracking-wider text-slate-300">
                             Usuario
                         </label>
                         <input
@@ -64,12 +64,12 @@ function LoginPage() {
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                             required
-                            className="w-full px-4 py-3 mt-1.5 text-slate-100 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 transition text-sm"
+                            className="w-full px-4 py-3 mt-1.5 text-slate-100 glass-subcard rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 transition text-sm"
                             placeholder="Usuario administrador"
                         />
                     </div>
                     <div>
-                        <label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                        <label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-slate-300">
                             Contraseña
                         </label>
                         <input
@@ -78,7 +78,7 @@ function LoginPage() {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
-                            className="w-full px-4 py-3 mt-1.5 text-slate-100 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 transition text-sm"
+                            className="w-full px-4 py-3 mt-1.5 text-slate-100 glass-subcard rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 transition text-sm"
                             placeholder="••••••••"
                         />
                     </div>
@@ -92,14 +92,14 @@ function LoginPage() {
                         </button>
                         <Link
                             to="/"
-                            className="block w-full text-center px-4 py-2.5 text-sm font-semibold text-slate-300 bg-slate-800 rounded-xl hover:bg-slate-700 transition"
+                            className="block w-full text-center px-4 py-2.5 text-sm font-semibold text-slate-200 glass-subcard rounded-xl hover:bg-white/10 transition"
                         >
                             Volver al Inicio
                         </Link>
                     </div>
                 </form>
 
-                <p className="text-center text-[11px] text-slate-500">
+                <p className="text-center text-[11px] text-slate-400">
                     La Rioja, Argentina • Red Padel LR
                 </p>
             </div>

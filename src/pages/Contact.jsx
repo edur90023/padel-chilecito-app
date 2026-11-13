@@ -50,8 +50,8 @@ function Contact() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Canales Directos */}
-                <div className="bg-gray-800/90 border border-gray-700 p-6 sm:p-8 rounded-2xl shadow-xl space-y-6">
-                    <h2 className="text-xl font-bold text-primary flex items-center gap-2 border-b border-gray-700 pb-3">
+                <div className="glass-card p-6 sm:p-8 rounded-2xl space-y-6">
+                    <h2 className="text-xl font-bold text-primary flex items-center gap-2 border-b border-white/10 pb-3">
                         <i className="fas fa-headset text-primary"></i> Canales de Comunicación
                     </h2>
 
@@ -116,8 +116,8 @@ function Contact() {
                 </div>
 
                 {/* Ubicación y Redes */}
-                <div className="bg-gray-800/90 border border-gray-700 p-6 sm:p-8 rounded-2xl shadow-xl space-y-6">
-                    <h2 className="text-xl font-bold text-primary flex items-center gap-2 border-b border-gray-700 pb-3">
+                <div className="glass-card p-6 sm:p-8 rounded-2xl space-y-6">
+                    <h2 className="text-xl font-bold text-primary flex items-center gap-2 border-b border-white/10 pb-3">
                         <i className="fas fa-map-marked-alt text-primary"></i> Información y Redes
                     </h2>
 

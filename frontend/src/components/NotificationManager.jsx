@@ -38,20 +38,29 @@ function NotificationManager() {
     }
 
     return (
-        <div className="fixed bottom-4 right-4 bg-gray-800 border border-green-500 text-white p-4 rounded-lg shadow-lg animate-fade-in z-50 max-w-sm">
+        <div className="fixed bottom-20 lg:bottom-5 left-4 right-4 sm:left-auto sm:right-5 sm:w-80 glass-modal text-white p-4 rounded-2xl animate-fade-in z-50">
             <button 
                 onClick={handleDismiss} 
-                className="absolute top-1 right-2 text-gray-500 hover:text-white text-2xl leading-none"
+                className="absolute top-2.5 right-3 text-slate-400 hover:text-white text-xl leading-none transition"
                 aria-label="Cerrar"
             >
                 &times;
             </button>
-            <p className="text-sm mb-3 pr-4">¡No te pierdas nada! Activa las notificaciones.</p>
+            <div className="flex items-start gap-3 mb-3 pr-5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/35 text-emerald-400 flex items-center justify-center flex-shrink-0">
+                    <i className="fas fa-bell text-sm"></i>
+                </div>
+                <div>
+                    <p className="text-xs font-extrabold uppercase tracking-wider text-cyan-400">Avisos en vivo</p>
+                    <p className="text-xs text-slate-200 mt-0.5 leading-snug">¡No te pierdas nada! Activa las notificaciones de torneos y partidos.</p>
+                </div>
+            </div>
             <button 
                 onClick={handleSubscribe}
-                className="w-full bg-green-600 font-semibold py-2 px-4 rounded hover:bg-green-700 transition-colors"
+                className="w-full bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 font-extrabold text-xs py-2.5 px-4 rounded-xl hover:opacity-95 transition shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
             >
-                Activar Notificaciones
+                <i className="fas fa-bell"></i>
+                <span>Activar Notificaciones</span>
             </button>
         </div>
     );

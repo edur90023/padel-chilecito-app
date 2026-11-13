@@ -11,12 +11,48 @@ html, body {
 
 body {
     background-color: #0B1120;
-    background-image: radial-gradient(ellipse 80% 45% at 50% -15%, rgba(16, 185, 129, 0.14), rgba(6, 182, 212, 0.06), transparent);
+    background-image:
+        radial-gradient(ellipse 80% 45% at 50% -10%, rgba(16, 185, 129, 0.20), transparent 70%),
+        radial-gradient(circle at 85% 25%, rgba(6, 182, 212, 0.14), transparent 45%),
+        radial-gradient(circle at 15% 75%, rgba(16, 185, 129, 0.10), transparent 50%);
     background-attachment: fixed;
     @apply text-text-secondary font-sans;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     -webkit-tap-highlight-color: transparent;
+}
+
+@layer components {
+    .glass-panel {
+        background: linear-gradient(135deg, rgba(17, 24, 39, 0.68) 0%, rgba(15, 23, 42, 0.50) 100%);
+        backdrop-filter: blur(18px) saturate(150%);
+        -webkit-backdrop-filter: blur(18px) saturate(150%);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow: 0 12px 34px -8px rgba(0, 0, 0, 0.55), inset 0 1px 0 0 rgba(255, 255, 255, 0.10);
+    }
+
+    .glass-card {
+        background: linear-gradient(145deg, rgba(17, 24, 39, 0.64) 0%, rgba(11, 17, 32, 0.48) 100%);
+        backdrop-filter: blur(14px) saturate(145%);
+        -webkit-backdrop-filter: blur(14px) saturate(145%);
+        border: 1px solid rgba(255, 255, 255, 0.11);
+        box-shadow: 0 10px 28px -8px rgba(0, 0, 0, 0.50), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+    }
+
+    .glass-modal {
+        background: linear-gradient(145deg, rgba(15, 23, 42, 0.80) 0%, rgba(11, 17, 32, 0.72) 100%);
+        backdrop-filter: blur(22px) saturate(165%);
+        -webkit-backdrop-filter: blur(22px) saturate(165%);
+        border: 1px solid rgba(16, 185, 129, 0.30);
+        box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.70), inset 0 1px 0 0 rgba(255, 255, 255, 0.14);
+    }
+
+    .glass-subcard {
+        background: rgba(15, 23, 42, 0.46);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
 }
 
 /* Estilo para un scrollbar más moderno */
@@ -37,9 +73,11 @@ body {
 
 /* --- ESTILOS PARA LA LLAVE GRÁFICA (BRACKET) --- */
 .bracket-container {
-    background-color: #111827;
-    border: 1px solid #1F2937;
-    border-radius: 0.75rem;
+    background: linear-gradient(135deg, rgba(17, 24, 39, 0.65) 0%, rgba(15, 23, 42, 0.48) 100%);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.11);
+    border-radius: 1rem;
     padding: 0.85rem;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -69,27 +107,30 @@ body {
     text-align: center;
     margin-bottom: 0.5rem;
     padding: 0.35rem 0.5rem;
-    background-color: #1E293B;
-    border: 1px solid #334155;
+    background-color: rgba(30, 41, 59, 0.7);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 0.5rem;
 }
 
 .bracket-match {
-    background-color: #1E293B;
-    border: 1px solid #334155;
-    border-radius: 0.5rem;
+    background-color: rgba(30, 41, 59, 0.62);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 0.65rem;
     position: relative;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 4px 10px -2px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 6px 16px -4px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .bracket-info {
     padding: 0.35rem 0.5rem;
-    background-color: #0B1120;
-    border-top: 1px solid #334155;
-    border-bottom-left-radius: 0.5rem;
-    border-bottom-right-radius: 0.5rem;
+    background-color: rgba(11, 17, 32, 0.68);
+    border-top: 1px solid rgba(255, 255, 255, 0.10);
+    border-bottom-left-radius: 0.65rem;
+    border-bottom-right-radius: 0.65rem;
     display: flex;
     align-items: center;
     justify-content: space-between;

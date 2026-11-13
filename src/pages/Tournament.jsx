@@ -65,13 +65,13 @@ function Tournament() {
 
             {/* Buscador de torneos */}
             <div className="max-w-md mx-auto mb-8 relative">
-                <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-emerald-400"></i>
                 <input
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Buscar torneo o categoría..."
-                    className="w-full pl-11 pr-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-emerald-500 text-sm shadow-inner"
+                    className="w-full pl-11 pr-4 py-2.5 glass-subcard rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500 text-sm"
                 />
                 {searchTerm && (
                     <button
@@ -84,25 +84,25 @@ function Tournament() {
             </div>
 
             {filteredTournaments.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
                     {filteredTournaments.map(tournament => {
                         const hasOpenRegistrations = tournament.categories.some(cat => cat.status === 'Inscripciones Abiertas');
                         let statusText, statusColor, actionButton;
 
                         if (tournament.status === 'Finalizado') {
                             statusText = 'Finalizado';
-                            statusColor = 'bg-gray-200 text-gray-800';
+                            statusColor = 'bg-slate-500/20 text-slate-200 border border-white/15';
                             actionButton = (
-                                <Link to={`/tournaments/${tournament._id}`} className="w-full text-center bg-accent text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition">
+                                <Link to={`/tournaments/${tournament._id}`} className="w-full text-center bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-950 font-extrabold py-3 px-4 rounded-xl hover:opacity-95 transition shadow-lg shadow-cyan-500/20">
                                     <i className="fas fa-eye mr-2"></i>Ver Resultados
                                 </Link>
                             );
                         } else if (hasOpenRegistrations) {
                             statusText = 'Inscripciones Abiertas';
-                            statusColor = 'bg-green-200 text-green-800';
+                            statusColor = 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
                             actionButton = (
                                 <button
-                                    className="w-full bg-primary text-dark-primary font-bold py-3 px-4 rounded-lg hover:bg-primary-dark transition shadow-primary hover:shadow-primary-hover"
+                                    className="w-full bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 font-extrabold py-3 px-4 rounded-xl hover:opacity-95 transition shadow-lg shadow-emerald-500/25"
                                     onClick={() => handleRegisterClick(tournament)}
                                 >
                                     <i className="fas fa-file-signature mr-2"></i>Inscribirse
@@ -110,29 +110,29 @@ function Tournament() {
                             );
                         } else {
                             statusText = 'En Curso';
-                            statusColor = 'bg-yellow-200 text-yellow-800';
+                            statusColor = 'bg-amber-400/20 text-amber-300 border border-amber-400/40';
                             actionButton = (
-                                <Link to={`/tournaments/${tournament._id}`} className="w-full text-center bg-gray-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-500 transition">
-                                    <i className="fas fa-stream mr-2"></i>Ver Zonas y Llaves
+                                <Link to={`/tournaments/${tournament._id}`} className="w-full text-center glass-subcard hover:bg-white/10 text-white font-bold py-3 px-4 rounded-xl transition border border-emerald-500/35">
+                                    <i className="fas fa-stream mr-2 text-emerald-400"></i>Ver Zonas y Llaves
                                 </Link>
                             );
                         }
 
                         return (
-                            <div key={tournament._id} className="bg-dark-secondary rounded-lg shadow-xl p-6 flex flex-col hover:animate-lift transition-transform duration-300">
-                                <h3 className="text-2xl font-bold text-text-primary mb-2">{tournament.name}</h3>
-                                <p className="text-text-secondary mb-1"><strong>Fecha:</strong> {new Date(tournament.startDate).toLocaleDateString()}</p>
-                                <p className="text-text-secondary mb-4"><strong>Categorías:</strong> {tournament.categories.map(cat => cat.name).join(', ')}</p>
+                            <div key={tournament._id} className="glass-card rounded-2xl p-6 flex flex-col hover:border-emerald-400/40 transition-all duration-300">
+                                <h3 className="text-2xl font-bold text-white mb-2">{tournament.name}</h3>
+                                <p className="text-slate-300 text-sm mb-1"><strong className="text-slate-200">Fecha:</strong> {new Date(tournament.startDate).toLocaleDateString()}</p>
+                                <p className="text-slate-300 text-sm mb-4"><strong className="text-slate-200">Categorías:</strong> {tournament.categories.map(cat => cat.name).join(', ')}</p>
                                 <div className="flex-grow"></div>
-                                <span className={`inline-block mb-4 px-3 py-1 text-sm font-semibold rounded-full self-start ${statusColor}`}>{statusText}</span>
+                                <span className={`inline-block mb-4 px-3 py-1 text-xs font-bold rounded-full self-start ${statusColor}`}>{statusText}</span>
                                 {actionButton}
                             </div>
                         );
                     })}
                 </div>
             ) : (
-                <div className="bg-dark-secondary p-8 rounded-lg text-center">
-                    <p className="text-text-secondary">No hay torneos programados en este momento.</p>
+                <div className="glass-panel p-8 rounded-2xl text-center">
+                    <p className="text-slate-300">No hay torneos programados en este momento.</p>
                 </div>
             )}
 

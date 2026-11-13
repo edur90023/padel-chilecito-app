@@ -33,7 +33,7 @@ const MatchDisplay = ({ match }) => {
         <div className="relative group">
             <div
                 onClick={() => hasDetails && setShowDetails(!showDetails)}
-                className={`w-full bg-gray-900 p-3 rounded-lg flex flex-col gap-2 text-sm transition-all duration-300 ${hasDetails ? 'cursor-pointer hover:bg-gray-800' : 'cursor-default'} border border-gray-800 hover:border-gray-700`}
+                className={`w-full glass-subcard p-3 rounded-xl flex flex-col gap-2 text-sm transition-all duration-300 ${hasDetails ? 'cursor-pointer hover:bg-white/[0.06] hover:border-emerald-400/35' : 'cursor-default'}`}
             >
                 <div className="flex items-center justify-between">
                     <div className={`w-2/5 text-center ${winner === 'A' ? 'font-bold text-primary' : 'text-text-primary'}`}>
@@ -84,7 +84,7 @@ const MatchDisplay = ({ match }) => {
             </div>
             {showDetails && hasDetails && (
                  <div
-                     className="absolute z-20 top-full left-1/2 -translate-x-1/2 mt-2 w-72 bg-gray-900 border border-primary/60 rounded-xl shadow-2xl p-4 text-center animate-fade-in"
+                     className="absolute z-20 top-full left-1/2 -translate-x-1/2 mt-2 w-72 glass-modal rounded-2xl p-4 text-center animate-fade-in"
                      onClick={(e) => { e.stopPropagation(); setShowDetails(false); }}
                  >
                      {match.matchPlace && <p className="font-bold text-text-primary text-base flex items-center justify-center gap-1.5"><i className="fas fa-map-pin text-red-400 text-sm"></i>{match.matchPlace}</p>}
@@ -294,7 +294,7 @@ const BracketMatchItem = ({ match }) => {
             {/* Popover detallado al hacer clic */}
             {showDetails && hasDetails && (
                 <div
-                    className="absolute z-50 top-full left-1/2 -translate-x-1/2 mt-2 w-72 bg-gray-900 border border-primary/70 rounded-xl shadow-2xl p-4 text-center animate-fade-in"
+                    className="absolute z-50 top-full left-1/2 -translate-x-1/2 mt-2 w-72 glass-modal rounded-2xl p-4 text-center animate-fade-in"
                     onClick={(e) => { e.stopPropagation(); setShowDetails(false); }}
                 >
                     <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1 font-semibold">Detalles del Partido</p>
@@ -348,16 +348,16 @@ const PlayoffBracket = ({ rounds }) => {
 
     return (
         <div className="space-y-4 my-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gray-900/60 p-3 rounded-xl border border-gray-800">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 glass-panel p-3.5 rounded-2xl">
                 <h4 className="text-lg font-bold text-white flex items-center gap-2">
                     <i className="fas fa-sitemap text-primary"></i>
                     <span>Fase de Playoffs</span>
                 </h4>
-                <div className="flex items-center gap-1 bg-gray-800 p-1 rounded-lg self-start sm:self-auto text-xs font-semibold">
+                <div className="flex items-center gap-1 glass-subcard p-1 rounded-xl self-start sm:self-auto text-xs font-semibold">
                     <button
                         type="button"
                         onClick={() => setViewMode('bracket')}
-                        className={`px-3 py-1.5 rounded-md transition flex items-center gap-1.5 ${viewMode === 'bracket' ? 'bg-primary text-dark-primary font-bold shadow' : 'text-gray-400 hover:text-white'}`}
+                        className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${viewMode === 'bracket' ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 font-bold shadow' : 'text-slate-300 hover:text-white'}`}
                     >
                         <i className="fas fa-project-diagram"></i>
                         <span>Llave (Gráfico)</span>
@@ -365,7 +365,7 @@ const PlayoffBracket = ({ rounds }) => {
                     <button
                         type="button"
                         onClick={() => setViewMode('list')}
-                        className={`px-3 py-1.5 rounded-md transition flex items-center gap-1.5 ${viewMode === 'list' ? 'bg-primary text-dark-primary font-bold shadow' : 'text-gray-400 hover:text-white'}`}
+                        className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${viewMode === 'list' ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 font-bold shadow' : 'text-slate-300 hover:text-white'}`}
                     >
                         <i className="fas fa-list-ul"></i>
                         <span>Cronograma (Lista)</span>
@@ -377,7 +377,7 @@ const PlayoffBracket = ({ rounds }) => {
                 /* Modo lista detallada con tarjetas MatchDisplay */
                 <div className="space-y-6 animate-fade-in">
                     {rounds.map((round) => (
-                        <div key={round._id} className="bg-dark-secondary p-5 rounded-xl border border-gray-800">
+                        <div key={round._id} className="glass-card p-5 rounded-2xl">
                             <h5 className="text-base font-bold text-primary mb-3 flex items-center gap-2">
                                 <i className="fas fa-trophy text-xs text-yellow-500"></i>
                                 {round.roundName}
@@ -460,11 +460,11 @@ const WinnersDisplay = ({ finishers }) => {
     };
 
     return (
-        <div className="bg-dark-secondary/50 border-2 border-primary rounded-xl shadow-primary p-6 my-8 animate-fade-in">
-            <h3 className="text-2xl font-bold text-text-primary text-center mb-6">Podio de la Categoría</h3>
+        <div className="glass-panel border-emerald-500/40 rounded-2xl p-6 my-8 animate-fade-in">
+            <h3 className="text-2xl font-bold text-white text-center mb-6">Podio de la Categoría</h3>
             <ul className="space-y-4">
                 {sortedFinishers.map(({ position, team }) => (
-                    <li key={position} className="flex items-center gap-4 p-3 bg-dark-primary rounded-lg">
+                    <li key={position} className="flex items-center gap-4 p-3.5 glass-subcard rounded-xl">
                         <div className="flex-shrink-0 w-24 text-center">
                             <i className={`${getPositionIcon(position)} text-3xl`}></i>
                             <p className="text-sm font-bold text-text-secondary mt-1">{getPositionText(position)}</p>
@@ -540,14 +540,14 @@ const PlayerMatchFinder = ({ tournament, onSelectCategory }) => {
     }, [searchTerm, tournament]);
 
     return (
-        <div className="bg-gradient-to-r from-gray-900 via-gray-850 to-gray-900 border border-emerald-500/40 rounded-2xl p-5 sm:p-6 mb-8 shadow-xl">
+        <div className="glass-panel border-emerald-500/35 rounded-2xl p-5 sm:p-6 mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                 <div>
                     <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
                         <i className="fas fa-search-location text-emerald-400"></i>
                         <span>¿A qué hora juegas? Busca tu partido</span>
                     </h3>
-                    <p className="text-xs text-gray-400 mt-0.5">
+                    <p className="text-xs text-slate-300 mt-0.5">
                         Escribe tu nombre, apellido o el de tu pareja para ver cancha, horario y cómo llegar en Google Maps.
                     </p>
                 </div>
@@ -560,7 +560,7 @@ const PlayerMatchFinder = ({ tournament, onSelectCategory }) => {
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Escribe tu nombre o apellido (ej: Gomez, Lucas, Martinez)..."
-                    className="w-full pl-11 pr-10 py-3 bg-gray-950/90 border border-gray-700 focus:border-emerald-500 rounded-xl text-white placeholder-gray-500 text-sm focus:outline-none transition shadow-inner"
+                    className="w-full pl-11 pr-10 py-3 glass-subcard focus:border-emerald-500 rounded-xl text-white placeholder-slate-400 text-sm focus:outline-none transition"
                 />
                 {searchTerm && (
                     <button
@@ -596,7 +596,7 @@ const PlayerMatchFinder = ({ tournament, onSelectCategory }) => {
                                 return (
                                     <div
                                         key={match._id || idx}
-                                        className="bg-gray-950/90 border border-gray-800 hover:border-emerald-500/60 rounded-xl p-4 flex flex-col justify-between gap-3 shadow-md transition"
+                                        className="glass-subcard hover:border-emerald-400/50 rounded-xl p-4 flex flex-col justify-between gap-3 transition"
                                     >
                                         <div className="flex items-center justify-between gap-2 border-b border-gray-800/80 pb-2">
                                             <button
@@ -710,23 +710,23 @@ function TournamentPublicView() {
 
     return (
         <div className="max-w-7xl mx-auto animate-fade-in">
-            <Link to="/tournaments" className="inline-block mb-6 bg-gray-700 text-white px-4 py-2 rounded-md font-medium hover:bg-gray-600 transition">
-                <i className="fas fa-arrow-left mr-2"></i>Volver a Torneos
+            <Link to="/tournaments" className="inline-flex items-center gap-2 mb-6 glass-subcard text-white px-4 py-2 rounded-xl font-semibold hover:bg-white/10 transition text-sm">
+                <i className="fas fa-arrow-left text-emerald-400"></i>Volver a Torneos
             </Link>
-            <div className="bg-dark-secondary p-6 rounded-lg shadow-xl mb-8">
-                <h1 className="text-4xl font-extrabold text-text-primary">{tournament.name}</h1>
-                <p className="text-text-secondary mt-2">Fecha: {new Date(tournament.startDate).toLocaleDateString()} - Estado: <span className="font-semibold">{tournament.status}</span></p>
+            <div className="glass-panel p-6 rounded-2xl mb-8">
+                <h1 className="text-3xl sm:text-4xl font-extrabold text-white">{tournament.name}</h1>
+                <p className="text-slate-300 mt-2">Fecha: {new Date(tournament.startDate).toLocaleDateString()} - Estado: <span className="font-semibold text-emerald-400">{tournament.status}</span></p>
             </div>
 
             {/* Buscador de partidos para jugadores */}
             <PlayerMatchFinder tournament={tournament} onSelectCategory={setSelectedCategory} />
 
-            <div className="flex flex-wrap border-b border-gray-700 mb-6">
+            <div className="flex flex-wrap border-b border-white/10 mb-6">
                 {tournament.categories.map(category => (
                     <button
                         key={category._id}
                         onClick={() => setSelectedCategory(category)}
-                        className={`px-4 py-3 font-medium text-sm transition-colors ${selectedCategory?._id === category._id ? 'border-b-2 border-green-500 text-white' : 'text-gray-400 hover:text-white'}`}
+                        className={`px-4 py-3 font-semibold text-sm transition-colors ${selectedCategory?._id === category._id ? 'border-b-2 border-emerald-400 text-white' : 'text-slate-400 hover:text-white'}`}
                     >
                         {category.name}
                     </button>
@@ -739,10 +739,10 @@ function TournamentPublicView() {
                     <PlayoffBracket rounds={selectedCategory.playoffRounds} />
                     {selectedCategory.zones && selectedCategory.zones.length > 0 && (
                         <div className="mt-10">
-                            <h3 className="text-2xl font-semibold text-text-primary mb-4">Fase de Zonas</h3>
+                            <h3 className="text-2xl font-semibold text-white mb-4">Fase de Zonas</h3>
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                                 {selectedCategory.zones.map(zone => (
-                                    <div key={zone._id} className="bg-dark-secondary p-5 rounded-lg">
+                                    <div key={zone._id} className="glass-card p-5 rounded-2xl">
                                         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2 border-b border-gray-700/60 pb-3">
                                             <h4 className="text-xl font-semibold text-text-primary">{zone.zoneName}</h4>
                                             {(zone.zonePlace || zone.zoneMapUrl) && (

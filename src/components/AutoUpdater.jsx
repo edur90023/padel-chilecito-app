@@ -73,26 +73,26 @@ export default function AutoUpdater() {
 
     if (updating) {
         return (
-            <div className="fixed bottom-4 right-4 z-50 bg-emerald-600 text-white text-xs px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 animate-bounce">
-                <i className="fas fa-sync-alt animate-spin"></i>
-                <span>Actualizando Red Padel LR a la última versión...</span>
+            <div className="fixed bottom-20 lg:bottom-4 right-4 z-50 glass-modal text-emerald-300 text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 animate-bounce">
+                <i className="fas fa-sync-alt animate-spin text-cyan-400"></i>
+                <span className="font-semibold text-white">Actualizando Red Padel LR a la última versión...</span>
             </div>
         );
     }
 
     if (updateAvailable) {
         return (
-            <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-96 z-50 bg-gray-900 border border-emerald-500/80 text-white p-3.5 rounded-2xl shadow-2xl flex items-center justify-between gap-3 animate-fade-in">
+            <div className="fixed bottom-20 lg:bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-96 z-50 glass-modal text-white p-3.5 rounded-2xl flex items-center justify-between gap-3 animate-fade-in">
                 <div className="flex items-center gap-2.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
                     <div>
                         <p className="text-xs font-bold text-white">¡Nueva versión disponible!</p>
-                        <p className="text-[11px] text-gray-400">Hay cambios y mejoras en la aplicación.</p>
+                        <p className="text-[11px] text-slate-300">Hay cambios y mejoras en la aplicación.</p>
                     </div>
                 </div>
                 <button
                     onClick={performUpdate}
-                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition shadow-md whitespace-nowrap"
+                    className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:opacity-95 text-slate-950 text-xs font-extrabold rounded-xl transition shadow-md whitespace-nowrap"
                 >
                     Actualizar
                 </button>

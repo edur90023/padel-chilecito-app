@@ -49,27 +49,27 @@ const ProfessorsPage = () => {
             {!loading && !error && (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
                     {professors.map((prof) => (
-                        <div key={prof._id} onClick={() => handleCardClick(prof)} className="cursor-pointer bg-dark-secondary rounded-xl shadow-lg overflow-hidden transform hover:scale-105 transition-transform duration-300 ease-in-out">
+                        <div key={prof._id} onClick={() => handleCardClick(prof)} className="cursor-pointer glass-card rounded-2xl overflow-hidden hover:border-emerald-400/50 transition-all duration-300 ease-in-out">
                             <div className="p-6">
                 <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left">
-                  <img src={prof.photoUrl} alt={`Foto de ${prof.name}`} className="w-32 h-32 rounded-full object-cover mb-4 sm:mb-0 sm:mr-6 border-4 border-primary-dark flex-shrink-0" />
+                  <img src={prof.photoUrl} alt={`Foto de ${prof.name}`} className="w-32 h-32 rounded-full object-cover mb-4 sm:mb-0 sm:mr-6 border-4 border-emerald-500/50 flex-shrink-0" />
                   <div className="flex-grow">
-                    <h2 className="text-2xl font-bold text-text-primary">{prof.name}</h2>
+                    <h2 className="text-2xl font-bold text-white">{prof.name}</h2>
                     <div className="my-3 flex flex-wrap justify-center sm:justify-start gap-2">
                       {prof.categories.map(cat => (
-                        <span key={cat} className="bg-primary text-dark-primary text-xs font-semibold px-2.5 py-0.5 rounded-full">{cat}</span>
+                        <span key={cat} className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-semibold px-2.5 py-0.5 rounded-full">{cat}</span>
                       ))}
                     </div>
                   </div>
                 </div>
-                <p className="text-text-secondary my-4 whitespace-pre-wrap">{prof.description}</p>
+                <p className="text-slate-300 my-4 whitespace-pre-wrap">{prof.description}</p>
 
-                <div className="border-t border-gray-700 pt-4">
-                  <h3 className="font-semibold text-text-primary mb-2 flex items-center">
-                    <i className="fas fa-map-marker-alt mr-2 text-primary"></i>
+                <div className="border-t border-white/10 pt-4">
+                  <h3 className="font-semibold text-white mb-2 flex items-center">
+                    <i className="fas fa-map-marker-alt mr-2 text-emerald-400"></i>
                     Lugares de entrenamiento
                   </h3>
-                  <ul className="list-disc list-inside text-text-secondary mb-4 pl-2">
+                  <ul className="list-disc list-inside text-slate-300 mb-4 pl-2">
                     {prof.locations.map(loc => <li key={loc}>{loc}</li>)}
                   </ul>
 
@@ -77,7 +77,8 @@ const ProfessorsPage = () => {
                     href={`https://wa.me/${prof.contactPhone}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="block w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 text-center"
+                    onClick={(e) => e.stopPropagation()}
+                    className="block w-full bg-gradient-to-r from-emerald-500 to-cyan-500 hover:opacity-95 text-slate-950 font-extrabold py-3 px-4 rounded-xl transition duration-300 text-center shadow-lg shadow-emerald-500/20"
                   >
                     <i className="fab fa-whatsapp mr-2"></i>
                     Contactar por WhatsApp
