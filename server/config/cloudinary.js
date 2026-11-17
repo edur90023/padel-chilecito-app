@@ -13,7 +13,7 @@ if (process.env.CLOUDINARY_URL || (process.env.CLOUDINARY_CLOUD_NAME && process.
     cloudinary: cloudinary,
     params: {
       folder: 'padel-chilecito',
-      allowed_formats: ['jpg', 'png', 'jpeg']
+      allowed_formats: ['jpg', 'png', 'jpeg', 'webp']
     }
   });
 } else {
@@ -66,6 +66,24 @@ const wrappedUpload = {
             if (!f.path || !f.path.startsWith('http')) {
               f.path = `/uploads/${f.filename}`;
             }
+          });
+        }
+        next();
+      });
+    };
+  },
+  fields: (fieldsConfig) => {
+    const handler = upload.fields(fieldsConfig);
+    return (req, res, next) => {
+      handler(req, res, (err) => {
+        if (err) return next(err);
+        if (req.files) {
+          Object.keys(req.files).forEach(key => {
+            req.files[key].forEach(f => {
+              if (!f.path || !f.path.startsWith('http')) {
+                f.path = `/uploads/${f.filename}`;
+              }
+            });
           });
         }
         next();

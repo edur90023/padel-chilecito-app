@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios, { API_BASE_URL } from '../api/axiosConfig';
+
+const resolveImageUrl = (url) => {
+    if (!url) return url;
+    if (url.startsWith('/uploads/') && API_BASE_URL) {
+        return `${API_BASE_URL}${url}`;
+    }
+    return url;
+};
 
 const COMMON_SERVICES = [
     'Iluminación LED',
@@ -25,6 +33,8 @@ export default function ComplexManagement() {
     const [showModal, setShowModal] = useState(false);
     const [editingComplex, setEditingComplex] = useState(null);
     const [thumbnailFile, setThumbnailFile] = useState(null);
+    const [thumbnailPreview, setThumbnailPreview] = useState('');
+    const [photoFiles, setPhotoFiles] = useState([]);
     const [newPhotoUrl, setNewPhotoUrl] = useState('');
 
     const [formData, setFormData] = useState({
@@ -61,9 +71,17 @@ export default function ComplexManagement() {
         fetchComplexes();
     }, []);
 
+    const clearLocalPreviews = () => {
+        if (thumbnailPreview) URL.revokeObjectURL(thumbnailPreview);
+        photoFiles.forEach(item => URL.revokeObjectURL(item.previewUrl));
+    };
+
     const handleOpenCreate = () => {
+        clearLocalPreviews();
         setEditingComplex(null);
         setThumbnailFile(null);
+        setThumbnailPreview('');
+        setPhotoFiles([]);
         setNewPhotoUrl('');
         setFormData({
             name: '',
@@ -85,8 +103,11 @@ export default function ComplexManagement() {
     };
 
     const handleOpenEdit = (complex) => {
+        clearLocalPreviews();
         setEditingComplex(complex);
         setThumbnailFile(null);
+        setThumbnailPreview('');
+        setPhotoFiles([]);
         setNewPhotoUrl('');
         setFormData({
             name: complex.name || '',
@@ -135,6 +156,32 @@ export default function ComplexManagement() {
         }));
     };
 
+    const handleThumbnailFileChange = (e) => {
+        const file = e.target.files?.[0] || null;
+        if (thumbnailPreview) URL.revokeObjectURL(thumbnailPreview);
+        setThumbnailFile(file);
+        setThumbnailPreview(file ? URL.createObjectURL(file) : '');
+    };
+
+    const handleLocalPhotosChange = (e) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+        const mapped = files.map(file => ({
+            file,
+            previewUrl: URL.createObjectURL(file)
+        }));
+        setPhotoFiles(prev => [...prev, ...mapped].slice(0, 10));
+        e.target.value = '';
+    };
+
+    const handleRemoveLocalPhoto = (index) => {
+        setPhotoFiles(prev => {
+            const target = prev[index];
+            if (target) URL.revokeObjectURL(target.previewUrl);
+            return prev.filter((_, idx) => idx !== index);
+        });
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!formData.name.trim()) {
@@ -166,6 +213,9 @@ export default function ComplexManagement() {
             if (thumbnailFile) {
                 data.append('thumbnail', thumbnailFile);
             }
+            photoFiles.forEach(item => {
+                data.append('photoFiles', item.file);
+            });
 
             if (editingComplex) {
                 await axios.put(`/complexes/${editingComplex._id}`, data);
@@ -175,6 +225,10 @@ export default function ComplexManagement() {
                 setSuccess('¡Complejo agregado con éxito!');
             }
 
+            clearLocalPreviews();
+            setPhotoFiles([]);
+            setThumbnailFile(null);
+            setThumbnailPreview('');
             setShowModal(false);
             fetchComplexes();
             setTimeout(() => setSuccess(''), 3500);
@@ -248,7 +302,7 @@ export default function ComplexManagement() {
                 /* Listado de Complejos */
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {complexes.map(complex => {
-                        const cover = complex.thumbnailUrl || 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?auto=format&fit=crop&w=800&q=80';
+                        const cover = resolveImageUrl(complex.thumbnailUrl) || 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?auto=format&fit=crop&w=800&q=80';
                         return (
                             <div
                                 key={complex._id}
@@ -353,30 +407,44 @@ export default function ComplexManagement() {
                             </div>
 
                             {/* Foto Miniatura / Portada */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1">
-                                        URL Imagen Miniatura
-                                    </label>
-                                    <input
-                                        type="url"
-                                        value={formData.thumbnailUrl}
-                                        onChange={(e) => setFormData({ ...formData, thumbnailUrl: e.target.value })}
-                                        placeholder="https://ejemplo.com/foto.jpg"
-                                        className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3.5 py-2 text-white text-sm focus:outline-none focus:border-emerald-500"
-                                    />
+                            <div className="space-y-2">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1">
+                                            Subir Foto Principal (PC o Celular)
+                                        </label>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleThumbnailFileChange}
+                                            className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-gray-300 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-600 file:text-white hover:file:bg-emerald-500 cursor-pointer"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1">
+                                            O Pegar URL Imagen Miniatura
+                                        </label>
+                                        <input
+                                            type="url"
+                                            value={formData.thumbnailUrl}
+                                            onChange={(e) => setFormData({ ...formData, thumbnailUrl: e.target.value })}
+                                            placeholder="https://ejemplo.com/foto.jpg"
+                                            className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3.5 py-2 text-white text-sm focus:outline-none focus:border-emerald-500"
+                                        />
+                                    </div>
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1">
-                                        O Subir Archivo de Imagen
-                                    </label>
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={(e) => setThumbnailFile(e.target.files[0] || null)}
-                                        className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-gray-300 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:bg-emerald-600 file:text-white"
-                                    />
-                                </div>
+                                {(thumbnailPreview || formData.thumbnailUrl) && (
+                                    <div className="flex items-center gap-3 p-2 bg-gray-800/70 rounded-xl border border-gray-700">
+                                        <img
+                                            src={thumbnailPreview || resolveImageUrl(formData.thumbnailUrl)}
+                                            alt="Vista previa miniatura"
+                                            className="w-20 h-14 object-cover rounded-lg border border-gray-700"
+                                        />
+                                        <span className="text-xs text-emerald-400 font-medium">
+                                            {thumbnailFile ? `Archivo local seleccionado: ${thumbnailFile.name}` : 'Imagen principal actual'}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Teléfono y WhatsApp */}
@@ -530,16 +598,31 @@ export default function ComplexManagement() {
                             </div>
 
                             {/* Galería de Fotos Adicionales */}
-                            <div>
-                                <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1">
-                                    Fotos Adicionales del Complejo (URLs)
+                            <div className="space-y-3">
+                                <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider">
+                                    Fotos Adicionales del Complejo (Archivos locales o URLs)
                                 </label>
+
+                                <div>
+                                    <label className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-gray-800 hover:bg-gray-700/80 border border-dashed border-emerald-500/50 rounded-xl text-xs font-semibold text-emerald-300 cursor-pointer transition">
+                                        <i className="fas fa-upload"></i>
+                                        <span>Seleccionar fotos desde tu PC o celular (hasta 10)</span>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            multiple
+                                            onChange={handleLocalPhotosChange}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                </div>
+
                                 <div className="flex gap-2">
                                     <input
                                         type="url"
                                         value={newPhotoUrl}
                                         onChange={(e) => setNewPhotoUrl(e.target.value)}
-                                        placeholder="Pegar URL de foto adicional..."
+                                        placeholder="O pegar URL de foto adicional..."
                                         className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-3.5 py-2 text-white text-sm focus:outline-none focus:border-emerald-500"
                                     />
                                     <button
@@ -547,19 +630,34 @@ export default function ComplexManagement() {
                                         onClick={handleAddPhotoUrl}
                                         className="py-2 px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition"
                                     >
-                                        Agregar
+                                        Agregar URL
                                     </button>
                                 </div>
 
-                                {formData.photos.length > 0 && (
+                                {(formData.photos.length > 0 || photoFiles.length > 0) && (
                                     <div className="flex flex-wrap gap-2 mt-2">
                                         {formData.photos.map((photo, idx) => (
-                                            <div key={idx} className="relative group w-16 h-16 rounded-lg overflow-hidden border border-gray-700 bg-gray-800">
-                                                <img src={photo} alt="" className="w-full h-full object-cover" />
+                                            <div key={`url-${idx}`} className="relative group w-16 h-16 rounded-lg overflow-hidden border border-gray-700 bg-gray-800">
+                                                <img src={resolveImageUrl(photo)} alt="" className="w-full h-full object-cover" />
                                                 <button
                                                     type="button"
                                                     onClick={() => handleRemovePhoto(idx)}
                                                     className="absolute inset-0 bg-red-900/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+                                                    title="Quitar foto"
+                                                >
+                                                    <i className="fas fa-trash-alt text-xs"></i>
+                                                </button>
+                                            </div>
+                                        ))}
+                                        {photoFiles.map((item, idx) => (
+                                            <div key={`file-${idx}`} className="relative group w-16 h-16 rounded-lg overflow-hidden border border-emerald-500/70 bg-gray-800">
+                                                <img src={item.previewUrl} alt="" className="w-full h-full object-cover" />
+                                                <span className="absolute bottom-0 left-0 right-0 bg-emerald-600/90 text-[9px] text-white text-center font-bold">Local</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRemoveLocalPhoto(idx)}
+                                                    className="absolute inset-0 bg-red-900/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+                                                    title="Quitar archivo"
                                                 >
                                                     <i className="fas fa-trash-alt text-xs"></i>
                                                 </button>

@@ -119,11 +119,12 @@ router.get('/:id', async (req, res) => {
 // @route   POST /api/complexes
 // @desc    Crear un nuevo complejo
 // @access  Privado (Admin)
-router.post('/', auth(['admin']), upload.single('thumbnail'), async (req, res) => {
+router.post('/', auth(['admin']), upload.fields([{ name: 'thumbnail', maxCount: 1 }, { name: 'photoFiles', maxCount: 10 }]), async (req, res) => {
     try {
         const data = { ...req.body };
-        if (req.file) {
-            data.thumbnailUrl = req.file.path || `/uploads/${req.file.filename}`;
+        const thumbFile = req.files?.thumbnail?.[0] || req.file;
+        if (thumbFile) {
+            data.thumbnailUrl = thumbFile.path || `/uploads/${thumbFile.filename}`;
         }
 
         // Parsear services si viene como string JSON o delimitado por comas
@@ -143,6 +144,14 @@ router.post('/', auth(['admin']), upload.single('thumbnail'), async (req, res) =
                 data.photos = data.photos.split(',').map(s => s.trim()).filter(Boolean);
             }
         }
+
+        const uploadedPhotos = Array.isArray(req.files?.photoFiles)
+            ? req.files.photoFiles.map(f => f.path || `/uploads/${f.filename}`)
+            : [];
+        data.photos = [
+            ...(Array.isArray(data.photos) ? data.photos : []),
+            ...uploadedPhotos
+        ];
 
         if (data.totalCourts) {
             data.totalCourts = Number(data.totalCourts) || 1;
@@ -192,12 +201,13 @@ router.post('/', auth(['admin']), upload.single('thumbnail'), async (req, res) =
 // @route   PUT /api/complexes/:id
 // @desc    Actualizar un complejo
 // @access  Privado (Admin)
-router.put('/:id', auth(['admin']), upload.single('thumbnail'), async (req, res) => {
+router.put('/:id', auth(['admin']), upload.fields([{ name: 'thumbnail', maxCount: 1 }, { name: 'photoFiles', maxCount: 10 }]), async (req, res) => {
     try {
         const { id } = req.params;
         const data = { ...req.body };
-        if (req.file) {
-            data.thumbnailUrl = req.file.path || `/uploads/${req.file.filename}`;
+        const thumbFile = req.files?.thumbnail?.[0] || req.file;
+        if (thumbFile) {
+            data.thumbnailUrl = thumbFile.path || `/uploads/${thumbFile.filename}`;
         }
 
         if (typeof data.services === 'string') {
@@ -215,6 +225,14 @@ router.put('/:id', auth(['admin']), upload.single('thumbnail'), async (req, res)
                 data.photos = data.photos.split(',').map(s => s.trim()).filter(Boolean);
             }
         }
+
+        const uploadedPhotos = Array.isArray(req.files?.photoFiles)
+            ? req.files.photoFiles.map(f => f.path || `/uploads/${f.filename}`)
+            : [];
+        data.photos = [
+            ...(Array.isArray(data.photos) ? data.photos : []),
+            ...uploadedPhotos
+        ];
 
         if (data.totalCourts) {
             data.totalCourts = Number(data.totalCourts) || 1;

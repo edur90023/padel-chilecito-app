@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios, { API_BASE_URL } from '../api/axiosConfig';
+
+const resolveImageUrl = (url) => {
+    if (!url) return url;
+    if (url.startsWith('/uploads/') && API_BASE_URL) {
+        return `${API_BASE_URL}${url}`;
+    }
+    return url;
+};
 
 // Helper para enlace seguro de Google Maps
 const getMapsUrl = (mapsUrl, address, name) => {
@@ -121,7 +129,7 @@ export default function ComplexesPage() {
                         const allPhotos = [
                             complex.thumbnailUrl,
                             ...(Array.isArray(complex.photos) ? complex.photos : [])
-                        ].filter(Boolean);
+                        ].filter(Boolean).map(resolveImageUrl);
                         const coverPhoto = allPhotos[0] || 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?auto=format&fit=crop&w=800&q=80';
                         const waUrl = formatWhatsAppUrl(complex.whatsapp || complex.phone, complex.name);
                         const mapsUrl = getMapsUrl(complex.mapsUrl, complex.address, complex.name);
@@ -260,7 +268,7 @@ export default function ComplexesPage() {
                             const allPhotos = [
                                 selectedComplex.thumbnailUrl,
                                 ...(Array.isArray(selectedComplex.photos) ? selectedComplex.photos : [])
-                            ].filter(Boolean);
+                            ].filter(Boolean).map(resolveImageUrl);
                             const currentPhoto = allPhotos[activePhotoIndex] || allPhotos[0] || 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?auto=format&fit=crop&w=800&q=80';
 
                             return (
