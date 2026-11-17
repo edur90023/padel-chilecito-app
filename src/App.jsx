@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink, Navigate, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import axios from './api/axiosConfig';
+import axios, { wakeUpServer } from './api/axiosConfig';
 import { useInstallPWA } from './hooks/useInstallPWA';
 import NotificationManager from './components/NotificationManager';
 import AutoUpdater from './components/AutoUpdater';
+import ServerWakeupBanner from './components/ServerWakeupBanner';
 const Analytics = () => null;
 
 import Admin from './components/Admin';
@@ -409,6 +410,10 @@ const PublicLayout = () => {
 };
 
 function App() {
+    useEffect(() => {
+        wakeUpServer();
+    }, []);
+
     return (
         <AuthProvider>
             <Router>
@@ -420,6 +425,7 @@ function App() {
                     <Route path="/*" element={<PublicLayout />} />
                 </Routes>
             </Router>
+            <ServerWakeupBanner />
             <AutoUpdater />
             <Analytics />
         </AuthProvider>

@@ -148,6 +148,10 @@ router.post('/', auth(['admin']), upload.single('thumbnail'), async (req, res) =
             data.totalCourts = Number(data.totalCourts) || 1;
         }
 
+        if (data.isActive !== undefined) {
+            data.isActive = data.isActive === true || data.isActive === 'true';
+        }
+
         if (!data.name) {
             return res.status(400).json({ error: 'El nombre del complejo es obligatorio' });
         }
@@ -214,6 +218,10 @@ router.put('/:id', auth(['admin']), upload.single('thumbnail'), async (req, res)
 
         if (data.totalCourts) {
             data.totalCourts = Number(data.totalCourts) || 1;
+        }
+
+        if (data.isActive !== undefined) {
+            data.isActive = data.isActive === true || data.isActive === 'true';
         }
 
         if (!isDbConnected()) {
