@@ -58,15 +58,17 @@ export default function ServerWakeupBanner() {
         ? 100
         : Math.min(94, Math.round(14 + 80 * (1 - Math.exp(-elapsedMs / 18000))));
 
-    let stageLabel = 'Conectando con el servidor...';
+    let stageLabel = 'Cargando noticias y novedades...';
     if (justFinished) {
-        stageLabel = '¡Listo! Cargando contenido...';
+        stageLabel = '¡Datos cargados con éxito!';
     } else if (elapsedSec >= 22) {
-        stageLabel = 'Últimos segundos, cargando información del torneo...';
-    } else if (elapsedSec >= 10) {
-        stageLabel = 'Iniciando base de datos y servicios...';
+        stageLabel = 'Finalizando sincronización de datos...';
+    } else if (elapsedSec >= 15) {
+        stageLabel = 'Recuperando galería y complejos...';
+    } else if (elapsedSec >= 9) {
+        stageLabel = 'Actualizando zonas, cruces y horarios...';
     } else if (elapsedSec >= 4) {
-        stageLabel = 'Despertando servidor en la nube...';
+        stageLabel = 'Recuperando torneos y categorías...';
     }
 
     return (
@@ -83,7 +85,7 @@ export default function ServerWakeupBanner() {
                     onClick={() => setDismissed(true)}
                     className="absolute top-3 right-3.5 text-slate-400 hover:text-white text-lg leading-none transition"
                     aria-label="Ocultar aviso"
-                    title="Seguir esperando en segundo plano"
+                    title="Seguir cargando en segundo plano"
                 >
                     &times;
                 </button>
@@ -102,12 +104,12 @@ export default function ServerWakeupBanner() {
                         Red Padel LR
                     </span>
                     <h3 className="text-lg font-extrabold text-white leading-snug">
-                        {justFinished ? '¡Servidor conectado!' : 'Iniciando el servidor'}
+                        {justFinished ? '¡Todo listo!' : 'Cargando información'}
                     </h3>
                     <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
                         {justFinished
-                            ? 'Ya estamos mostrando los datos actualizados.'
-                            : 'El servidor estaba en reposo por inactividad y se está despertando. Esto demora unos segundos la primera vez.'}
+                            ? 'Ya tenés todo el contenido actualizado.'
+                            : 'Estamos preparando los torneos, horarios y novedades del circuito para vos.'}
                     </p>
 
                     {/* Barra de progreso */}
@@ -122,7 +124,7 @@ export default function ServerWakeupBanner() {
                         <div className="flex items-center justify-between text-[11px] font-medium">
                             <span className="text-emerald-300 truncate pr-2">{stageLabel}</span>
                             <span className="text-slate-400 font-mono flex-shrink-0">
-                                {progress}% • {elapsedSec}s
+                                {progress}%
                             </span>
                         </div>
                     </div>
