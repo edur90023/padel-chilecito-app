@@ -101,6 +101,11 @@ const tournamentSchema = new mongoose.Schema({
         type: String,
         enum: ['Activo', 'Finalizado', 'Cancelado'],
         default: 'Activo'
+    },
+    visibility: {
+        type: String,
+        enum: ['borrador', 'expectativa', 'publicado'],
+        default: 'publicado'
     }
 });
 

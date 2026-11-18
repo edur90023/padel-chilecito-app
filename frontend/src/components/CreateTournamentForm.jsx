@@ -13,13 +13,26 @@ function CreateTournamentForm({ onTournamentCreated, onClose }) {
         zonePlaySystem: false,
         useSeedings: false,
         avoidClubConflicts: false,
+        visibility: 'publicado',
     });
+    const [visibilityTouched, setVisibilityTouched] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState('');
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
+        if (name === 'isManual') {
+            setFormData(prev => ({
+                ...prev,
+                isManual: checked,
+                visibility: visibilityTouched ? prev.visibility : (checked ? 'borrador' : 'publicado')
+            }));
+            return;
+        }
+        if (name === 'visibility') {
+            setVisibilityTouched(true);
+        }
         setFormData({ 
             ...formData, 
             [name]: type === 'checkbox' ? checked : value 
@@ -44,7 +57,9 @@ function CreateTournamentForm({ onTournamentCreated, onClose }) {
                 zonePlaySystem: false,
                 useSeedings: false,
                 avoidClubConflicts: false,
+                visibility: 'publicado',
             });
+            setVisibilityTouched(false);
             setTimeout(() => {
                 if (onTournamentCreated) {
                     onTournamentCreated();
@@ -113,6 +128,54 @@ function CreateTournamentForm({ onTournamentCreated, onClose }) {
                             <label htmlFor="avoidClubConflicts" className="font-medium text-white">Evitar Cruces Mismo Club</label>
                             <p className="text-xs text-gray-400">Intenta no poner equipos del mismo club en la misma zona.</p>
                         </div>
+                    </div>
+                </div>
+
+                {/* Selector de Visibilidad Inicial */}
+                <div className="bg-gray-900/60 p-4 rounded-xl border border-gray-700 space-y-2.5">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-emerald-400">
+                        Visibilidad al Crear el Torneo
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                        {[
+                            {
+                                id: 'borrador',
+                                title: 'Borrador (Oculto)',
+                                icon: 'fa-lock',
+                                desc: 'Nadie lo ve mientras armás zonas por partes.'
+                            },
+                            {
+                                id: 'expectativa',
+                                title: 'Modo Expectativa',
+                                icon: 'fa-fire',
+                                desc: 'Muestra cuántas parejas hay sin mostrar zonas.'
+                            },
+                            {
+                                id: 'publicado',
+                                title: 'Publicado',
+                                icon: 'fa-globe',
+                                desc: 'Visible de inmediato para el público.'
+                            }
+                        ].map(opt => {
+                            const selected = formData.visibility === opt.id;
+                            return (
+                                <button
+                                    key={opt.id}
+                                    type="button"
+                                    onClick={() => {
+                                        setVisibilityTouched(true);
+                                        setFormData(prev => ({ ...prev, visibility: opt.id }));
+                                    }}
+                                    className={`p-3 rounded-xl border text-left transition ${selected ? 'bg-emerald-950/70 border-emerald-400 text-white shadow' : 'bg-gray-800/70 border-gray-700 text-gray-300 hover:border-gray-500'}`}
+                                >
+                                    <div className="flex items-center gap-1.5 font-bold text-xs mb-1">
+                                        <i className={`fas ${opt.icon} ${selected ? 'text-emerald-400' : 'text-gray-400'}`}></i>
+                                        <span>{opt.title}</span>
+                                    </div>
+                                    <p className="text-[11px] text-gray-400 leading-snug">{opt.desc}</p>
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
 

@@ -1,9 +1,68 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken');
 const Tournament = require('../models/Tournament');
 const TournamentManager = require('../services/tournament-manager');
 const auth = require('../middleware/auth');
+
+const getCategoryPairsCount = (cat) => {
+    const zoneTeamsCount = Array.isArray(cat?.zones)
+        ? cat.zones.reduce((sum, z) => sum + (Array.isArray(z?.teams) ? z.teams.length : 0), 0)
+        : 0;
+    const registeredCount = Array.isArray(cat?.registeredPlayers) ? cat.registeredPlayers.length : 0;
+    return Math.max(zoneTeamsCount, registeredCount);
+};
+
+const formatTournamentResponse = (tournamentDoc, { sanitizeExpectativa = false } = {}) => {
+    const obj = typeof tournamentDoc.toObject === 'function'
+        ? tournamentDoc.toObject()
+        : { ...tournamentDoc };
+
+    const visibility = obj.visibility || 'publicado';
+    obj.visibility = visibility;
+
+    const rawCategories = Array.isArray(obj.categories) ? obj.categories : [];
+    let totalPairsCount = 0;
+
+    obj.categories = rawCategories.map((cat) => {
+        const pairsCount = getCategoryPairsCount(cat);
+        totalPairsCount += pairsCount;
+
+        if (sanitizeExpectativa && visibility === 'expectativa') {
+            return {
+                _id: cat._id,
+                name: cat.name,
+                status: cat.status,
+                isManual: cat.isManual,
+                pairsCount,
+                zones: [],
+                playoffRounds: [],
+                finishers: [],
+                registeredPlayers: []
+            };
+        }
+
+        return {
+            ...cat,
+            pairsCount
+        };
+    });
+
+    obj.totalPairsCount = totalPairsCount;
+    return obj;
+};
+
+const getOptionalUser = (req) => {
+    try {
+        const token = req.header('Authorization')?.replace('Bearer ', '');
+        if (!token) return null;
+        const secret = process.env.JWT_SECRET || 'padel-chilecito-secret-key-2024';
+        return jwt.verify(token, secret);
+    } catch (e) {
+        return null;
+    }
+};
 
 // MOCK DATA CUANDO LA BASE DE DATOS ESTÁ OFFLINE
 const mockTournaments = [
@@ -36,16 +95,55 @@ const mockTournaments = [
     }
 ];
 
-// OBTENER TODOS LOS TORNEOS
+// OBTENER TODOS LOS TORNEOS PÚBLICOS (OCULTA BORRADORES Y PROTEGE ZONAS EN MODO EXPECTATIVA)
 router.get('/', async (req, res) => {
     try {
         if (mongoose.connection.readyState !== 1) {
             return res.status(200).json(mockTournaments);
         }
-        const tournaments = await Tournament.find({}).sort({ startDate: -1 });
-        res.status(200).json(tournaments);
+        const tournaments = await Tournament.find({ visibility: { $ne: 'borrador' } }).sort({ startDate: -1 });
+        const formatted = tournaments.map(t => formatTournamentResponse(t, { sanitizeExpectativa: true }));
+        res.status(200).json(formatted);
     } catch (error) {
         res.status(200).json(mockTournaments);
+    }
+});
+
+// OBTENER TODOS LOS TORNEOS PARA ADMINISTRACIÓN (INCLUYE BORRADORES)
+router.get('/admin', auth(['admin']), async (req, res) => {
+    try {
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(200).json(mockTournaments);
+        }
+        const tournaments = await Tournament.find({}).sort({ startDate: -1 });
+        const formatted = tournaments.map(t => formatTournamentResponse(t));
+        res.status(200).json(formatted);
+    } catch (error) {
+        res.status(500).json({ error: 'Error al cargar los torneos para administración.' });
+    }
+});
+
+// OBTENER EL ÚLTIMO TORNEO CON GANADORES (SOLO PUBLICADOS)
+router.get('/latest-finished', async (req, res) => {
+    try {
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(200).json(null);
+        }
+        const latestFinishedTournament = await Tournament.findOne({
+            status: 'Finalizado',
+            visibility: { $nin: ['borrador', 'expectativa'] }
+        })
+            .sort({ startDate: -1 })
+            .lean();
+
+        if (!latestFinishedTournament) {
+            return res.status(200).json(null);
+        }
+        
+        res.status(200).json(formatTournamentResponse(latestFinishedTournament));
+
+    } catch (error) {
+        res.status(200).json(null);
     }
 });
 
@@ -58,38 +156,31 @@ router.get('/:id', async (req, res) => {
         }
         const tournament = await Tournament.findById(req.params.id);
         if (!tournament) return res.status(404).json({ error: 'Torneo no encontrado.' });
-        res.status(200).json(tournament);
+
+        const user = getOptionalUser(req);
+        const isPrivileged = user && (
+            user.role === 'admin' ||
+            (user.role === 'operator' && String(user.tournamentId) === String(tournament._id))
+        );
+
+        const visibility = tournament.visibility || 'publicado';
+
+        if (!isPrivileged && visibility === 'borrador') {
+            return res.status(404).json({ error: 'Este torneo aún se encuentra en preparación.' });
+        }
+
+        const formatted = formatTournamentResponse(tournament, { sanitizeExpectativa: !isPrivileged });
+        res.status(200).json(formatted);
     } catch (error) {
         const mock = mockTournaments.find(t => t._id === req.params.id) || mockTournaments[0];
         res.status(200).json(mock);
     }
 });
 
-// OBTENER EL ÚLTIMO TORNEO CON GANADORES
-router.get('/latest-finished', async (req, res) => {
-    try {
-        if (mongoose.connection.readyState !== 1) {
-            return res.status(200).json(null);
-        }
-        const latestFinishedTournament = await Tournament.findOne({ status: 'Finalizado' })
-            .sort({ startDate: -1 })
-            .lean();
-
-        if (!latestFinishedTournament) {
-            return res.status(200).json(null);
-        }
-        
-        res.status(200).json(latestFinishedTournament);
-
-    } catch (error) {
-        res.status(200).json(null);
-    }
-});
-
 // CREAR UN NUEVO TORNEO
 router.post('/', auth(['admin']), async (req, res) => {
     try {
-        const { name, startDate, organizerPhone, categories, isManual, zonePlaySystem, useSeedings, avoidClubConflicts } = req.body;
+        const { name, startDate, organizerPhone, categories, isManual, zonePlaySystem, useSeedings, avoidClubConflicts, visibility } = req.body;
         
         const categoriesArray = categories.split(',')
             .map(cat => cat.trim())
@@ -106,27 +197,63 @@ router.post('/', auth(['admin']), async (req, res) => {
         if (categoriesArray.length === 0) {
             return res.status(400).json({ error: 'Debe especificar al menos una categoría válida.' });
         }
+
+        const allowedVisibilities = ['borrador', 'expectativa', 'publicado'];
+        const resolvedVisibility = allowedVisibilities.includes(visibility)
+            ? visibility
+            : (isManual ? 'borrador' : 'publicado');
         
         const newTournament = new Tournament({ 
             name, 
             startDate, 
             organizerPhone, 
             categories: categoriesArray, 
-            status: 'Activo' 
+            status: 'Activo',
+            visibility: resolvedVisibility
         });
         
         await newTournament.save();
-        res.status(201).json({ message: 'Torneo creado exitosamente.', tournament: newTournament });
+        res.status(201).json({ message: 'Torneo creado exitosamente.', tournament: formatTournamentResponse(newTournament) });
     } catch (error) {
         res.status(500).json({ error: 'Error al crear el torneo.' });
     }
 });
 
-// GUARDAR LA ESTRUCTURA MANUAL DE ZONAS Y EQUIPOS
+// CAMBIAR VISIBILIDAD / PUBLICAR TORNEO (BORRADOR, EXPECTATIVA, PUBLICADO)
+router.put('/:id/visibility', auth(['admin']), async (req, res) => {
+    try {
+        const { visibility } = req.body;
+        const allowedVisibilities = ['borrador', 'expectativa', 'publicado'];
+        if (!allowedVisibilities.includes(visibility)) {
+            return res.status(400).json({ error: 'Modo de visibilidad inválido.' });
+        }
+
+        const tournament = await Tournament.findById(req.params.id);
+        if (!tournament) return res.status(404).json({ error: 'Torneo no encontrado.' });
+
+        tournament.visibility = visibility;
+        await tournament.save();
+
+        const labels = {
+            borrador: 'Borrador (oculto al público)',
+            expectativa: 'Modo Expectativa (contador público, zonas ocultas)',
+            publicado: 'Publicado (visible para todos)'
+        };
+
+        res.status(200).json({
+            message: `Visibilidad actualizada a: ${labels[visibility]}.`,
+            tournament: formatTournamentResponse(tournament)
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Error al actualizar la visibilidad del torneo.' });
+    }
+});
+
+// GUARDAR LA ESTRUCTURA MANUAL DE ZONAS Y EQUIPOS (SOPORTA GUARDADO POR PARTES Y EDICIÓN)
 router.post('/:tournamentId/category/:categoryId/save-manual-structure', auth(['admin']), async (req, res) => {
     try {
         const { tournamentId, categoryId } = req.params;
-        const { zones } = req.body; 
+        const { zones, finalizeCategory = true } = req.body; 
 
         if (!zones || !Array.isArray(zones)) {
             return res.status(400).json({ error: 'Formato de zonas inválido.' });
@@ -139,43 +266,105 @@ router.post('/:tournamentId/category/:categoryId/save-manual-structure', auth(['
         if (!category) return res.status(404).json({ error: 'Categoría no encontrada.' });
         if (!category.isManual) return res.status(400).json({ error: 'Esta categoría no está configurada para gestión manual.' });
 
+        const existingZonesById = new Map();
+        const existingZonesByName = new Map();
+        const existingTeamsByName = new Map();
+        const existingMatchesByPairKey = new Map();
+
+        (category.zones || []).forEach(ez => {
+            if (ez._id) existingZonesById.set(String(ez._id), ez);
+            if (ez.zoneName) existingZonesByName.set(ez.zoneName.trim().toLowerCase(), ez);
+            (ez.teams || []).forEach(t => {
+                if (t?.teamName) {
+                    existingTeamsByName.set(t.teamName.trim().toLowerCase(), t);
+                }
+            });
+            (ez.matches || []).forEach(m => {
+                if (m?.teamA?.teamName && m?.teamB?.teamName) {
+                    const pair = [m.teamA.teamName.trim().toLowerCase(), m.teamB.teamName.trim().toLowerCase()].sort().join('|||');
+                    existingMatchesByPairKey.set(pair, m);
+                }
+            });
+        });
+
         const processedZones = [];
         for (const zoneData of zones) {
-            if (!zoneData.teams || !Array.isArray(zoneData.teams) || !zoneData.zoneName) {
-                return res.status(400).json({ error: 'El formato de una de las zonas es inválido.' });
+            if (!zoneData.teams || !Array.isArray(zoneData.teams) || !zoneData.zoneName || !zoneData.zoneName.trim()) {
+                continue;
             }
 
+            const prevZone = (zoneData._id && existingZonesById.get(String(zoneData._id)))
+                || existingZonesByName.get(zoneData.zoneName.trim().toLowerCase());
+
             const teams = [];
-            for (const teamName of zoneData.teams) {
-                if (typeof teamName !== 'string' || teamName.trim() === '') continue;
-                
-                const playerNames = teamName.split('/').map(name => name.trim());
-                
+            for (const rawTeamName of zoneData.teams) {
+                if (typeof rawTeamName !== 'string' || rawTeamName.trim() === '') continue;
+                const cleanName = rawTeamName.trim();
+                const prevTeam = existingTeamsByName.get(cleanName.toLowerCase());
+                const playerNames = cleanName.split('/').map(name => name.trim());
+
                 teams.push({
-                    _id: new mongoose.Types.ObjectId(),
-                    teamName: teamName.trim(),
-                    players: [
-                        { playerName: playerNames[0] || 'Jugador 1' }, 
+                    _id: prevTeam?._id || new mongoose.Types.ObjectId(),
+                    teamName: cleanName,
+                    players: prevTeam?.players?.length ? prevTeam.players : [
+                        { playerName: playerNames[0] || 'Jugador 1' },
                         { playerName: playerNames[1] || 'Jugador 2' }
                     ]
                 });
             }
-            
-            const matches = TournamentManager._generateZoneMatches(teams, category);
-            
+
+            // En guardado parcial permitimos zonas vacías para ir armando la estructura; al finalizar requerimos al menos 1 pareja si hay equipos
+            if (finalizeCategory && teams.length === 0) {
+                continue;
+            }
+
+            let matches = [];
+            if (finalizeCategory && teams.length >= 2) {
+                matches = TournamentManager._generateZoneMatches(teams, category).map(m => {
+                    if (m.teamA?.teamName && m.teamB?.teamName) {
+                        const pair = [m.teamA.teamName.trim().toLowerCase(), m.teamB.teamName.trim().toLowerCase()].sort().join('|||');
+                        const prevMatch = existingMatchesByPairKey.get(pair);
+                        if (prevMatch) {
+                            const sameOrder = prevMatch.teamA?.teamName?.trim().toLowerCase() === m.teamA.teamName.trim().toLowerCase();
+                            return {
+                                ...m,
+                                scoreA: sameOrder ? prevMatch.scoreA : prevMatch.scoreB,
+                                scoreB: sameOrder ? prevMatch.scoreB : prevMatch.scoreA,
+                                status: prevMatch.status || 'Pendiente',
+                                matchTime: prevMatch.matchTime || '',
+                                matchPlace: prevMatch.matchPlace || '',
+                                matchMapUrl: prevMatch.matchMapUrl || ''
+                            };
+                        }
+                    }
+                    return m;
+                });
+            }
+
             processedZones.push({
-                zoneName: zoneData.zoneName,
+                zoneName: zoneData.zoneName.trim(),
+                zonePlace: zoneData.zonePlace !== undefined ? zoneData.zonePlace : (prevZone?.zonePlace || ''),
+                zoneMapUrl: zoneData.zoneMapUrl !== undefined ? zoneData.zoneMapUrl : (prevZone?.zoneMapUrl || ''),
                 teams: teams,
                 matches: matches
             });
         }
 
+        if (finalizeCategory && (processedZones.length === 0 || processedZones.every(z => z.teams.length === 0))) {
+            return res.status(400).json({ error: 'Debes añadir al menos una zona con parejas antes de generar los partidos.' });
+        }
+
         category.zones = processedZones;
-        category.status = 'Zonas Sorteadas';
+        category.status = finalizeCategory ? 'Zonas Sorteadas' : 'Configuración Manual';
         
         await tournament.save();
         const populatedTournament = await Tournament.findById(tournamentId);
-        res.status(200).json({ message: 'Estructura manual guardada y partidos generados.', tournament: populatedTournament });
+        res.status(200).json({
+            message: finalizeCategory
+                ? 'Estructura manual guardada y partidos generados.'
+                : 'Avance guardado en borrador. Podés seguir cargando más zonas luego.',
+            tournament: formatTournamentResponse(populatedTournament)
+        });
 
     } catch (error) {
         console.error("Error guardando estructura manual:", error);
@@ -201,6 +390,9 @@ router.post('/:tournamentId/register', async (req, res) => {
         const { categoryName, player1Name, player1Phone, player2Name, player2Phone, club } = req.body;
         const tournament = await Tournament.findById(tournamentId);
         if (!tournament) return res.status(404).json({ error: 'Torneo no encontrado.' });
+        if ((tournament.visibility || 'publicado') === 'borrador') {
+            return res.status(400).json({ error: 'Este torneo aún está en preparación y no admite inscripciones públicas.' });
+        }
         const category = tournament.categories.find(cat => cat.name === categoryName);
         if (!category) return res.status(404).json({ error: 'Categoría no encontrada.' });
         if (category.status !== 'Inscripciones Abiertas') return res.status(400).json({ error: 'Las inscripciones para esta categoría ya están cerradas.' });
@@ -274,7 +466,7 @@ router.post('/:tournamentId/category/:categoryId/zone/:zoneId/advance-apa', auth
 
         await tournament.save();
         const populatedTournament = await Tournament.findById(tournamentId);
-        res.status(200).json({ message: 'Se avanzó la zona APA correctamente.', tournament: populatedTournament });
+        res.status(200).json({ message: 'Se avanzó la zona APA correctamente.', tournament: formatTournamentResponse(populatedTournament) });
 
     } catch (error) {
         console.error("Error al avanzar zona APA:", error);
@@ -328,7 +520,7 @@ router.post('/:tournamentId/category/:categoryId/draw-zones', auth(['admin']), a
         category.status = 'Zonas Sorteadas';
         await tournament.save();
         const populatedTournament = await Tournament.findById(tournamentId);
-        res.status(200).json({ message: `Zonas para ${category.name} generadas.`, tournament: populatedTournament });
+        res.status(200).json({ message: `Zonas para ${category.name} generadas.`, tournament: formatTournamentResponse(populatedTournament) });
     } catch (error) {
         res.status(500).json({ error: 'Error al generar las zonas.', details: error.message });
     }
@@ -344,7 +536,7 @@ router.post('/:tournamentId/close-all-registrations', auth(['admin']), async (re
             if (category.status === 'Inscripciones Abiertas') category.status = 'Inscripciones Cerradas';
         });
         const updatedTournament = await tournament.save();
-        res.status(200).json({ message: "Todas las inscripciones han sido cerradas.", tournament: updatedTournament });
+        res.status(200).json({ message: "Todas las inscripciones han sido cerradas.", tournament: formatTournamentResponse(updatedTournament) });
     } catch (error) {
         res.status(500).json({ error: "Error al cerrar las inscripciones." });
     }
@@ -359,7 +551,7 @@ router.delete('/:tournamentId/category/:categoryId/team/:teamId', auth(['admin']
         const category = tournament.categories.id(categoryId);
         category.registeredPlayers.pull({ _id: teamId });
         const updatedTournament = await tournament.save();
-        res.status(200).json({ message: "Pareja eliminada", tournament: updatedTournament });
+        res.status(200).json({ message: "Pareja eliminada", tournament: formatTournamentResponse(updatedTournament) });
     } catch (error) {
         res.status(500).json({ error: "Error al eliminar la pareja" });
     }
@@ -378,7 +570,7 @@ router.post('/:tournamentId/move-team', auth(['admin']), async (req, res) => {
         currentCategory.registeredPlayers.pull({ _id: teamId });
         newCategory.registeredPlayers.push(teamToMove);
         const updatedTournament = await tournament.save();
-        res.status(200).json({ message: "Pareja movida exitosamente", tournament: updatedTournament });
+        res.status(200).json({ message: "Pareja movida exitosamente", tournament: formatTournamentResponse(updatedTournament) });
     } catch (error) {
         res.status(500).json({ error: "Error al mover la pareja" });
     }
@@ -499,7 +691,7 @@ router.put('/:tournamentId/category/:categoryId/match/:matchId', auth(['admin', 
         if (match.teamB) updateGlobalTeam(match.teamB._id, resolvedTeamBName, teamBPlayers);
         
         await tournament.save();
-        res.status(200).json({ message: 'Actualización global exitosa', tournament: await Tournament.findById(tournamentId) });
+        res.status(200).json({ message: 'Actualización global exitosa', tournament: formatTournamentResponse(await Tournament.findById(tournamentId)) });
 
     } catch (error) {
         console.error('Error al actualizar partido:', error);
@@ -573,7 +765,7 @@ router.put('/:tournamentId/category/:categoryId/team/:teamId', auth(['admin', 'o
         });
 
         await tournament.save();
-        res.status(200).json({ message: 'Equipo y jugadores actualizados con éxito.', tournament: await Tournament.findById(tournamentId) });
+        res.status(200).json({ message: 'Equipo y jugadores actualizados con éxito.', tournament: formatTournamentResponse(await Tournament.findById(tournamentId)) });
     } catch (error) {
         console.error('Error al editar equipo:', error);
         res.status(500).json({ error: 'Error al actualizar el equipo' });
@@ -622,7 +814,7 @@ router.post('/:tournamentId/category/:categoryId/swap-zone-teams', auth(['admin'
         });
 
         await tournament.save();
-        res.status(200).json({ message: '¡Cruce corregido con éxito! Las parejas fueron intercambiadas entre zonas.', tournament: await Tournament.findById(tournamentId) });
+        res.status(200).json({ message: '¡Cruce corregido con éxito! Las parejas fueron intercambiadas entre zonas.', tournament: formatTournamentResponse(await Tournament.findById(tournamentId)) });
     } catch (error) {
         console.error('Error al intercambiar parejas de zona:', error);
         res.status(500).json({ error: 'Error al intercambiar parejas de zona' });
@@ -656,7 +848,7 @@ router.put('/:tournamentId/category/:categoryId/zone/:zoneId/venue', auth(['admi
         }
 
         await tournament.save();
-        res.status(200).json({ message: 'Sede y ubicación de Maps de la zona guardadas con éxito.', tournament: await Tournament.findById(tournamentId) });
+        res.status(200).json({ message: 'Sede y ubicación de Maps de la zona guardadas con éxito.', tournament: formatTournamentResponse(await Tournament.findById(tournamentId)) });
     } catch (error) {
         console.error('Error al actualizar sede de la zona:', error);
         res.status(500).json({ error: 'Error al actualizar sede de la zona' });
@@ -694,7 +886,7 @@ router.post('/:tournamentId/category/:categoryId/generate-playoffs', auth(['admi
         category.status = 'En Juego';
         await tournament.save();
         const populatedTournament = await Tournament.findById(tournamentId);
-        res.status(200).json({ message: 'Llave de playoffs generada exitosamente.', tournament: populatedTournament });
+        res.status(200).json({ message: 'Llave de playoffs generada exitosamente.', tournament: formatTournamentResponse(populatedTournament) });
 
     } catch (error) {
         console.error("Error al generar playoffs:", error);
@@ -719,7 +911,7 @@ router.post('/:tournamentId/category/:categoryId/advance-playoffs', auth(['admin
         category.playoffRounds.push(...nextRounds);
         await tournament.save();
         const populatedTournament = await Tournament.findById(tournamentId);
-        res.status(200).json({ message: "Ganadores avanzados a la siguiente ronda.", tournament: populatedTournament });
+        res.status(200).json({ message: "Ganadores avanzados a la siguiente ronda.", tournament: formatTournamentResponse(populatedTournament) });
     } catch (error) {
         res.status(500).json({ error: "Error en el servidor al avanzar playoffs.", details: error.message });
     }
@@ -741,7 +933,7 @@ router.post('/:tournamentId/category/:categoryId/add-team', auth(['admin']), asy
         const newTeam = { _id: new mongoose.Types.ObjectId(), teamName: `${p1LastName} / ${p2LastName}`, players: [{ playerName: player1Name, phoneNumber: player1Phone || '' }, { playerName: player2Name, phoneNumber: player2Phone || '' }]};
         category.registeredPlayers.push(newTeam);
         const updatedTournament = await tournament.save();
-        res.status(201).json({ message: 'Pareja añadida exitosamente', tournament: updatedTournament });
+        res.status(201).json({ message: 'Pareja añadida exitosamente', tournament: formatTournamentResponse(updatedTournament) });
     } catch (error) {
         res.status(500).json({ error: 'Error en el servidor al añadir la pareja.' });
     }
@@ -810,7 +1002,7 @@ router.post('/:tournamentId/category/:categoryId/add-late-team', auth(['admin'])
         const updatedTournament = await tournament.save();
         res.status(201).json({
             message: 'Pareja fuera de término añadida y asignada con éxito.',
-            tournament: updatedTournament
+            tournament: formatTournamentResponse(updatedTournament)
         });
     } catch (error) {
         console.error("Error al añadir pareja fuera de término:", error);
@@ -832,7 +1024,7 @@ router.post('/:tournamentId/category/:categoryId/finish', auth(['admin']), async
         if (allCategoriesFinished) tournament.status = 'Finalizado';
         await tournament.save();
         const populatedTournament = await Tournament.findById(req.params.tournamentId);
-        res.status(200).json({ message: 'Categoría finalizada.', tournament: populatedTournament });
+        res.status(200).json({ message: 'Categoría finalizada.', tournament: formatTournamentResponse(populatedTournament) });
     } catch (error) {
         res.status(500).json({ error: 'Error al guardar los resultados.' });
     }
@@ -889,7 +1081,7 @@ router.put('/:tournamentId/category/:categoryId/team/:teamId/player/:playerIndex
 
         await tournament.save();
         const populatedTournament = await Tournament.findById(tournamentId);
-        res.status(200).json({ message: 'Nombre actualizado.', tournament: populatedTournament });
+        res.status(200).json({ message: 'Nombre actualizado.', tournament: formatTournamentResponse(populatedTournament) });
 
     } catch (error) {
         res.status(500).json({ error: 'Error al actualizar el nombre.' });

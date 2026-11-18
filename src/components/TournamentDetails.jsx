@@ -1272,7 +1272,12 @@ function CategoryManager({ category, tournament, onAction, userRole }) {
     const [showRegisteredTeams, setShowRegisteredTeams] = useState(false);
     const [editingVenueZone, setEditingVenueZone] = useState(null);
     const [showLateTeamModal, setShowLateTeamModal] = useState(false);
+    const [editingManualZones, setEditingManualZones] = useState(false);
     const isAdmin = userRole === 'admin';
+
+    useEffect(() => {
+        setEditingManualZones(false);
+    }, [category?._id]);
 
     const areAllZoneMatchesFinished = useMemo(() => {
         if (!category.zones || category.zones.length === 0) return false;
@@ -1306,8 +1311,14 @@ function CategoryManager({ category, tournament, onAction, userRole }) {
         }
     }, [tournament.previewData, category._id]);
 
-    if (category.isManual && category.status === 'Configuración Manual' && isAdmin) {
-        return <ManualSetupManager category={category} onAction={onAction} />;
+    if (category.isManual && isAdmin && (category.status === 'Configuración Manual' || editingManualZones)) {
+        return (
+            <ManualSetupManager
+                category={category}
+                onAction={onAction}
+                onCancelEdit={category.status !== 'Configuración Manual' ? () => setEditingManualZones(false) : null}
+            />
+        );
     }
 
     const showRegistrationManagement = ['Inscripciones Abiertas', 'Inscripciones Cerradas'].includes(category.status);
@@ -1404,16 +1415,29 @@ function CategoryManager({ category, tournament, onAction, userRole }) {
                         <div className="space-y-6">
                             <div className="flex flex-col sm:flex-row justify-between sm:items-center border-b border-gray-700 pb-2 gap-2">
                                 <h4 className="text-xl font-bold text-white">Fase de Grupos</h4>
-                                {isAdmin && category.zones.length > 1 && (
-                                    <button 
-                                        type="button"
-                                        onClick={() => setShowSwapModal(true)} 
-                                        className="bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition shadow"
-                                        title="Corregir cruce o intercambio de parejas entre zonas"
-                                    >
-                                        <span>🔀</span> Corregir Cruce / Mover de Zona
-                                    </button>
-                                )}
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    {isAdmin && category.isManual && category.status === 'Zonas Sorteadas' && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setEditingManualZones(true)}
+                                            className="bg-blue-600/80 hover:bg-blue-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition shadow"
+                                            title="Agregar o editar zonas y parejas manualmente"
+                                        >
+                                            <i className="fas fa-edit"></i>
+                                            <span>Editar Zonas / Cargar por Partes</span>
+                                        </button>
+                                    )}
+                                    {isAdmin && category.zones.length > 1 && (
+                                        <button 
+                                            type="button"
+                                            onClick={() => setShowSwapModal(true)} 
+                                            className="bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition shadow"
+                                            title="Corregir cruce o intercambio de parejas entre zonas"
+                                        >
+                                            <span>🔀</span> Corregir Cruce / Mover de Zona
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                             {category.zones.map(zone => (
                                 <div key={zone._id} className="p-4 border border-gray-700 rounded-lg bg-gray-800/30">
@@ -1491,12 +1515,42 @@ function TournamentDetails({ tournament, onBack }) {
     const [currentTournament, setCurrentTournament] = useState(tournament);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [actionSuccess, setActionSuccess] = useState('');
     const [selectedCategoryId, setSelectedCategoryId] = useState(tournament.categories[0]?._id || null);
     const [operatorLink, setOperatorLink] = useState('');
     const [linkLoading, setLinkLoading] = useState(false);
 
+    useEffect(() => {
+        setCurrentTournament(tournament);
+    }, [tournament]);
+
     const hasAnyOpenRegistration = useMemo(() => currentTournament.categories.some(cat => cat.status === 'Inscripciones Abiertas'), [currentTournament]);
     const userRole = isAdmin() ? 'admin' : isOperator() ? 'operator' : null;
+
+    const currentVisibility = currentTournament.visibility || 'publicado';
+    const categoriesWithZonesCount = useMemo(
+        () => (currentTournament.categories || []).filter(cat => Array.isArray(cat.zones) && cat.zones.length > 0 && cat.status !== 'Configuración Manual').length,
+        [currentTournament.categories]
+    );
+    const totalPairsCount = useMemo(() => {
+        if (typeof currentTournament.totalPairsCount === 'number') return currentTournament.totalPairsCount;
+        return (currentTournament.categories || []).reduce((acc, cat) => {
+            const zCount = Array.isArray(cat.zones) ? cat.zones.reduce((s, z) => s + (z.teams?.length || 0), 0) : 0;
+            const rCount = Array.isArray(cat.registeredPlayers) ? cat.registeredPlayers.length : 0;
+            return acc + Math.max(zCount, rCount);
+        }, 0);
+    }, [currentTournament]);
+
+    const handleChangeVisibility = (targetVisibility) => {
+        if (targetVisibility === currentVisibility) return;
+        const missingZonesCount = (currentTournament.categories || []).length - categoriesWithZonesCount;
+        if (targetVisibility === 'publicado' && missingZonesCount > 0 && !hasAnyOpenRegistration) {
+            if (!window.confirm(`Todavía faltan ${missingZonesCount} categoría(s) por finalizar sus zonas. ¿Seguro que querés publicar el torneo igual?`)) {
+                return;
+            }
+        }
+        handleAction('update-visibility', null, { visibility: targetVisibility });
+    };
 
     const handleGenerateOperatorLink = async () => {
         setLinkLoading(true);
@@ -1518,6 +1572,7 @@ function TournamentDetails({ tournament, onBack }) {
     const handleAction = async (action, categoryId, data = {}) => {
         setLoading(true);
         setError(null);
+        setActionSuccess('');
         try {
             let response;
             const url = `/tournaments/${currentTournament._id}`;
@@ -1529,7 +1584,10 @@ function TournamentDetails({ tournament, onBack }) {
                 return; 
             }
             
-            if (action === 'save-manual-structure') {
+            if (action === 'update-visibility') {
+                response = await axios.put(`${url}/visibility`, data);
+            }
+            else if (action === 'save-manual-structure') {
                 response = await axios.post(`${url}/category/${categoryId}/save-manual-structure`, data);
             }
             else if (action === 'update-match') response = await axios.put(`${url}/category/${categoryId}/match/${data.matchId}`, data);
@@ -1547,6 +1605,10 @@ function TournamentDetails({ tournament, onBack }) {
             else if (action === 'advance-apa') response = await axios.post(`${url}/category/${categoryId}/zone/${data.zoneId}/advance-apa`);
             else response = await axios.post(`${url}/category/${categoryId}/${action}`, data || {});
             
+            if (response.data?.message) {
+                setActionSuccess(response.data.message);
+                setTimeout(() => setActionSuccess(''), 4000);
+            }
             if(response.data.tournament) {
                 const newTournament = { ...response.data.tournament, previewData: null };
                 setCurrentTournament(newTournament);
@@ -1568,6 +1630,24 @@ function TournamentDetails({ tournament, onBack }) {
         onBack();
     };
 
+    const visibilityMeta = {
+        borrador: {
+            label: 'Borrador (Oculto al público)',
+            badge: 'bg-gray-700 text-gray-200 border-gray-500',
+            icon: 'fa-lock'
+        },
+        expectativa: {
+            label: 'Modo Expectativa (Contador público / Zonas ocultas)',
+            badge: 'bg-amber-900/70 text-amber-300 border-amber-500/50',
+            icon: 'fa-fire'
+        },
+        publicado: {
+            label: 'Publicado (Visible para todos)',
+            badge: 'bg-emerald-900/70 text-emerald-300 border-emerald-500/50',
+            icon: 'fa-globe'
+        }
+    }[currentVisibility];
+
     return (
         <div className="animate-fade-in">
             <button onClick={handleBack} className="mb-6 bg-gray-700 text-white px-4 py-2 rounded-md font-medium hover:bg-gray-600 transition">
@@ -1579,7 +1659,7 @@ function TournamentDetails({ tournament, onBack }) {
                         <h2 className="text-3xl font-bold text-white">{currentTournament.name}</h2>
                         <p className="text-gray-400">Estado General: <span className="font-semibold">{currentTournament.status}</span></p>
                     </div>
-                    <div className="flex gap-4">
+                    <div className="flex gap-3 flex-wrap">
                         {isAdmin() && (
                              <>
                                 <button onClick={handleGenerateOperatorLink} disabled={linkLoading} className="bg-orange-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-orange-600 transition disabled:bg-gray-600">
@@ -1592,6 +1672,55 @@ function TournamentDetails({ tournament, onBack }) {
                         )}
                     </div>
                 </div>
+
+                {/* Panel de Control de Visibilidad y Publicación (Solo Admin) */}
+                {isAdmin() && (
+                    <div className="bg-gray-900/75 border border-gray-700 rounded-xl p-4 mb-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                        <div className="space-y-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Visibilidad Pública:</span>
+                                <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full border ${visibilityMeta.badge}`}>
+                                    <i className={`fas ${visibilityMeta.icon}`}></i>
+                                    {visibilityMeta.label}
+                                </span>
+                            </div>
+                            <p className="text-xs text-gray-400">
+                                Avance de carga: <strong className="text-white">{categoriesWithZonesCount} de {(currentTournament.categories || []).length}</strong> categorías con zonas listas • <strong className="text-emerald-400">{totalPairsCount}</strong> {totalPairsCount === 1 ? 'pareja cargada' : 'parejas cargadas'}
+                            </p>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => handleChangeVisibility('borrador')}
+                                disabled={loading || currentVisibility === 'borrador'}
+                                className={`px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 border ${currentVisibility === 'borrador' ? 'bg-gray-700 text-white border-gray-400 cursor-default' : 'bg-gray-800 hover:bg-gray-700 text-gray-300 border-gray-600'}`}
+                            >
+                                <i className="fas fa-lock"></i>
+                                <span>Borrador (Ocultar)</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleChangeVisibility('expectativa')}
+                                disabled={loading || currentVisibility === 'expectativa'}
+                                className={`px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 border ${currentVisibility === 'expectativa' ? 'bg-amber-600 text-white border-amber-400 cursor-default' : 'bg-amber-950/60 hover:bg-amber-900/80 text-amber-300 border-amber-600/50'}`}
+                            >
+                                <i className="fas fa-fire"></i>
+                                <span>Modo Expectativa</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleChangeVisibility('publicado')}
+                                disabled={loading || currentVisibility === 'publicado'}
+                                className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow ${currentVisibility === 'publicado' ? 'bg-emerald-700 text-white border border-emerald-400 cursor-default' : 'bg-emerald-600 hover:bg-emerald-500 text-white'}`}
+                            >
+                                <i className="fas fa-globe"></i>
+                                <span>{currentVisibility === 'publicado' ? 'Publicado' : 'Publicar Torneo'}</span>
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 {operatorLink && (
                     <div className="bg-green-900/50 border border-green-700 p-4 rounded-lg mb-4 text-center">
                         <p className="text-white font-semibold mb-2">Enlace de Operador Generado:</p>
@@ -1600,6 +1729,7 @@ function TournamentDetails({ tournament, onBack }) {
                     </div>
                 )}
                 {loading && <div className="text-center my-4 text-blue-400">Procesando...</div>}
+                {actionSuccess && <p className="bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 p-3 rounded-lg mb-4 text-sm font-medium flex items-center gap-2"><i className="fas fa-check-circle"></i>{actionSuccess}</p>}
                 {error && <p className="bg-red-900/50 text-red-400 p-3 rounded-lg mb-4">{error}</p>}
                 
                 <div className="flex flex-wrap border-b border-gray-700 mb-6">

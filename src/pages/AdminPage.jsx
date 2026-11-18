@@ -13,7 +13,7 @@ function AdminPage() {
     const fetchTournaments = async () => {
         try {
             setLoading(true);
-            const response = await axios.get('/tournaments');
+            const response = await axios.get('/tournaments/admin');
             setTournaments(response.data);
             setError(null);
         } catch (err) {

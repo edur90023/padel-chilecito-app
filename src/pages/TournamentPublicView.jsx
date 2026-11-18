@@ -696,7 +696,7 @@ function TournamentPublicView() {
                     setSelectedCategory(response.data.categories[0]);
                 }
             } catch (err) {
-                setError('No se pudo cargar la información del torneo.');
+                setError(err.response?.data?.error || 'No se pudo cargar la información del torneo.');
             } finally {
                 setLoading(false);
             }
@@ -705,8 +705,64 @@ function TournamentPublicView() {
     }, [id]);
 
     if (loading) return <div className="loading-spinner mx-auto mt-10"></div>;
-    if (error) return <p className="text-red-400 text-center mt-10">{error}</p>;
+    if (error) {
+        return (
+            <div className="max-w-2xl mx-auto mt-10 glass-panel p-8 rounded-2xl text-center space-y-4 animate-fade-in">
+                <i className="fas fa-lock text-4xl text-amber-400"></i>
+                <h2 className="text-xl font-bold text-white">{error}</h2>
+                <Link to="/tournaments" className="inline-flex items-center gap-2 glass-subcard text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-white/10 transition text-sm">
+                    <i className="fas fa-arrow-left text-emerald-400"></i>Volver a Torneos
+                </Link>
+            </div>
+        );
+    }
     if (!tournament) return <p className="text-text-secondary text-center mt-10">Torneo no encontrado.</p>;
+
+    const hasAnyPublicData = (tournament.categories || []).some(
+        c => (c.zones && c.zones.length > 0) || (c.playoffRounds && c.playoffRounds.length > 0) || (c.finishers && c.finishers.length > 0)
+    );
+
+    if (tournament.visibility === 'expectativa' && !hasAnyPublicData) {
+        const totalPairs = typeof tournament.totalPairsCount === 'number'
+            ? tournament.totalPairsCount
+            : (tournament.categories || []).reduce((acc, c) => acc + (c.pairsCount || 0), 0);
+
+        return (
+            <div className="max-w-3xl mx-auto animate-fade-in space-y-6">
+                <Link to="/tournaments" className="inline-flex items-center gap-2 glass-subcard text-white px-4 py-2 rounded-xl font-semibold hover:bg-white/10 transition text-sm">
+                    <i className="fas fa-arrow-left text-emerald-400"></i>Volver a Torneos
+                </Link>
+
+                <div className="glass-panel border-amber-400/35 p-6 sm:p-8 rounded-2xl text-center space-y-5">
+                    <span className="inline-flex items-center gap-2 px-3.5 py-1 rounded-lg bg-amber-400/15 border border-amber-400/40 text-amber-300 text-xs font-bold uppercase tracking-wider">
+                        <i className="fas fa-fire"></i> Próximamente • Armando Zonas
+                    </span>
+                    <h1 className="text-3xl sm:text-4xl font-extrabold text-white">{tournament.name}</h1>
+                    <p className="text-slate-300 text-sm">
+                        Fecha estimada de inicio: <strong className="text-white">{new Date(tournament.startDate).toLocaleDateString()}</strong>
+                    </p>
+
+                    <div className="glass-subcard border-amber-400/25 rounded-2xl p-5 max-w-md mx-auto space-y-3">
+                        <p className="text-2xl font-extrabold text-amber-300">
+                            {totalPairs} {totalPairs === 1 ? 'pareja confirmada' : 'parejas confirmadas'}
+                        </p>
+                        <div className="grid grid-cols-2 gap-2 text-xs text-slate-200 pt-2 border-t border-white/10">
+                            {(tournament.categories || []).map(cat => (
+                                <div key={cat._id} className="bg-slate-900/60 px-3 py-2 rounded-lg flex items-center justify-between">
+                                    <span className="font-semibold truncate">{cat.name}</span>
+                                    <span className="text-emerald-400 font-bold ml-2">{cat.pairsCount || 0}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <p className="text-xs sm:text-sm text-slate-400 max-w-lg mx-auto">
+                        Estamos terminando de organizar todas las categorías, zonas y horarios. Apenas se complete la carga, vas a poder consultar el fixture completo aquí mismo.
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-7xl mx-auto animate-fade-in">

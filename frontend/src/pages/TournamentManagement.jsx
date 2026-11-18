@@ -13,7 +13,7 @@ function AdminPage() {
     const fetchTournaments = async () => {
         try {
             setLoading(true);
-            const response = await axios.get('/tournaments');
+            const response = await axios.get('/tournaments/admin');
             setTournaments(response.data);
             setError(null);
         } catch (err) {
@@ -79,16 +79,44 @@ function AdminPage() {
                                     statusColor = hasOpenRegistrations ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800';
                                 }
 
+                                const visibility = t.visibility || 'publicado';
+                                const visibilityBadge = {
+                                    borrador: { text: 'Borrador (Oculto)', icon: 'fa-lock', cls: 'bg-gray-700 text-gray-200 border border-gray-500' },
+                                    expectativa: { text: 'Modo Expectativa', icon: 'fa-fire', cls: 'bg-amber-900/70 text-amber-300 border border-amber-500/50' },
+                                    publicado: { text: 'Publicado', icon: 'fa-globe', cls: 'bg-emerald-900/70 text-emerald-300 border border-emerald-500/50' }
+                                }[visibility];
+
+                                const totalPairs = typeof t.totalPairsCount === 'number'
+                                    ? t.totalPairsCount
+                                    : (t.categories || []).reduce((acc, cat) => {
+                                        const zCount = Array.isArray(cat.zones) ? cat.zones.reduce((s, z) => s + (z.teams?.length || 0), 0) : 0;
+                                        const rCount = Array.isArray(cat.registeredPlayers) ? cat.registeredPlayers.length : 0;
+                                        return acc + Math.max(zCount, rCount);
+                                    }, 0);
+
+                                const readyCats = (t.categories || []).filter(cat => Array.isArray(cat.zones) && cat.zones.length > 0 && cat.status !== 'Configuración Manual').length;
+
                                 return (
-                                    <div key={t._id} className="bg-gray-800 p-5 rounded-lg shadow-lg flex flex-col">
-                                        <h3 className="text-xl font-bold text-white">{t.name}</h3>
-                                        <p className="text-gray-400">{new Date(t.startDate).toLocaleDateString()}</p>
-                                        <span className={`inline-block mt-2 px-3 py-1 text-sm font-semibold rounded-full self-start ${statusColor}`}>
-                                            {statusText}
-                                        </span>
+                                    <div key={t._id} className="bg-gray-800 p-5 rounded-lg shadow-lg flex flex-col border border-gray-700/70">
+                                        <div className="flex items-start justify-between gap-2 mb-1">
+                                            <h3 className="text-xl font-bold text-white">{t.name}</h3>
+                                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 text-[11px] font-bold rounded-full flex-shrink-0 ${visibilityBadge.cls}`}>
+                                                <i className={`fas ${visibilityBadge.icon}`}></i>
+                                                {visibilityBadge.text}
+                                            </span>
+                                        </div>
+                                        <p className="text-gray-400 text-sm">{new Date(t.startDate).toLocaleDateString()}</p>
+                                        <div className="flex flex-wrap items-center gap-2 mt-2">
+                                            <span className={`inline-block px-3 py-1 text-xs font-semibold rounded-full ${statusColor}`}>
+                                                {statusText}
+                                            </span>
+                                            <span className="inline-block px-2.5 py-1 text-xs font-semibold rounded-full bg-gray-900 text-cyan-300 border border-gray-700">
+                                                {totalPairs} {totalPairs === 1 ? 'pareja' : 'parejas'} • {readyCats}/{(t.categories || []).length} cat. listas
+                                            </span>
+                                        </div>
                                         <div className="flex-grow mt-4"></div>
                                         <div className="flex gap-2">
-                                            <button onClick={() => handleViewDetails(t)} className="flex-1 bg-indigo-600 text-white py-2 rounded-md hover:bg-indigo-700 transition">
+                                            <button onClick={() => handleViewDetails(t)} className="flex-1 bg-indigo-600 text-white py-2 rounded-md hover:bg-indigo-700 transition font-semibold text-sm">
                                                 Gestionar
                                             </button>
                                             <button onClick={() => handleDeleteTournament(t._id, t.name)} className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition">
