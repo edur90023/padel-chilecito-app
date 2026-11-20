@@ -94,7 +94,7 @@ body {
     display: inline-flex;
     flex-direction: column;
     gap: 1.5rem;
-    width: 220px;
+    width: 245px;
     flex-shrink: 0;
     justify-content: space-around;
     vertical-align: top;
@@ -186,7 +186,8 @@ body {
     align-items: center;
     color: #d1d5db; /* text-gray-300 */
     border-bottom: 1px solid #4b5563;
-    font-size: 0.85rem; /* Tamaño de fuente ajustado */
+    font-size: 0.8rem;
+    white-space: normal;
 }
 
 .bracket-team:last-child {
@@ -200,10 +201,11 @@ body {
 
 .bracket-team .team-name {
     flex-grow: 1;
-    overflow: hidden;
-    text-overflow: ellipsis; /* Añadir puntos suspensivos si el texto es muy largo */
-    white-space: nowrap; /* Evitar que el nombre se rompa en varias líneas */
-    margin-right: 0.5rem; /* Espacio entre nombre y score */
+    min-width: 0;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    line-height: 1.25;
+    margin-right: 0.5rem;
 }
 
 .bracket-team .team-score {
@@ -221,7 +223,7 @@ body {
         gap: 2.5rem;
     }
     .bracket-round {
-        width: 250px;
+        width: 265px;
         gap: 3rem;
     }
     .bracket-round-title {
@@ -238,8 +240,8 @@ body {
         height: calc(100% + 3rem);
     }
     .bracket-team {
-        padding: 0.75rem;
-        font-size: 0.9rem;
+        padding: 0.65rem 0.75rem;
+        font-size: 0.875rem;
     }
     .bracket-team .team-name {
         margin-right: 1rem;

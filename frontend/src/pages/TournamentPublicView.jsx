@@ -23,11 +23,27 @@ const getMatchWinner = (match) => {
     return setsA >= Math.ceil(match.scoreA.length / 2) ? 'A' : 'B';
 };
 
+const getTeamPlayers = (team, fallback = 'A definir') => {
+    if (!team) return [fallback];
+    const rawName = (team.teamName || '').trim();
+    if (rawName.includes('/')) {
+        const parts = rawName.split('/').map(p => p.trim()).filter(Boolean);
+        if (parts.length > 0) return parts;
+    }
+    if (Array.isArray(team.players) && team.players.length > 0) {
+        const names = team.players.map(p => (p?.playerName || '').trim()).filter(Boolean);
+        if (names.length > 0) return names;
+    }
+    return [rawName || fallback];
+};
+
 const MatchDisplay = ({ match }) => {
     const [showDetails, setShowDetails] = useState(false);
     const winner = getMatchWinner(match);
-    const formatScore = (scoreArray) => scoreArray.join(' / ');
+    const formatScore = (scoreArray) => (Array.isArray(scoreArray) ? scoreArray.join(' / ') : '');
     const hasDetails = match.matchTime || match.matchPlace || match.matchMapUrl;
+    const playersA = getTeamPlayers(match.teamA, match.placeholderA || 'A definir');
+    const playersB = getTeamPlayers(match.teamB, match.placeholderB || 'A definir');
 
     return (
         <div className="relative group">
@@ -35,17 +51,29 @@ const MatchDisplay = ({ match }) => {
                 onClick={() => hasDetails && setShowDetails(!showDetails)}
                 className={`w-full glass-subcard p-3 rounded-xl flex flex-col gap-2 text-sm transition-all duration-300 ${hasDetails ? 'cursor-pointer hover:bg-white/[0.06] hover:border-emerald-400/35' : 'cursor-default'}`}
             >
-                <div className="flex items-center justify-between">
-                    <div className={`w-2/5 text-center ${winner === 'A' ? 'font-bold text-primary' : 'text-text-primary'}`}>
-                        <p className="truncate">{match.teamA.teamName}</p>
-                        <p className="text-xs text-gray-400 mt-1">{match.status === 'Finalizado' ? formatScore(match.scoreA) : ' '}</p>
+                <div className="flex items-center justify-between gap-2">
+                    <div className={`flex-1 min-w-0 text-center sm:text-left ${winner === 'A' ? 'font-bold text-primary' : 'text-text-primary'}`}>
+                        <div className="space-y-0.5">
+                            {playersA.map((player, idx) => (
+                                <p key={idx} className="text-[13px] sm:text-sm leading-snug break-words">{player}</p>
+                            ))}
+                        </div>
+                        {match.status === 'Finalizado' && (
+                            <p className="text-xs text-gray-400 mt-1">{formatScore(match.scoreA)}</p>
+                        )}
                     </div>
-                    <div className="w-1/5 text-center font-bold text-gray-500">
+                    <div className="flex-shrink-0 px-1.5 py-0.5 rounded-md bg-white/[0.06] border border-white/10 text-[10px] font-extrabold text-slate-400 tracking-wider">
                         VS
                     </div>
-                    <div className={`w-2/5 text-center ${winner === 'B' ? 'font-bold text-primary' : 'text-text-primary'}`}>
-                        <p className="truncate">{match.teamB.teamName}</p>
-                        <p className="text-xs text-gray-400 mt-1">{match.status === 'Finalizado' ? formatScore(match.scoreB) : ' '}</p>
+                    <div className={`flex-1 min-w-0 text-center sm:text-right ${winner === 'B' ? 'font-bold text-primary' : 'text-text-primary'}`}>
+                        <div className="space-y-0.5">
+                            {playersB.map((player, idx) => (
+                                <p key={idx} className="text-[13px] sm:text-sm leading-snug break-words">{player}</p>
+                            ))}
+                        </div>
+                        {match.status === 'Finalizado' && (
+                            <p className="text-xs text-gray-400 mt-1">{formatScore(match.scoreB)}</p>
+                        )}
                     </div>
                 </div>
 
@@ -211,22 +239,28 @@ const ZoneStandings = ({ zone }) => {
             <table className="w-full text-xs text-left">
                 <thead className="text-gray-400">
                     <tr>
-                        <th className="p-2">Equipo</th>
-                        <th className="p-2 text-center">Pts</th><th className="p-2 text-center">PJ</th>
-                        <th className="p-2 text-center">PG</th><th className="p-2 text-center">PP</th>
-                        <th className="p-2 text-center">DS</th><th className="p-2 text-center">DG</th>
+                        <th className="px-1.5 py-2 sm:p-2 min-w-[125px]">Equipo</th>
+                        <th className="px-1.5 py-2 sm:p-2 text-center">Pts</th><th className="px-1.5 py-2 sm:p-2 text-center">PJ</th>
+                        <th className="px-1.5 py-2 sm:p-2 text-center">PG</th><th className="px-1.5 py-2 sm:p-2 text-center">PP</th>
+                        <th className="px-1.5 py-2 sm:p-2 text-center">DS</th><th className="px-1.5 py-2 sm:p-2 text-center">DG</th>
                     </tr>
                 </thead>
                 <tbody>
                     {sortedStandings.map((team, index) => (
                         <tr key={index} className={`border-t border-gray-700 ${index < 2 ? 'text-primary' : 'text-gray-300'}`}>
-                            <td className="p-2 font-semibold">{team.teamName}</td>
-                            <td className="p-2 text-center font-bold">{team.points}</td>
-                            <td className="p-2 text-center">{team.played}</td>
-                            <td className="p-2 text-center">{team.won}</td>
-                            <td className="p-2 text-center">{team.lost}</td>
-                            <td className="p-2 text-center">{team.setsFor - team.setsAgainst}</td>
-                            <td className="p-2 text-center">{team.gamesFor - team.gamesAgainst}</td>
+                            <td className="px-1.5 py-2 sm:p-2 font-semibold min-w-[125px]">
+                                <div className="space-y-0.5 leading-tight">
+                                    {getTeamPlayers({ teamName: team.teamName }).map((player, pIdx) => (
+                                        <div key={pIdx} className="break-words">{player}</div>
+                                    ))}
+                                </div>
+                            </td>
+                            <td className="px-1.5 py-2 sm:p-2 text-center font-bold">{team.points}</td>
+                            <td className="px-1.5 py-2 sm:p-2 text-center">{team.played}</td>
+                            <td className="px-1.5 py-2 sm:p-2 text-center">{team.won}</td>
+                            <td className="px-1.5 py-2 sm:p-2 text-center">{team.lost}</td>
+                            <td className="px-1.5 py-2 sm:p-2 text-center">{team.setsFor - team.setsAgainst}</td>
+                            <td className="px-1.5 py-2 sm:p-2 text-center">{team.gamesFor - team.gamesAgainst}</td>
                         </tr>
                     ))}
                 </tbody>
@@ -240,6 +274,8 @@ const BracketMatchItem = ({ match }) => {
     const winner = getMatchWinner(match);
     const hasDetails = Boolean(match.matchTime || match.matchPlace || match.matchMapUrl);
     const mapsLink = getGoogleMapsUrl(match.matchMapUrl, match.matchPlace);
+    const playersA = getTeamPlayers(match.teamA, match.placeholderA || 'A definir');
+    const playersB = getTeamPlayers(match.teamB, match.placeholderB || 'A definir');
 
     return (
         <div className="relative">
@@ -248,11 +284,19 @@ const BracketMatchItem = ({ match }) => {
                 onClick={() => hasDetails && setShowDetails(!showDetails)}
             >
                 <div className={`bracket-team ${winner === 'A' ? 'winner' : ''}`}>
-                    <span className="team-name" title={match.teamA?.teamName}>{match.teamA?.teamName || 'A definir'}</span>
+                    <span className="team-name space-y-0.5" title={match.teamA?.teamName || match.placeholderA}>
+                        {playersA.map((player, idx) => (
+                            <span key={idx} className="block leading-tight break-words">{player}</span>
+                        ))}
+                    </span>
                     <span className="team-score">{match.status === 'Finalizado' ? match.scoreA?.join('-') : ''}</span>
                 </div>
                 <div className={`bracket-team ${winner === 'B' ? 'winner' : ''}`}>
-                    <span className="team-name" title={match.teamB?.teamName}>{match.teamB?.teamName || 'A definir'}</span>
+                    <span className="team-name space-y-0.5" title={match.teamB?.teamName || match.placeholderB}>
+                        {playersB.map((player, idx) => (
+                            <span key={idx} className="block leading-tight break-words">{player}</span>
+                        ))}
+                    </span>
                     <span className="team-score">{match.status === 'Finalizado' ? match.scoreB?.join('-') : ''}</span>
                 </div>
 
@@ -298,7 +342,7 @@ const BracketMatchItem = ({ match }) => {
                     onClick={(e) => { e.stopPropagation(); setShowDetails(false); }}
                 >
                     <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1 font-semibold">Detalles del Partido</p>
-                    <p className="text-sm font-bold text-white mb-2">{match.teamA?.teamName} vs {match.teamB?.teamName}</p>
+                    <p className="text-sm font-bold text-white mb-2">{match.teamA?.teamName || match.placeholderA || 'A definir'} vs {match.teamB?.teamName || match.placeholderB || 'A definir'}</p>
                     {match.matchPlace && (
                         <p className="font-bold text-emerald-400 text-sm flex items-center justify-center gap-1.5">
                             <i className="fas fa-map-pin text-red-400 text-xs"></i>
@@ -336,7 +380,7 @@ const BracketMatchItem = ({ match }) => {
 };
 
 const PlayoffBracket = ({ rounds }) => {
-    const [viewMode, setViewMode] = useState('bracket');
+    const [viewMode, setViewMode] = useState(() => (typeof window !== 'undefined' && window.innerWidth < 640 ? 'list' : 'bracket'));
 
     if (!rounds || rounds.length === 0) {
         return <p className="text-gray-500">La llave de playoffs aún no ha sido generada.</p>;
@@ -612,25 +656,30 @@ const PlayerMatchFinder = ({ tournament, onSelectCategory }) => {
                                         </div>
 
                                         {/* Equipos */}
-                                        <div className="space-y-1.5 py-1">
-                                            <div className={`flex items-center justify-between text-sm ${isTeamA ? 'text-emerald-300 font-bold' : 'text-gray-300'}`}>
-                                                <span className="truncate flex items-center gap-1.5">
-                                                    {isTeamA && <i className="fas fa-arrow-right text-[10px] text-emerald-400"></i>}
-                                                    {match.teamA?.teamName}
-                                                </span>
+                                        <div className="flex items-center justify-between gap-2 py-1">
+                                            <div className={`flex-1 min-w-0 text-xs sm:text-sm ${isTeamA ? 'text-emerald-300 font-bold' : 'text-gray-300'}`}>
+                                                <div className="space-y-0.5">
+                                                    {getTeamPlayers(match.teamA, match.placeholderA || 'A definir').map((player, pIdx) => (
+                                                        <p key={pIdx} className="leading-snug break-words">{player}</p>
+                                                    ))}
+                                                </div>
                                                 {isFinished && (
-                                                    <span className="text-xs font-mono font-bold text-gray-300 ml-2">
+                                                    <span className="inline-block text-xs font-mono font-bold text-gray-300 mt-1">
                                                         {match.scoreA?.join('-')}
                                                     </span>
                                                 )}
                                             </div>
-                                            <div className={`flex items-center justify-between text-sm ${!isTeamA ? 'text-emerald-300 font-bold' : 'text-gray-300'}`}>
-                                                <span className="truncate flex items-center gap-1.5">
-                                                    {!isTeamA && <i className="fas fa-arrow-right text-[10px] text-emerald-400"></i>}
-                                                    {match.teamB?.teamName}
-                                                </span>
+                                            <span className="flex-shrink-0 px-1.5 py-0.5 rounded bg-white/[0.06] border border-white/10 text-[10px] font-extrabold text-slate-400">
+                                                VS
+                                            </span>
+                                            <div className={`flex-1 min-w-0 text-right text-xs sm:text-sm ${!isTeamA ? 'text-emerald-300 font-bold' : 'text-gray-300'}`}>
+                                                <div className="space-y-0.5">
+                                                    {getTeamPlayers(match.teamB, match.placeholderB || 'A definir').map((player, pIdx) => (
+                                                        <p key={pIdx} className="leading-snug break-words">{player}</p>
+                                                    ))}
+                                                </div>
                                                 {isFinished && (
-                                                    <span className="text-xs font-mono font-bold text-gray-300 ml-2">
+                                                    <span className="inline-block text-xs font-mono font-bold text-gray-300 mt-1">
                                                         {match.scoreB?.join('-')}
                                                     </span>
                                                 )}

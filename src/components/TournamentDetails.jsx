@@ -679,6 +679,15 @@ function MatchEditor({ tournamentId, categoryId, match, onAction, userRole }) {
     const [place, setPlace] = useState(match.matchPlace || '');
     const [mapUrl, setMapUrl] = useState(match.matchMapUrl || '');
     const [status, setStatus] = useState(match.status || 'Pendiente');
+    const [whatsappMode, setWhatsappMode] = useState(() => {
+        try {
+            return localStorage.getItem('red_padel_wa_mode') || 'app';
+        } catch {
+            return 'app';
+        }
+    });
+    const [copiedMsg, setCopiedMsg] = useState(false);
+    const [notifyNotice, setNotifyNotice] = useState('');
 
     useEffect(() => {
         setTeamAName(match.teamA?.teamName || match.placeholderA || '');
@@ -753,22 +762,64 @@ function MatchEditor({ tournamentId, categoryId, match, onAction, userRole }) {
         setIsEditing(false);
     };
 
+    const handleWhatsappModeChange = (mode) => {
+        setWhatsappMode(mode);
+        try {
+            localStorage.setItem('red_padel_wa_mode', mode);
+        } catch {
+            // ignorar si localStorage no está disponible
+        }
+    };
+
+    const buildMatchNotificationText = (playerName, opponentName) => {
+        const mapsLink = (place || mapUrl) ? getGoogleMapsUrl(mapUrl, place) : '';
+        const greeting = playerName ? `¡Hola ${playerName}!` : '¡Aviso de Partido!';
+        return `${greeting} Tu próximo partido del torneo ha sido programado:\n\n*Rivales:* ${opponentName}\n*Lugar:* ${place || 'Cancha a confirmar'}\n*Fecha/Hora:* ${time || 'A confirmar'}${mapsLink ? `\n*Ubicación:* ${mapsLink}` : ''}\n\n¡Mucha suerte!`;
+    };
+
     const handleNotifyPlayer = (player, team, opponents) => {
         if (!player?.phoneNumber) {
-            alert(`Error: El jugador ${player?.playerName || ''} no tiene un número de teléfono registrado.`);
+            setNotifyNotice(`El jugador ${player?.playerName || ''} no tiene un número de teléfono registrado.`);
             return;
         }
+        setNotifyNotice('');
 
         const opponentName = opponents?.teamName || 'Rival';
-        const message = `¡Hola ${player.playerName}! Tu próximo partido del torneo ha sido programado:\n\n*Rivales:* ${opponentName}\n*Lugar:* ${place || 'Cancha a confirmar'}\n*Fecha/Hora:* ${time || 'A confirmar'}\n\n¡Mucha suerte!`;
+        const message = buildMatchNotificationText(player.playerName, opponentName);
 
         let cleanPhone = player.phoneNumber.replace(/[^0-9]/g, '');
         if (cleanPhone.length > 8 && !cleanPhone.startsWith('54')) {
             cleanPhone = `54${cleanPhone}`;
         }
 
-        const whatsappUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(message)}`;
-        window.open(whatsappUrl, '_blank');
+        const encodedMsg = encodeURIComponent(message);
+        if (whatsappMode === 'app') {
+            window.location.href = `whatsapp://send?phone=${cleanPhone}&text=${encodedMsg}`;
+        } else {
+            window.open(`https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodedMsg}`, 'red_padel_whatsapp');
+        }
+    };
+
+    const handleCopyNotification = async () => {
+        const mapsLink = (place || mapUrl) ? getGoogleMapsUrl(mapUrl, place) : '';
+        const summary = `Partido programado:\n*Parejas:* ${teamAName || 'Pareja A'} vs ${teamBName || 'Pareja B'}\n*Lugar:* ${place || 'Cancha a confirmar'}\n*Fecha/Hora:* ${time || 'A confirmar'}${mapsLink ? `\n*Ubicación:* ${mapsLink}` : ''}`;
+        try {
+            if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(summary);
+            } else {
+                const ta = document.createElement('textarea');
+                ta.value = summary;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+            }
+            setCopiedMsg(true);
+            setNotifyNotice('');
+            setTimeout(() => setCopiedMsg(false), 2000);
+        } catch {
+            setNotifyNotice('No se pudo copiar automáticamente al portapapeles.');
+        }
     };
 
     const canNotify = time.trim() !== '' && place.trim() !== '';
@@ -984,21 +1035,55 @@ function MatchEditor({ tournamentId, categoryId, match, onAction, userRole }) {
             </div>
 
             {userRole === 'admin' && match.teamA && match.teamB && (
-                <div className="pt-4 mt-4 border-t border-gray-700 space-y-4">
-                    <div>
-                        <p className="font-semibold text-white text-sm mb-2">Notificar a jugadores por WhatsApp:</p>
-                        <div className="flex flex-wrap gap-2">
-                            {match.teamA.players?.map(player => (
-                                <button key={player._id || player.playerName} onClick={() => handleNotifyPlayer(player, match.teamA, match.teamB)} disabled={!canNotify} className="bg-blue-500 text-white font-semibold py-1.5 px-3 rounded-lg hover:bg-blue-600 transition text-xs flex items-center disabled:bg-gray-600">
-                                    <i className="fab fa-whatsapp mr-1.5"></i> {player.playerName}
-                                </button>
-                            ))}
-                            {match.teamB.players?.map(player => (
-                                <button key={player._id || player.playerName} onClick={() => handleNotifyPlayer(player, match.teamB, match.teamA)} disabled={!canNotify} className="bg-blue-500 text-white font-semibold py-1.5 px-3 rounded-lg hover:bg-blue-600 transition text-xs flex items-center disabled:bg-gray-600">
-                                    <i className="fab fa-whatsapp mr-1.5"></i> {player.playerName}
-                                </button>
-                            ))}
+                <div className="pt-4 mt-4 border-t border-gray-700 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <p className="font-semibold text-white text-sm">Notificar a jugadores por WhatsApp:</p>
+                        <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                            <button
+                                type="button"
+                                onClick={() => handleWhatsappModeChange('app')}
+                                className={`px-2.5 py-1 rounded-md font-semibold transition border ${whatsappMode === 'app' ? 'bg-emerald-600 border-emerald-400 text-white' : 'bg-gray-800 border-gray-700 text-gray-300 hover:text-white'}`}
+                                title="Abre la aplicación de WhatsApp instalada en PC o celular sin abrir nuevas pestañas"
+                            >
+                                App WhatsApp (Rápido)
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleWhatsappModeChange('web')}
+                                className={`px-2.5 py-1 rounded-md font-semibold transition border ${whatsappMode === 'web' ? 'bg-blue-600 border-blue-400 text-white' : 'bg-gray-800 border-gray-700 text-gray-300 hover:text-white'}`}
+                                title="Reutiliza siempre la misma pestaña de WhatsApp Web"
+                            >
+                                WhatsApp Web (1 pestaña)
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleCopyNotification}
+                                disabled={!time.trim() && !place.trim()}
+                                className="px-2.5 py-1 rounded-md font-semibold bg-gray-700 hover:bg-gray-600 text-gray-100 border border-gray-600 transition disabled:opacity-50"
+                                title="Copiar texto del horario y ubicación para pegar rápido"
+                            >
+                                <i className={`fas ${copiedMsg ? 'fa-check text-emerald-400' : 'fa-copy'} mr-1`}></i>
+                                {copiedMsg ? '¡Copiado!' : 'Copiar aviso'}
+                            </button>
                         </div>
+                    </div>
+                    {!canNotify && (
+                        <p className="text-[11px] text-amber-300/90">Completa Hora y Lugar arriba para habilitar el envío directo por WhatsApp.</p>
+                    )}
+                    {notifyNotice && (
+                        <p className="text-[11px] text-red-400">{notifyNotice}</p>
+                    )}
+                    <div className="flex flex-wrap gap-2">
+                        {match.teamA.players?.map(player => (
+                            <button type="button" key={player._id || player.playerName} onClick={() => handleNotifyPlayer(player, match.teamA, match.teamB)} disabled={!canNotify} className="bg-emerald-600 text-white font-semibold py-1.5 px-3 rounded-lg hover:bg-emerald-500 transition text-xs flex items-center disabled:bg-gray-600 disabled:opacity-60">
+                                <i className="fab fa-whatsapp mr-1.5"></i> {player.playerName}
+                            </button>
+                        ))}
+                        {match.teamB.players?.map(player => (
+                            <button type="button" key={player._id || player.playerName} onClick={() => handleNotifyPlayer(player, match.teamB, match.teamA)} disabled={!canNotify} className="bg-blue-600 text-white font-semibold py-1.5 px-3 rounded-lg hover:bg-blue-500 transition text-xs flex items-center disabled:bg-gray-600 disabled:opacity-60">
+                                <i className="fab fa-whatsapp mr-1.5"></i> {player.playerName}
+                            </button>
+                        ))}
                     </div>
                 </div>
             )}
