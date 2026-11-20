@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
+import CourtScheduleView from '../components/CourtScheduleView';
 
 // --- FUNCIONES Y COMPONENTES HELPER ---
 
@@ -735,6 +736,7 @@ function TournamentPublicView() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [selectedCategory, setSelectedCategory] = useState(null);
+    const [activeTab, setActiveTab] = useState('category');
 
     useEffect(() => {
         const fetchTournament = async () => {
@@ -824,21 +826,47 @@ function TournamentPublicView() {
             </div>
 
             {/* Buscador de partidos para jugadores */}
-            <PlayerMatchFinder tournament={tournament} onSelectCategory={setSelectedCategory} />
+            <PlayerMatchFinder
+                tournament={tournament}
+                onSelectCategory={(cat) => {
+                    setSelectedCategory(cat);
+                    setActiveTab('category');
+                }}
+            />
 
-            <div className="flex flex-wrap border-b border-white/10 mb-6">
-                {tournament.categories.map(category => (
-                    <button
-                        key={category._id}
-                        onClick={() => setSelectedCategory(category)}
-                        className={`px-4 py-3 font-semibold text-sm transition-colors ${selectedCategory?._id === category._id ? 'border-b-2 border-emerald-400 text-white' : 'text-slate-400 hover:text-white'}`}
-                    >
-                        {category.name}
-                    </button>
-                ))}
+            <div className="flex flex-wrap items-center justify-between border-b border-white/10 mb-6 gap-2">
+                <div className="flex flex-wrap">
+                    {tournament.categories.map(category => (
+                        <button
+                            key={category._id}
+                            onClick={() => {
+                                setSelectedCategory(category);
+                                setActiveTab('category');
+                            }}
+                            className={`px-4 py-3 font-semibold text-sm transition-colors ${activeTab === 'category' && selectedCategory?._id === category._id ? 'border-b-2 border-emerald-400 text-white' : 'text-slate-400 hover:text-white'}`}
+                        >
+                            {category.name}
+                        </button>
+                    ))}
+                </div>
+
+                <button
+                    type="button"
+                    onClick={() => setActiveTab('schedule')}
+                    className={`px-4 py-2.5 my-1 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2 border ${
+                        activeTab === 'schedule'
+                            ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-lg shadow-emerald-500/20'
+                            : 'bg-white/[0.05] text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/15'
+                    }`}
+                >
+                    <i className="fas fa-calendar-alt"></i>
+                    <span>Cronograma por Canchas</span>
+                </button>
             </div>
 
-            {selectedCategory && (
+            {activeTab === 'schedule' ? (
+                <CourtScheduleView tournament={tournament} isAdminView={false} />
+            ) : selectedCategory && (
                 <div key={selectedCategory._id}>
                     <WinnersDisplay finishers={selectedCategory.finishers} />
                     <PlayoffBracket rounds={selectedCategory.playoffRounds} />

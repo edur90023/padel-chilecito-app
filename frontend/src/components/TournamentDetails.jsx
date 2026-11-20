@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import axios from 'axios';
 import ManualSetupManager from './ManualSetupManager';
 import { useAuth } from '../context/AuthContext';
+import CourtScheduleView from './CourtScheduleView';
 
 export const getGoogleMapsUrl = (mapUrl, placeName) => {
     if (mapUrl && (mapUrl.startsWith('http://') || mapUrl.startsWith('https://'))) {
@@ -1602,6 +1603,7 @@ function TournamentDetails({ tournament, onBack }) {
     const [error, setError] = useState(null);
     const [actionSuccess, setActionSuccess] = useState('');
     const [selectedCategoryId, setSelectedCategoryId] = useState(tournament.categories[0]?._id || null);
+    const [activeTab, setActiveTab] = useState('category');
     const [operatorLink, setOperatorLink] = useState('');
     const [linkLoading, setLinkLoading] = useState(false);
 
@@ -1817,29 +1819,58 @@ function TournamentDetails({ tournament, onBack }) {
                 {actionSuccess && <p className="bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 p-3 rounded-lg mb-4 text-sm font-medium flex items-center gap-2"><i className="fas fa-check-circle"></i>{actionSuccess}</p>}
                 {error && <p className="bg-red-900/50 text-red-400 p-3 rounded-lg mb-4">{error}</p>}
                 
-                <div className="flex flex-wrap border-b border-gray-700 mb-6">
-                    {currentTournament.categories.map(category => (
-                        <button
-                            key={category._id}
-                            onClick={() => setSelectedCategoryId(category._id)}
-                            className={`px-4 py-3 font-medium text-sm transition-colors ${selectedCategoryId === category._id ? 'border-b-2 border-green-500 text-white' : 'text-gray-400 hover:text-white'}`}
-                        >
-                            {category.name}
-                        </button>
-                    ))}
+                <div className="flex flex-wrap items-center justify-between border-b border-gray-700 mb-6 gap-2">
+                    <div className="flex flex-wrap">
+                        {currentTournament.categories.map(category => (
+                            <button
+                                key={category._id}
+                                onClick={() => {
+                                    setSelectedCategoryId(category._id);
+                                    setActiveTab('category');
+                                }}
+                                className={`px-4 py-3 font-medium text-sm transition-colors ${activeTab === 'category' && selectedCategoryId === category._id ? 'border-b-2 border-green-500 text-white' : 'text-gray-400 hover:text-white'}`}
+                            >
+                                {category.name}
+                            </button>
+                        ))}
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('schedule')}
+                        className={`px-4 py-2 my-1 rounded-lg font-bold text-xs sm:text-sm transition flex items-center gap-2 border ${
+                            activeTab === 'schedule'
+                                ? 'bg-emerald-600 text-white border-emerald-400 shadow'
+                                : 'bg-gray-900/70 text-emerald-300 border-emerald-500/40 hover:bg-emerald-950/60'
+                        }`}
+                    >
+                        <i className="fas fa-calendar-alt"></i>
+                        <span>Cronograma por Canchas</span>
+                    </button>
                 </div>
 
-                {currentTournament.categories
-                    .filter(category => category._id === selectedCategoryId)
-                    .map(category => (
-                        <CategoryManager 
-                            key={category._id}
-                            category={category}
-                            tournament={currentTournament}
-                            onAction={handleAction}
-                            userRole={userRole}
-                        />
-                ))}
+                {activeTab === 'schedule' ? (
+                    <CourtScheduleView
+                        tournament={currentTournament}
+                        isAdminView={true}
+                        onSelectCategory={(catId) => {
+                            setSelectedCategoryId(catId);
+                            setActiveTab('category');
+                        }}
+                    />
+                ) : (
+                    currentTournament.categories
+                        .filter(category => category._id === selectedCategoryId)
+                        .map(category => (
+                            <CategoryManager 
+                                key={category._id}
+                                category={category}
+                                tournament={currentTournament}
+                                onAction={handleAction}
+                                userRole={userRole}
+                            />
+                    ))
+                )}
             </div>
         </div>
     );
