@@ -34,8 +34,19 @@ function Gallery() {
                             <h3 className="text-2xl font-bold text-emerald-400 mb-4">{album.albumName}</h3>
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                                 {album.photos.map(photo => (
-                                    <div key={photo._id} className="aspect-w-1 aspect-h-1 cursor-pointer group glass-card p-1.5 rounded-2xl overflow-hidden" onClick={() => setSelectedPhotoUrl(photo.url)}>
-                                        <img src={photo.url} alt="Foto de la galería" className="w-full h-full object-cover rounded-xl transition-transform duration-300 group-hover:scale-105" />
+                                    <div
+                                        key={photo._id}
+                                        className="cursor-pointer group glass-card p-1.5 rounded-2xl overflow-hidden"
+                                        onClick={() => setSelectedPhotoUrl(photo.url)}
+                                    >
+                                        <div className="aspect-square w-full overflow-hidden rounded-xl bg-slate-900/60">
+                                            <img
+                                                src={photo.url}
+                                                alt="Foto de la galería"
+                                                loading="lazy"
+                                                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                            />
+                                        </div>
                                     </div>
                                 ))}
                             </div>
