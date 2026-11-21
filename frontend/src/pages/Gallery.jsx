@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import axios from 'axios';
+import axios, { API_BASE_URL } from '../api/axiosConfig';
+
+const resolveImageUrl = (url) => {
+    if (!url) return url;
+    if (url.startsWith('/uploads/') && API_BASE_URL) {
+        return `${API_BASE_URL}${url}`;
+    }
+    return url;
+};
 
 function Gallery() {
     const [albums, setAlbums] = useState([]);
@@ -111,7 +119,7 @@ function Gallery() {
                                     >
                                         <div className="aspect-square w-full overflow-hidden rounded-xl bg-slate-900/60">
                                             <img
-                                                src={photo.url}
+                                                src={resolveImageUrl(photo.url)}
                                                 alt="Foto de la galería"
                                                 loading="lazy"
                                                 className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
@@ -179,7 +187,7 @@ function Gallery() {
                         )}
 
                         <img
-                            src={activePhoto.url}
+                            src={resolveImageUrl(activePhoto.url)}
                             alt={`Foto ${lightbox.index + 1} de ${activeAlbum.albumName}`}
                             className={`max-w-full max-h-[76vh] object-contain rounded-2xl shadow-2xl border border-white/15 transition-transform duration-150 ease-out ${
                                 dragOffset > 20 ? 'translate-x-4' : dragOffset < -20 ? '-translate-x-4' : 'translate-x-0'

@@ -20,12 +20,6 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// --- FUNCIÓN DE RESCATE DE ACCESO ---
-app.get('/keep-alive', (req, res) => {
-  console.log('Ping recibido: Manteniendo el server despierto');
-  res.status(200).send('OK');
-});
-
 // --- CONFIGURACIÓN DE CORS ---
 app.use(cors({
     origin: true,
@@ -33,6 +27,12 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// --- FUNCIÓN DE RESCATE DE ACCESO ---
+app.get('/keep-alive', (req, res) => {
+  console.log('Ping recibido: Manteniendo el server despierto');
+  res.status(200).send('OK');
+});
 
 // --- CONEXIÓN A BASE DE DATOS Y ARRANQUE ---
 mongoose.set('bufferCommands', false);
@@ -60,7 +60,7 @@ app.use('/api/professors', require('./routes/professors'));
 app.use('/api/complexes', require('./routes/complexes'));
 app.use('/api/settings', require('./routes/settings'));
 
-// Middleware de manejo de errores de base de datos
+// Middleware de manejo de errores de base de datos y subidas
 app.use((err, req, res, next) => {
   if (err.name === 'MongooseError' || err.name === 'MongoNetworkError' || (err.message && err.message.includes('buffering timed out'))) {
     console.warn('[AI Studio] Base de datos desconectada — respondiendo con fallback');
@@ -69,7 +69,9 @@ app.use((err, req, res, next) => {
     }
     return res.status(503).json({ error: 'Servicio temporalmente no disponible (base de datos desconectada)' });
   }
-  next(err);
+  console.error('[Server Error]', err);
+  const status = err.status || err.http_code || (err.name === 'MulterError' ? 400 : 500);
+  res.status(status).json({ error: err.message || 'Error interno del servidor' });
 });
 
 app.listen(PORT, () => {

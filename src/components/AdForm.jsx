@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { compressImageFile } from '../utils/imageCompression';
 
 function AdForm({ onAdCreated, onClose, initialData = null }) {
     const [formData, setFormData] = useState({
@@ -51,7 +52,8 @@ function AdForm({ onAdCreated, onClose, initialData = null }) {
             data.append('imageUrl', formData.imageUrl);
         }
         if (formData.imageFile) {
-            data.append('image', formData.imageFile);
+            const compressed = await compressImageFile(formData.imageFile, { maxDimension: 1280, quality: 0.78 });
+            data.append('image', compressed);
         }
 
         if (!formData.imageUrl && !formData.imageFile && !initialData?.imageUrl) {

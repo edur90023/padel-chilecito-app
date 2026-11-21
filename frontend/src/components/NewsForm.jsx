@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { compressImageFile } from '../utils/imageCompression';
 
 function NewsForm({ onNewsCreated, onClose, initialData = null }) {
     const { token } = useAuth(); // Token se obtiene del contexto, no es necesario pasarlo a Axios manualmente
@@ -49,7 +50,8 @@ function NewsForm({ onNewsCreated, onClose, initialData = null }) {
             data.append('imageUrl', formData.imageUrl);
         }
         if (formData.imageFile) {
-            data.append('image', formData.imageFile);
+            const compressed = await compressImageFile(formData.imageFile, { maxDimension: 1280, quality: 0.78 });
+            data.append('image', compressed);
         }
 
         try {

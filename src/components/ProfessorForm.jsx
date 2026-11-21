@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from '../api/axiosConfig';
+import { compressImageFile } from '../utils/imageCompression';
 
 const ProfessorForm = ({ professor, onSave, onCancel }) => {
     const [formData, setFormData] = useState({
@@ -56,20 +57,15 @@ const ProfessorForm = ({ professor, onSave, onCancel }) => {
         data.append('availability', JSON.stringify([]));
 
         if (photoFile) {
-            data.append('photo', photoFile);
+            const compressed = await compressImageFile(photoFile, { maxDimension: 1000, quality: 0.78 });
+            data.append('photo', compressed);
         }
-
-        const config = {
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            }
-        };
 
         try {
             if (professor) {
-                await axios.put(`/professors/${professor._id}`, data, config);
+                await axios.put(`/professors/${professor._id}`, data);
             } else {
-                await axios.post('/professors', data, config);
+                await axios.post('/professors', data);
             }
             onSave();
             setPhotoFile(null); // Reset file input after successful submission

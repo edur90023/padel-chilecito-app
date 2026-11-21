@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios, { API_BASE_URL } from '../api/axiosConfig';
+import { compressImageFile } from '../utils/imageCompression';
 
 const resolveImageUrl = (url) => {
     if (!url) return url;
@@ -211,11 +212,13 @@ export default function ComplexManagement() {
             data.append('isActive', formData.isActive);
 
             if (thumbnailFile) {
-                data.append('thumbnail', thumbnailFile);
+                const compressedThumb = await compressImageFile(thumbnailFile, { maxDimension: 1280, quality: 0.78 });
+                data.append('thumbnail', compressedThumb);
             }
-            photoFiles.forEach(item => {
-                data.append('photoFiles', item.file);
-            });
+            for (const item of photoFiles) {
+                const compressedPhoto = await compressImageFile(item.file, { maxDimension: 1280, quality: 0.78 });
+                data.append('photoFiles', compressedPhoto);
+            }
 
             if (editingComplex) {
                 await axios.put(`/complexes/${editingComplex._id}`, data);

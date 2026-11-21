@@ -60,7 +60,7 @@ app.use('/api/professors', require('./server/routes/professors'));
 app.use('/api/complexes', require('./server/routes/complexes'));
 app.use('/api/settings', require('./server/routes/settings'));
 
-// Middleware de manejo de errores de base de datos
+// Middleware de manejo de errores de base de datos y subidas
 app.use((err, req, res, next) => {
   if (err.name === 'MongooseError' || err.name === 'MongoNetworkError' || (err.message && err.message.includes('buffering timed out'))) {
     console.warn('[AI Studio] Base de datos desconectada — respondiendo con fallback');
@@ -69,7 +69,9 @@ app.use((err, req, res, next) => {
     }
     return res.status(503).json({ error: 'Servicio temporalmente no disponible (base de datos desconectada)' });
   }
-  next(err);
+  console.error('[Server Error]', err);
+  const status = err.status || err.http_code || (err.name === 'MulterError' ? 400 : 500);
+  res.status(status).json({ error: err.message || 'Error interno del servidor' });
 });
 
 // Frontend Integration (Vite in Dev, Static in Prod)

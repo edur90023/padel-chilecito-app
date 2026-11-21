@@ -60,25 +60,37 @@ router.post('/albums', isAuthenticated, async (req, res) => {
 });
 
 // POST /api/gallery/:albumId/photos - Subir una o varias fotos a un álbum
-router.post('/:albumId/photos', isAuthenticated, upload.array('photos', 10), async (req, res) => {
+router.post('/:albumId/photos', isAuthenticated, upload.array('photos', 30), async (req, res) => {
     try {
         if (!req.files || req.files.length === 0) {
             return res.status(400).json({ error: 'No se ha subido ningún archivo.' });
         }
-        
+
+        const mongoose = require('mongoose');
+        if (!mongoose.Types.ObjectId.isValid(req.params.albumId)) {
+            return res.status(400).json({ error: 'ID de álbum inválido.' });
+        }
+
         const album = await Gallery.findById(req.params.albumId);
         if (!album) {
             return res.status(404).json({ error: 'Álbum no encontrado.' });
         }
-        
-        // ¡CAMBIO! Ahora guardamos la URL segura que nos da Cloudinary
-        const newPhotos = req.files.map(file => ({ url: file.path }));
+
+        const newPhotos = req.files
+            .map(file => ({ url: file.path || file.secure_url || file.url }))
+            .filter(p => Boolean(p.url));
+
+        if (newPhotos.length === 0) {
+            return res.status(500).json({ error: 'No se pudo obtener la URL de las fotos subidas.' });
+        }
+
         album.photos.push(...newPhotos);
         await album.save();
 
         res.status(201).json({ message: 'Fotos subidas exitosamente.', album });
     } catch (error) {
-        res.status(500).json({ error: 'Error al subir las fotos.' });
+        console.error('Error al subir fotos a la galería:', error);
+        res.status(500).json({ error: error.message || 'Error al subir las fotos.' });
     }
 });
 
