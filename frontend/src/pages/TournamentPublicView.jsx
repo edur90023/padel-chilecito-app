@@ -413,6 +413,36 @@ const getShortRoundLabel = (roundName) => {
     return roundName;
 };
 
+const orderNextRoundSlots = (byeSlots = [], matchSlots = []) => {
+    if (byeSlots.length === 0) return matchSlots;
+    if (byeSlots.length === 1 && matchSlots.length === 1) {
+        return [byeSlots[0], matchSlots[0]];
+    }
+    if (byeSlots.length === 2 && matchSlots.length === 2) {
+        return [byeSlots[0], matchSlots[0], matchSlots[1], byeSlots[1]];
+    }
+
+    const total = byeSlots.length + matchSlots.length;
+    const isPowerOfTwo = total >= 2 && (total & (total - 1)) === 0;
+    if (isPowerOfTwo) {
+        const orderedSeeds = [...byeSlots, ...matchSlots];
+        let indices = [0, 1];
+        while (indices.length < total) {
+            const nextSize = indices.length * 2;
+            indices = indices.flatMap(idx => [idx, nextSize - 1 - idx]);
+        }
+        return indices.map(idx => orderedSeeds[idx]).filter(Boolean);
+    }
+
+    const interleaved = [];
+    const maxLen = Math.max(byeSlots.length, matchSlots.length);
+    for (let i = 0; i < maxLen; i++) {
+        if (byeSlots[i]) interleaved.push(byeSlots[i]);
+        if (matchSlots[i]) interleaved.push(matchSlots[i]);
+    }
+    return interleaved;
+};
+
 const buildDisplayBracketRounds = (rounds) => {
     if (!Array.isArray(rounds) || rounds.length === 0) return [];
 
@@ -437,15 +467,13 @@ const buildDisplayBracketRounds = (rounds) => {
             };
         });
 
-        const byeSlots = lastRound.roundName === 'Semifinales'
-            ? []
-            : (lastRound.teamsWithByes || []).filter(Boolean).map(t => ({
-                team: t,
-                placeholder: '',
-                isBye: true
-            }));
+        const byeSlots = (lastRound.teamsWithByes || []).filter(Boolean).map(t => ({
+            team: t,
+            placeholder: '',
+            isBye: true
+        }));
 
-        const nextSlots = [...byeSlots, ...matchSlots];
+        const nextSlots = orderNextRoundSlots(byeSlots, matchSlots);
         if (nextSlots.length < 2) break;
 
         const nextRoundName = getProjectedNextRoundName(lastRound.roundName, nextSlots.length);

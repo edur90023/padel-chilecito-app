@@ -1580,6 +1580,16 @@ function CategoryManager({ category, tournament, onAction, userRole }) {
                             {category.playoffRounds.map((round, index) => (
                                 <div key={index} className="mb-6 p-4 border border-gray-700 rounded-lg bg-gray-900/20">
                                     <h5 className="text-lg font-semibold text-primary mb-4">{round.roundName}</h5>
+                                    {Array.isArray(round.teamsWithByes) && round.teamsWithByes.length > 0 && (
+                                        <div className="mb-4 p-3 rounded-lg bg-emerald-950/40 border border-emerald-500/35 text-xs text-emerald-200 flex flex-wrap items-center gap-2">
+                                            <span className="font-bold text-emerald-300">Pasan directo (BYE):</span>
+                                            {round.teamsWithByes.map((byeTeam, bIdx) => (
+                                                <span key={byeTeam?._id || bIdx} className="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-400/40 text-white font-semibold">
+                                                    {byeTeam?.teamName}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
                                     <div className="space-y-2">
                                         {round.matches.map(match => (
                                             <MatchEditor key={match._id} tournamentId={tournament._id} categoryId={category._id} match={match} onAction={onAction} userRole={userRole} />

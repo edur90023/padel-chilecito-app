@@ -465,6 +465,49 @@ class TournamentManager {
         }];
     }
 
+    _orderNextRoundParticipants(teamsWithByes = [], winners = []) {
+        const byes = (teamsWithByes || []).filter(Boolean);
+        const matchWinners = (winners || []).filter(Boolean);
+
+        if (byes.length === 0) {
+            return matchWinners;
+        }
+
+        // Caso especial 1 zona de 3 parejas: Semifinal (1 BYE + 1 ganador) -> Final
+        if (byes.length === 1 && matchWinners.length === 1) {
+            return [byes[0], matchWinners[0]];
+        }
+
+        // Caso Oficial APA 3 zonas (6 clasificados):
+        // Cuartos: P1 = 2ºB vs 2ºC, P2 = 1ºC vs 2ºA | BYEs = [1ºA, 1ºB]
+        // Semifinales: (1ºA vs Ganador P1) y (Ganador P2 vs 1ºB)
+        if (byes.length === 2 && matchWinners.length === 2) {
+            return [byes[0], matchWinners[0], matchWinners[1], byes[1]];
+        }
+
+        const total = byes.length + matchWinners.length;
+        const isPowerOfTwo = total >= 2 && (total & (total - 1)) === 0;
+
+        if (isPowerOfTwo) {
+            const orderedSeeds = [...byes, ...matchWinners];
+            let indices = [0, 1];
+            while (indices.length < total) {
+                const nextSize = indices.length * 2;
+                indices = indices.flatMap(idx => [idx, nextSize - 1 - idx]);
+            }
+            return indices.map(idx => orderedSeeds[idx]).filter(Boolean);
+        }
+
+        // Respaldo intercalado si el tamaño es irregular por edición manual
+        const interleaved = [];
+        const maxLen = Math.max(byes.length, matchWinners.length);
+        for (let i = 0; i < maxLen; i++) {
+            if (byes[i]) interleaved.push(byes[i]);
+            if (matchWinners[i]) interleaved.push(matchWinners[i]);
+        }
+        return interleaved;
+    }
+
     advancePlayoffs(category) {
         const lastRound = category.playoffRounds[category.playoffRounds.length - 1];
         if (!lastRound.matches.every(m => m.status === 'Finalizado')) {
@@ -482,12 +525,12 @@ class TournamentManager {
         };
 
         const winners = lastRound.matches.map(getMatchWinner);
-        const teamsForNextRound = [...(lastRound.teamsWithByes || []), ...winners];
+        const teamsForNextRound = this._orderNextRoundParticipants(lastRound.teamsWithByes || [], winners);
 
         // Semifinales a Final (sin partido de 3er y 4to puesto)
         if (lastRound.roundName === 'Semifinales') {
             return [
-                { roundName: 'Final', matches: [{ teamA: winners[0], teamB: winners[1], scoreA: [], scoreB: [], status: 'Pendiente' }], teamsWithByes: [] }
+                { roundName: 'Final', matches: [{ teamA: teamsForNextRound[0], teamB: teamsForNextRound[1], scoreA: [], scoreB: [], status: 'Pendiente' }], teamsWithByes: [] }
             ];
         }
 
