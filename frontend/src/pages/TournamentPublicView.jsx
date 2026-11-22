@@ -270,34 +270,52 @@ const ZoneStandings = ({ zone }) => {
     );
 };
 
-const BracketMatchItem = ({ match }) => {
+const BracketMatchItem = ({ match, matchLabel }) => {
     const [showDetails, setShowDetails] = useState(false);
     const winner = getMatchWinner(match);
     const hasDetails = Boolean(match.matchTime || match.matchPlace || match.matchMapUrl);
     const mapsLink = getGoogleMapsUrl(match.matchMapUrl, match.matchPlace);
     const playersA = getTeamPlayers(match.teamA, match.placeholderA || 'A definir');
     const playersB = getTeamPlayers(match.teamB, match.placeholderB || 'A definir');
+    const isProjected = Boolean(match._isProjected);
 
     return (
-        <div className="relative">
+        <div className="bracket-match-slot relative">
             <div 
-                className={`bracket-match transition-all duration-200 ${hasDetails ? 'cursor-pointer hover:ring-2 hover:ring-primary/60' : ''}`}
+                className={`bracket-match transition-all duration-200 ${isProjected ? 'bracket-match-projected' : ''} ${hasDetails ? 'cursor-pointer hover:ring-2 hover:ring-primary/60' : ''}`}
                 onClick={() => hasDetails && setShowDetails(!showDetails)}
             >
+                {(matchLabel || isProjected) && (
+                    <div className="px-2.5 py-1 border-b border-white/10 bg-slate-950/50 rounded-t-[0.65rem] flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-wider">
+                        <span className="text-slate-400">{matchLabel || 'Cruce'}</span>
+                        {isProjected && <span className="text-amber-300/90">Proyección</span>}
+                    </div>
+                )}
+
                 <div className={`bracket-team ${winner === 'A' ? 'winner' : ''}`}>
-                    <span className="team-name space-y-0.5" title={match.teamA?.teamName || match.placeholderA}>
+                    <span className={`team-name space-y-0.5 ${!match.teamA ? 'text-slate-400 italic text-xs' : ''}`} title={match.teamA?.teamName || match.placeholderA}>
                         {playersA.map((player, idx) => (
                             <span key={idx} className="block leading-tight break-words">{player}</span>
                         ))}
                     </span>
+                    {match.isByeA && (
+                        <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-bold flex-shrink-0">
+                            BYE
+                        </span>
+                    )}
                     <span className="team-score">{match.status === 'Finalizado' ? match.scoreA?.join('-') : ''}</span>
                 </div>
                 <div className={`bracket-team ${winner === 'B' ? 'winner' : ''}`}>
-                    <span className="team-name space-y-0.5" title={match.teamB?.teamName || match.placeholderB}>
+                    <span className={`team-name space-y-0.5 ${!match.teamB ? 'text-slate-400 italic text-xs' : ''}`} title={match.teamB?.teamName || match.placeholderB}>
                         {playersB.map((player, idx) => (
                             <span key={idx} className="block leading-tight break-words">{player}</span>
                         ))}
                     </span>
+                    {match.isByeB && (
+                        <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-bold flex-shrink-0">
+                            BYE
+                        </span>
+                    )}
                     <span className="team-score">{match.status === 'Finalizado' ? match.scoreB?.join('-') : ''}</span>
                 </div>
 
@@ -380,16 +398,136 @@ const BracketMatchItem = ({ match }) => {
     );
 };
 
+const getProjectedNextRoundName = (prevRoundName, numSlots) => {
+    if (prevRoundName === 'Semifinales' || numSlots <= 2) return 'Final';
+    if (numSlots <= 4) return 'Semifinales';
+    if (numSlots <= 8) return 'Cuartos de Final';
+    if (numSlots <= 16) return 'Octavos de Final';
+    return `Ronda de ${numSlots}`;
+};
+
+const getShortRoundLabel = (roundName) => {
+    if (roundName === 'Cuartos de Final') return 'Cuartos';
+    if (roundName === 'Octavos de Final') return 'Octavos';
+    if (roundName === 'Semifinales') return 'Semi';
+    return roundName;
+};
+
+const buildDisplayBracketRounds = (rounds) => {
+    if (!Array.isArray(rounds) || rounds.length === 0) return [];
+
+    const mainRounds = rounds.filter(r => r.roundName !== 'Tercer y Cuarto Puesto');
+    const projected = [...mainRounds];
+
+    let guard = 0;
+    while (projected.length > 0 && guard < 5) {
+        guard += 1;
+        const lastRound = projected[projected.length - 1];
+        if (!lastRound || lastRound.roundName === 'Final') break;
+
+        const matchSlots = (lastRound.matches || []).map((m, idx) => {
+            const winner = getMatchWinner(m);
+            if (winner && m.teamA && m.teamB) {
+                return { team: winner === 'A' ? m.teamA : m.teamB, placeholder: '', isBye: false };
+            }
+            return {
+                team: null,
+                placeholder: `Ganador ${getShortRoundLabel(lastRound.roundName)} P${idx + 1}`,
+                isBye: false
+            };
+        });
+
+        const byeSlots = lastRound.roundName === 'Semifinales'
+            ? []
+            : (lastRound.teamsWithByes || []).filter(Boolean).map(t => ({
+                team: t,
+                placeholder: '',
+                isBye: true
+            }));
+
+        const nextSlots = [...byeSlots, ...matchSlots];
+        if (nextSlots.length < 2) break;
+
+        const nextRoundName = getProjectedNextRoundName(lastRound.roundName, nextSlots.length);
+        const nextMatches = [];
+        for (let i = 0; i + 1 < nextSlots.length; i += 2) {
+            nextMatches.push({
+                _id: `proj-${guard}-${i}`,
+                teamA: nextSlots[i].team,
+                teamB: nextSlots[i + 1].team,
+                placeholderA: nextSlots[i].placeholder,
+                placeholderB: nextSlots[i + 1].placeholder,
+                isByeA: nextSlots[i].isBye,
+                isByeB: nextSlots[i + 1].isBye,
+                scoreA: [],
+                scoreB: [],
+                status: 'Pendiente',
+                _isProjected: true
+            });
+        }
+
+        if (nextMatches.length === 0) break;
+        projected.push({
+            _id: `proj-round-${guard}`,
+            roundName: nextRoundName,
+            matches: nextMatches,
+            teamsWithByes: [],
+            _isProjected: true
+        });
+    }
+
+    return projected;
+};
+
 const PlayoffBracket = ({ rounds }) => {
     const [viewMode, setViewMode] = useState(() => (typeof window !== 'undefined' && window.innerWidth < 640 ? 'list' : 'bracket'));
+
+    const displayMainRounds = useMemo(() => buildDisplayBracketRounds(rounds), [rounds]);
 
     if (!rounds || rounds.length === 0) {
         return <p className="text-gray-500">La llave de playoffs aún no ha sido generada.</p>;
     }
 
-    const finalRound = rounds.find(r => r.roundName === 'Final');
+    const finalRound = displayMainRounds.find(r => r.roundName === 'Final');
     const thirdPlaceRound = rounds.find(r => r.roundName === 'Tercer y Cuarto Puesto');
-    const otherRounds = rounds.filter(r => r.roundName !== 'Final' && r.roundName !== 'Tercer y Cuarto Puesto');
+    const otherRounds = displayMainRounds.filter(r => r.roundName !== 'Final');
+
+    const renderRoundMatches = (round, roundIdx) => {
+        const matches = round.matches || [];
+        const nextRound = otherRounds[roundIdx + 1] || finalRound;
+        const canForkPairs = Boolean(
+            nextRound &&
+            matches.length >= 2 &&
+            matches.length % 2 === 0 &&
+            nextRound.matches?.length === matches.length / 2
+        );
+
+        if (canForkPairs) {
+            const pairs = [];
+            for (let i = 0; i < matches.length; i += 2) {
+                pairs.push([matches[i], matches[i + 1]]);
+            }
+            return pairs.map((pair, pIdx) => (
+                <div key={pIdx} className="bracket-pair bracket-pair-connected">
+                    {pair.map((match, mIdx) => (
+                        <BracketMatchItem
+                            key={match._id || `${pIdx}-${mIdx}`}
+                            match={match}
+                            matchLabel={`Partido ${pIdx * 2 + mIdx + 1}`}
+                        />
+                    ))}
+                </div>
+            ));
+        }
+
+        return matches.map((match, idx) => (
+            <BracketMatchItem
+                key={match._id || idx}
+                match={match}
+                matchLabel={matches.length > 1 ? `Partido ${idx + 1}` : undefined}
+            />
+        ));
+    };
 
     return (
         <div className="space-y-4 my-6">
@@ -422,11 +560,24 @@ const PlayoffBracket = ({ rounds }) => {
                 /* Modo lista detallada con tarjetas MatchDisplay */
                 <div className="space-y-6 animate-fade-in">
                     {rounds.map((round) => (
-                        <div key={round._id} className="glass-card p-5 rounded-2xl">
-                            <h5 className="text-base font-bold text-primary mb-3 flex items-center gap-2">
+                        <div key={round._id} className="glass-card p-5 rounded-2xl space-y-3">
+                            <h5 className="text-base font-bold text-primary flex items-center gap-2">
                                 <i className="fas fa-trophy text-xs text-yellow-500"></i>
                                 {round.roundName}
                             </h5>
+                            {Array.isArray(round.teamsWithByes) && round.teamsWithByes.length > 0 && (
+                                <div className="p-3 rounded-xl bg-emerald-950/45 border border-emerald-500/35 text-xs text-emerald-200 flex flex-wrap items-center gap-2">
+                                    <span className="font-bold text-emerald-300 flex items-center gap-1.5">
+                                        <i className="fas fa-forward"></i>
+                                        Pasan directo a la siguiente ronda (BYE):
+                                    </span>
+                                    {round.teamsWithByes.map((byeTeam, bIdx) => (
+                                        <span key={byeTeam?._id || bIdx} className="px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-400/40 font-semibold text-white">
+                                            {byeTeam?.teamName}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 {round.matches.map((match, idx) => (
                                     <MatchDisplay key={match._id || idx} match={match} />
@@ -439,27 +590,51 @@ const PlayoffBracket = ({ rounds }) => {
                 /* Modo gráfico de llave clásica */
                 <div className="bracket-container">
                     <div className="bracket-scroll">
-                        {otherRounds.map(round => (
-                            <div key={round._id} className="bracket-round">
-                                <h4 className="bracket-round-title">{round.roundName}</h4>
+                        {otherRounds.map((round, roundIdx) => (
+                            <div key={round._id || roundIdx} className="bracket-round">
+                                <h4 className="bracket-round-title">
+                                    <span>{round.roundName}</span>
+                                    {round._isProjected && (
+                                        <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-amber-400/15 border border-amber-400/35 text-amber-300">
+                                            Proyección
+                                        </span>
+                                    )}
+                                </h4>
                                 <div className="bracket-matches">
-                                    {round.matches.map(match => (
-                                        <BracketMatchItem key={match._id} match={match} />
-                                    ))}
+                                    {renderRoundMatches(round, roundIdx)}
                                 </div>
+                                {Array.isArray(round.teamsWithByes) && round.teamsWithByes.length > 0 && (
+                                    <div className="mt-1 p-2.5 rounded-xl bg-emerald-950/50 border border-emerald-500/35 text-[11px] space-y-1">
+                                        <p className="font-bold text-emerald-300 uppercase tracking-wider text-[10px]">
+                                            Pase directo (BYE)
+                                        </p>
+                                        {round.teamsWithByes.map((byeTeam, bIdx) => (
+                                            <p key={byeTeam?._id || bIdx} className="text-white font-semibold leading-snug break-words">
+                                                • {byeTeam?.teamName}
+                                            </p>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         ))}
                         {(finalRound || thirdPlaceRound) && (
                             <div className="bracket-round">
-                                <h4 className="bracket-round-title">Rondas Finales</h4>
+                                <h4 className="bracket-round-title">
+                                    <span>Rondas Finales</span>
+                                    {finalRound?._isProjected && !thirdPlaceRound && (
+                                        <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-amber-400/15 border border-amber-400/35 text-amber-300">
+                                            Proyección
+                                        </span>
+                                    )}
+                                </h4>
                                 <div className="bracket-matches">
-                                    {finalRound && (
+                                    {finalRound && finalRound.matches?.[0] && (
                                         <>
                                             <h5 className="bracket-match-subtitle">Final</h5>
                                             <BracketMatchItem match={finalRound.matches[0]} />
                                         </>
                                     )}
-                                    {thirdPlaceRound && (
+                                    {thirdPlaceRound && thirdPlaceRound.matches?.[0] && (
                                         <>
                                             <h5 className="bracket-match-subtitle">3er y 4to Puesto</h5>
                                             <BracketMatchItem match={thirdPlaceRound.matches[0]} />

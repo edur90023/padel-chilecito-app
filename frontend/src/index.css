@@ -86,18 +86,34 @@ body {
 
 .bracket-scroll {
     display: flex;
-    gap: 1.5rem;
+    align-items: stretch;
+    gap: 1.75rem;
     padding-bottom: 0.5rem;
 }
 
 .bracket-round {
     display: inline-flex;
     flex-direction: column;
-    gap: 1.5rem;
-    width: 245px;
+    gap: 0.85rem;
+    width: 250px;
     flex-shrink: 0;
-    justify-content: space-around;
+    justify-content: flex-start;
     vertical-align: top;
+}
+
+.bracket-matches {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    justify-content: space-around;
+    flex: 1;
+}
+
+.bracket-pair {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    position: relative;
 }
 
 .bracket-round-title {
@@ -105,24 +121,35 @@ body {
     font-weight: 700;
     color: #F8FAFC;
     text-align: center;
-    margin-bottom: 0.5rem;
-    padding: 0.35rem 0.5rem;
+    margin-bottom: 0;
+    padding: 0.4rem 0.6rem;
     background-color: rgba(30, 41, 59, 0.7);
     backdrop-filter: blur(8px);
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
 }
 
 .bracket-match {
-    background-color: rgba(30, 41, 59, 0.62);
+    background-color: rgba(30, 41, 59, 0.68);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 0.65rem;
     position: relative;
     display: flex;
     flex-direction: column;
     box-shadow: 0 6px 16px -4px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.bracket-match-projected {
+    background-color: rgba(15, 23, 42, 0.52);
+    border: 1px dashed rgba(148, 163, 184, 0.45);
+    box-shadow: none;
 }
 
 .bracket-info {
@@ -143,55 +170,57 @@ body {
     font-weight: 600;
     color: #9ca3af; /* text-gray-400 */
     text-align: center;
-    font-size: 0.75rem; /* Más pequeño */
-    padding-top: 0.5rem;
-    margin-bottom: 0.25rem;
+    font-size: 0.75rem;
+    padding-top: 0.25rem;
+    margin-bottom: -0.75rem;
 }
 
-/* Conectores de la llave */
-.bracket-match::after {
+/* Conectores limpios para pares que alimentan 2 -> 1 a la ronda siguiente */
+.bracket-pair-connected::before {
     content: '';
     position: absolute;
-    right: -0.75rem; /* La mitad del gap entre rondas */
-    top: 50%;
-    width: 0.75rem; /* Ancho ajustado */
-    height: 2px;
-    background-color: #4b5563; /* bg-gray-600 */
-    transform: translateY(-50%);
-}
-
-/* Líneas verticales que unen los partidos */
-.bracket-match:not(:last-child)::before {
-    content: '';
-    position: absolute;
-    right: -0.75rem;
-    top: 50%;
+    right: -0.875rem;
+    top: 25%;
+    bottom: 25%;
     width: 2px;
-    height: calc(100% + 1.5rem); /* Altura del partido + gap ajustado */
-    background-color: #4b5563; /* bg-gray-600 */
-    transform: translateY(-50%);
-    z-index: -1; /* Para que esté detrás de los partidos */
+    background-color: rgba(148, 163, 184, 0.45);
 }
 
-/* Ocultar conectores para la última ronda */
-.bracket-round:last-child .bracket-match::after,
-.bracket-round:last-child .bracket-match::before {
-    display: none;
+.bracket-pair-connected::after {
+    content: '';
+    position: absolute;
+    right: -1.75rem;
+    top: 50%;
+    width: 0.875rem;
+    height: 2px;
+    background-color: rgba(148, 163, 184, 0.45);
+    transform: translateY(-50%);
+}
+
+.bracket-pair-connected > .bracket-match-slot::after {
+    content: '';
+    position: absolute;
+    right: -0.875rem;
+    top: 50%;
+    width: 0.875rem;
+    height: 2px;
+    background-color: rgba(148, 163, 184, 0.45);
+    transform: translateY(-50%);
 }
 
 .bracket-team {
-    padding: 0.5rem; /* Padding más compacto */
+    padding: 0.5rem 0.6rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    color: #d1d5db; /* text-gray-300 */
-    border-bottom: 1px solid #4b5563;
+    color: #e2e8f0;
     font-size: 0.8rem;
     white-space: normal;
+    gap: 0.4rem;
 }
 
-.bracket-team:last-child {
-    border-bottom: none;
+.bracket-team + .bracket-team {
+    border-top: 1px solid rgba(148, 163, 184, 0.22);
 }
 
 .bracket-team.winner .team-name {
@@ -205,13 +234,12 @@ body {
     overflow-wrap: anywhere;
     white-space: normal;
     line-height: 1.25;
-    margin-right: 0.5rem;
 }
 
 .bracket-team .team-score {
     font-weight: 600;
     font-size: 0.85rem;
-    flex-shrink: 0; /* Evita que el score se encoja */
+    flex-shrink: 0;
 }
 
 /* Ajustes para pantallas más grandes (desktops) */
@@ -220,31 +248,36 @@ body {
         padding: 1.5rem;
     }
     .bracket-scroll {
-        gap: 2.5rem;
-    }
-    .bracket-round {
-        width: 265px;
         gap: 3rem;
     }
+    .bracket-round {
+        width: 270px;
+        gap: 1.15rem;
+    }
+    .bracket-matches {
+        gap: 2.25rem;
+    }
+    .bracket-pair {
+        gap: 2.25rem;
+    }
     .bracket-round-title {
-        font-size: 1.25rem;
-        margin-bottom: 1rem;
-        padding: 0.5rem 0;
+        font-size: 1.1rem;
+        padding: 0.5rem 0.75rem;
     }
-    .bracket-match::after {
-        right: -1.25rem;
-        width: 1.25rem;
+    .bracket-pair-connected::before {
+        right: -1.5rem;
     }
-    .bracket-match:not(:last-child)::before {
-        right: -1.25rem;
-        height: calc(100% + 3rem);
+    .bracket-pair-connected::after {
+        right: -3rem;
+        width: 1.5rem;
+    }
+    .bracket-pair-connected > .bracket-match-slot::after {
+        right: -1.5rem;
+        width: 1.5rem;
     }
     .bracket-team {
         padding: 0.65rem 0.75rem;
         font-size: 0.875rem;
-    }
-    .bracket-team .team-name {
-        margin-right: 1rem;
     }
     .bracket-team .team-score {
         font-size: 0.9rem;
