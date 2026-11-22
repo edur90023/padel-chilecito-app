@@ -102,28 +102,25 @@ body {
 }
 
 .bracket-matches {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-auto-rows: 1fr;
     gap: 0;
-    justify-content: space-around;
     flex: 1;
 }
 
 .bracket-pair {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-rows: 1fr 1fr;
     gap: 0;
-    flex: 1;
-    justify-content: space-around;
     position: relative;
 }
 
 .bracket-match-slot {
-    flex: 1;
     display: flex;
     align-items: center;
     width: 100%;
     padding: 0.45rem 0;
+    position: relative;
 }
 
 .bracket-round-title {
@@ -194,12 +191,22 @@ body {
 }
 
 /* Conectores limpios para pares que alimentan 2 -> 1 a la ronda siguiente */
-.bracket-pair-connected::before {
+.bracket-pair-connected > .bracket-match-slot:first-child::before {
     content: '';
     position: absolute;
     right: -0.875rem;
-    top: 25%;
-    bottom: 25%;
+    top: calc(50% - 1px);
+    bottom: 0;
+    width: 2px;
+    background-color: rgba(148, 163, 184, 0.45);
+}
+
+.bracket-pair-connected > .bracket-match-slot:last-child::before {
+    content: '';
+    position: absolute;
+    right: -0.875rem;
+    top: 0;
+    bottom: calc(50% - 1px);
     width: 2px;
     background-color: rgba(148, 163, 184, 0.45);
 }
@@ -286,7 +293,8 @@ body {
         min-height: 2.75rem;
         padding: 0.5rem 0.75rem;
     }
-    .bracket-pair-connected::before {
+    .bracket-pair-connected > .bracket-match-slot:first-child::before,
+    .bracket-pair-connected > .bracket-match-slot:last-child::before {
         right: -1.5rem;
     }
     .bracket-pair-connected::after {
