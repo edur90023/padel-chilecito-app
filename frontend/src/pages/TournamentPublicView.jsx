@@ -270,6 +270,33 @@ const ZoneStandings = ({ zone }) => {
     );
 };
 
+const BracketByeItem = ({ team, subtitle = 'Avanza directo' }) => {
+    const players = getTeamPlayers(team, 'A definir');
+    return (
+        <div className="bracket-match-slot relative">
+            <div className="bracket-match bracket-match-bye">
+                <div className="px-2.5 py-1 border-b border-emerald-400/20 bg-emerald-950/60 rounded-t-[0.65rem] flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-wider">
+                    <span className="text-emerald-300">Pase directo</span>
+                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 border border-emerald-400/40 text-emerald-200">BYE</span>
+                </div>
+                <div className="bracket-team winner">
+                    <span className="team-name space-y-0.5" title={team?.teamName}>
+                        {players.map((player, idx) => (
+                            <span key={idx} className="block leading-tight break-words">{player}</span>
+                        ))}
+                    </span>
+                </div>
+                <div className="bracket-info">
+                    <span className="text-emerald-300/90 font-semibold flex items-center gap-1">
+                        <i className="fas fa-forward text-[9px]"></i>
+                        <span>{subtitle}</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const BracketMatchItem = ({ match, matchLabel }) => {
     const [showDetails, setShowDetails] = useState(false);
     const winner = getMatchWinner(match);
@@ -520,9 +547,46 @@ const PlayoffBracket = ({ rounds }) => {
     const thirdPlaceRound = rounds.find(r => r.roundName === 'Tercer y Cuarto Puesto');
     const otherRounds = displayMainRounds.filter(r => r.roundName !== 'Final');
 
+    const hasInlineByePairs = (round, roundIdx) => {
+        const matches = round.matches || [];
+        const byes = (round.teamsWithByes || []).filter(Boolean);
+        const nextRound = otherRounds[roundIdx + 1] || finalRound;
+        if (!nextRound) return false;
+        return (
+            (byes.length === 2 && matches.length === 2 && nextRound.matches?.length === 2) ||
+            (byes.length === 1 && matches.length === 1 && nextRound.matches?.length === 1)
+        );
+    };
+
     const renderRoundMatches = (round, roundIdx) => {
         const matches = round.matches || [];
+        const byes = (round.teamsWithByes || []).filter(Boolean);
         const nextRound = otherRounds[roundIdx + 1] || finalRound;
+
+        if (byes.length === 1 && matches.length === 1 && nextRound?.matches?.length === 1) {
+            return (
+                <div className="bracket-pair bracket-pair-connected">
+                    <BracketByeItem team={byes[0]} subtitle="Avanza a Final" />
+                    <BracketMatchItem match={matches[0]} matchLabel="Partido 1" />
+                </div>
+            );
+        }
+
+        if (byes.length === 2 && matches.length === 2 && nextRound?.matches?.length === 2) {
+            return (
+                <>
+                    <div className="bracket-pair bracket-pair-connected">
+                        <BracketByeItem team={byes[0]} subtitle="Avanza a Semis" />
+                        <BracketMatchItem match={matches[0]} matchLabel="Partido 1" />
+                    </div>
+                    <div className="bracket-pair bracket-pair-connected">
+                        <BracketMatchItem match={matches[1]} matchLabel="Partido 2" />
+                        <BracketByeItem team={byes[1]} subtitle="Avanza a Semis" />
+                    </div>
+                </>
+            );
+        }
+
         const canForkPairs = Boolean(
             nextRound &&
             matches.length >= 2 &&
@@ -631,7 +695,7 @@ const PlayoffBracket = ({ rounds }) => {
                                 <div className="bracket-matches">
                                     {renderRoundMatches(round, roundIdx)}
                                 </div>
-                                {Array.isArray(round.teamsWithByes) && round.teamsWithByes.length > 0 && (
+                                {!hasInlineByePairs(round, roundIdx) && Array.isArray(round.teamsWithByes) && round.teamsWithByes.length > 0 && (
                                     <div className="mt-1 p-2.5 rounded-xl bg-emerald-950/50 border border-emerald-500/35 text-[11px] space-y-1">
                                         <p className="font-bold text-emerald-300 uppercase tracking-wider text-[10px]">
                                             Pase directo (BYE)
@@ -657,16 +721,10 @@ const PlayoffBracket = ({ rounds }) => {
                                 </h4>
                                 <div className="bracket-matches">
                                     {finalRound && finalRound.matches?.[0] && (
-                                        <>
-                                            <h5 className="bracket-match-subtitle">Final</h5>
-                                            <BracketMatchItem match={finalRound.matches[0]} />
-                                        </>
+                                        <BracketMatchItem match={finalRound.matches[0]} matchLabel="Final" />
                                     )}
                                     {thirdPlaceRound && thirdPlaceRound.matches?.[0] && (
-                                        <>
-                                            <h5 className="bracket-match-subtitle">3er y 4to Puesto</h5>
-                                            <BracketMatchItem match={thirdPlaceRound.matches[0]} />
-                                        </>
+                                        <BracketMatchItem match={thirdPlaceRound.matches[0]} matchLabel="3er y 4to Puesto" />
                                     )}
                                 </div>
                             </div>
