@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import RegistrationForm from '../components/RegistrationForm';
+import { isTournamentCompleted } from '../utils/tournamentStatus';
 
 function Tournament() {
     const [tournaments, setTournaments] = useState([]);
@@ -87,9 +88,10 @@ function Tournament() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
                     {filteredTournaments.map(tournament => {
                         const hasOpenRegistrations = tournament.categories.some(cat => cat.status === 'Inscripciones Abiertas');
+                        const isFinished = isTournamentCompleted(tournament);
                         let statusText, statusColor, actionButton;
 
-                        if (tournament.status === 'Finalizado') {
+                        if (isFinished) {
                             statusText = 'Finalizado';
                             statusColor = 'bg-slate-500/20 text-slate-200 border border-white/15';
                             actionButton = (

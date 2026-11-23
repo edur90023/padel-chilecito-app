@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import CourtScheduleView from '../components/CourtScheduleView';
+import { isTournamentCompleted } from '../utils/tournamentStatus';
 
 // --- FUNCIONES Y COMPONENTES HELPER ---
 
@@ -1113,7 +1114,30 @@ function TournamentPublicView() {
             </Link>
             <div className="glass-panel p-6 rounded-2xl mb-8">
                 <h1 className="text-3xl sm:text-4xl font-extrabold text-white">{tournament.name}</h1>
-                <p className="text-slate-300 mt-2">Fecha: {new Date(tournament.startDate).toLocaleDateString()} - Estado: <span className="font-semibold text-emerald-400">{tournament.status}</span></p>
+                {(() => {
+                    const isFinished = isTournamentCompleted(tournament);
+                    const hasOpen = (tournament.categories || []).some(c => c.status === 'Inscripciones Abiertas');
+                    const displayStatus = tournament.status === 'Cancelado'
+                        ? 'Cancelado'
+                        : isFinished
+                            ? 'Finalizado'
+                            : hasOpen
+                                ? 'Inscripciones Abiertas'
+                                : 'En Curso';
+                    const statusBadgeClass = isFinished
+                        ? 'text-cyan-300'
+                        : tournament.status === 'Cancelado'
+                            ? 'text-red-400'
+                            : hasOpen
+                                ? 'text-emerald-400'
+                                : 'text-amber-300';
+                    return (
+                        <p className="text-slate-300 mt-2">
+                            Fecha: {new Date(tournament.startDate).toLocaleDateString()} - Estado:{' '}
+                            <span className={`font-semibold ${statusBadgeClass}`}>{displayStatus}</span>
+                        </p>
+                    );
+                })()}
             </div>
 
             {/* Buscador de partidos para jugadores */}

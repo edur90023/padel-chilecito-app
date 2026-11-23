@@ -5,6 +5,7 @@ import axios from 'axios';
 import { Link } from 'react-router-dom';
 import RegistrationForm from '../components/RegistrationForm';
 import WinnersShowcase from '../components/WinnersShowcase';
+import { isTournamentCompleted } from '../utils/tournamentStatus';
 
 const getCatPairsCount = (cat) => {
     if (typeof cat?.pairsCount === 'number') return cat.pairsCount;
@@ -81,7 +82,7 @@ function Tournament() {
                         if (isExpectativa) {
                             statusText = 'Próximamente • Armando Zonas';
                             statusColor = 'bg-amber-400/15 text-amber-300 border border-amber-400/40';
-                        } else if (tournament.status === 'Finalizado') {
+                        } else if (isTournamentCompleted(tournament)) {
                             statusText = 'Finalizado';
                             statusColor = 'bg-slate-600/60 text-slate-200 border border-white/10';
                         } else if (hasOpenRegistrations) {

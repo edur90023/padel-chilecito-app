@@ -14,6 +14,88 @@ const getCategoryPairsCount = (cat) => {
     return Math.max(zoneTeamsCount, registeredCount);
 };
 
+const getCategoryMatches = (cat) => {
+    const zoneMatches = Array.isArray(cat?.zones)
+        ? cat.zones.flatMap(z => (Array.isArray(z?.matches) ? z.matches : []))
+        : [];
+    const playoffMatches = Array.isArray(cat?.playoffRounds)
+        ? cat.playoffRounds.flatMap(r => (Array.isArray(r?.matches) ? r.matches : []))
+        : [];
+    return { zoneMatches, playoffMatches };
+};
+
+const isCategoryCompleted = (cat) => {
+    if (!cat) return false;
+    if (cat.status === 'Finalizado') return true;
+    if (cat.status === 'Inscripciones Abiertas') return false;
+
+    const { zoneMatches, playoffMatches } = getCategoryMatches(cat);
+    if (zoneMatches.length + playoffMatches.length === 0) return false;
+
+    const finalRound = Array.isArray(cat.playoffRounds)
+        ? cat.playoffRounds.find(r => r.roundName === 'Final')
+        : null;
+    if (!finalRound || !Array.isArray(finalRound.matches) || finalRound.matches.length === 0) {
+        return false;
+    }
+
+    return (
+        zoneMatches.every(m => m.status === 'Finalizado') &&
+        playoffMatches.every(m => m.status === 'Finalizado')
+    );
+};
+
+const isCategoryUnplayedEmpty = (cat) => {
+    if (!cat || cat.status === 'Inscripciones Abiertas') return false;
+    const { zoneMatches, playoffMatches } = getCategoryMatches(cat);
+    if (zoneMatches.length + playoffMatches.length > 0) return false;
+    return cat.status === 'Configuración Manual' || getCategoryPairsCount(cat) < 2;
+};
+
+const isTournamentAllCompleted = (tournament) => {
+    if (!tournament) return false;
+    if (tournament.status === 'Finalizado') return true;
+    if (tournament.status === 'Cancelado') return false;
+
+    const categories = Array.isArray(tournament.categories) ? tournament.categories : [];
+    if (categories.length === 0) return false;
+    if (categories.some(cat => cat.status === 'Inscripciones Abiertas')) return false;
+
+    const hasCompletedCategory = categories.some(cat => isCategoryCompleted(cat));
+    if (!hasCompletedCategory) return false;
+
+    return categories.every(cat => isCategoryCompleted(cat) || isCategoryUnplayedEmpty(cat));
+};
+
+const resolveFinalFinishers = (cat) => {
+    const finalRound = Array.isArray(cat?.playoffRounds)
+        ? cat.playoffRounds.find(r => r.roundName === 'Final')
+        : null;
+    const finalMatch = finalRound?.matches?.[0];
+    if (!finalMatch || finalMatch.status !== 'Finalizado' || !finalMatch.teamA || !finalMatch.teamB) {
+        return null;
+    }
+    const scoreA = Array.isArray(finalMatch.scoreA) ? finalMatch.scoreA : [];
+    const scoreB = Array.isArray(finalMatch.scoreB) ? finalMatch.scoreB : [];
+    if (scoreA.length === 0) return null;
+
+    let setsA = 0;
+    let setsB = 0;
+    scoreA.forEach((s, i) => {
+        const sb = scoreB[i] || 0;
+        if (s > sb) setsA++;
+        else if (sb > s) setsB++;
+    });
+    if (setsA === setsB) return null;
+
+    const winner = setsA > setsB ? finalMatch.teamA : finalMatch.teamB;
+    const loser = setsA > setsB ? finalMatch.teamB : finalMatch.teamA;
+    return [
+        { position: 1, team: typeof winner.toObject === 'function' ? winner.toObject() : winner },
+        { position: 2, team: typeof loser.toObject === 'function' ? loser.toObject() : loser }
+    ];
+};
+
 const formatTournamentResponse = (tournamentDoc, { sanitizeExpectativa = false } = {}) => {
     const obj = typeof tournamentDoc.toObject === 'function'
         ? tournamentDoc.toObject()
@@ -21,6 +103,10 @@ const formatTournamentResponse = (tournamentDoc, { sanitizeExpectativa = false }
 
     const visibility = obj.visibility || 'publicado';
     obj.visibility = visibility;
+
+    if (obj.status === 'Activo' && isTournamentAllCompleted(obj)) {
+        obj.status = 'Finalizado';
+    }
 
     const rawCategories = Array.isArray(obj.categories) ? obj.categories : [];
     let totalPairsCount = 0;
@@ -129,12 +215,22 @@ router.get('/latest-finished', async (req, res) => {
         if (mongoose.connection.readyState !== 1) {
             return res.status(200).json(null);
         }
-        const latestFinishedTournament = await Tournament.findOne({
+        let latestFinishedTournament = await Tournament.findOne({
             status: 'Finalizado',
             visibility: { $nin: ['borrador', 'expectativa'] }
         })
             .sort({ startDate: -1 })
             .lean();
+
+        if (!latestFinishedTournament) {
+            const candidates = await Tournament.find({
+                visibility: { $nin: ['borrador', 'expectativa'] }
+            })
+                .sort({ startDate: -1 })
+                .limit(10)
+                .lean();
+            latestFinishedTournament = candidates.find(t => isTournamentAllCompleted(t)) || null;
+        }
 
         if (!latestFinishedTournament) {
             return res.status(200).json(null);
@@ -689,6 +785,23 @@ router.put('/:tournamentId/category/:categoryId/match/:matchId', auth(['admin', 
 
         if (match.teamA) updateGlobalTeam(match.teamA._id, resolvedTeamAName, teamAPlayers);
         if (match.teamB) updateGlobalTeam(match.teamB._id, resolvedTeamBName, teamBPlayers);
+
+        // 3. Si toda la categoría terminó (incluyendo la Final), marcar categoría y re-evaluar torneo
+        if (isCategoryCompleted(category)) {
+            if (!Array.isArray(category.finishers) || category.finishers.length === 0) {
+                const autoFinishers = resolveFinalFinishers(category);
+                if (autoFinishers) {
+                    category.finishers = autoFinishers;
+                }
+            }
+            if (category.status !== 'Finalizado') {
+                category.status = 'Finalizado';
+            }
+        }
+
+        if (tournament.status !== 'Cancelado') {
+            tournament.status = isTournamentAllCompleted(tournament) ? 'Finalizado' : 'Activo';
+        }
         
         await tournament.save();
         res.status(200).json({ message: 'Actualización global exitosa', tournament: formatTournamentResponse(await Tournament.findById(tournamentId)) });
@@ -884,6 +997,9 @@ router.post('/:tournamentId/category/:categoryId/generate-playoffs', auth(['admi
         const playoffs = TournamentManager.generatePlayoffs(qualifiedTeams);
         category.playoffRounds = playoffs;
         category.status = 'En Juego';
+        if (tournament.status !== 'Cancelado') {
+            tournament.status = 'Activo';
+        }
         await tournament.save();
         const populatedTournament = await Tournament.findById(tournamentId);
         res.status(200).json({ message: 'Llave de playoffs generada exitosamente.', tournament: formatTournamentResponse(populatedTournament) });
@@ -1020,8 +1136,9 @@ router.post('/:tournamentId/category/:categoryId/finish', auth(['admin']), async
         if (!finishers || finishers.length === 0) return res.status(400).json({ error: "No se proporcionaron datos de los ganadores." });
         category.finishers = finishers;
         category.status = 'Finalizado';
-        const allCategoriesFinished = tournament.categories.every(cat => cat.status === 'Finalizado');
-        if (allCategoriesFinished) tournament.status = 'Finalizado';
+        if (isTournamentAllCompleted(tournament)) {
+            tournament.status = 'Finalizado';
+        }
         await tournament.save();
         const populatedTournament = await Tournament.findById(req.params.tournamentId);
         res.status(200).json({ message: 'Categoría finalizada.', tournament: formatTournamentResponse(populatedTournament) });

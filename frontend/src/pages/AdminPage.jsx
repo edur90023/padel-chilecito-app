@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import CreateTournamentForm from '../components/CreateTournamentForm';
 import TournamentDetails from '../components/TournamentDetails';
+import { isTournamentCompleted } from '../utils/tournamentStatus';
 
 function AdminPage() {
     const [view, setView] = useState('list');
@@ -71,10 +72,11 @@ function AdminPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {tournaments.map(t => {
                                 const hasOpenRegistrations = t.categories.some(cat => cat.status === 'Inscripciones Abiertas');
-                                let statusText = t.status;
+                                const isFinished = isTournamentCompleted(t);
+                                let statusText = isFinished ? 'Finalizado' : t.status;
                                 let statusColor = 'bg-yellow-200 text-yellow-800';
 
-                                if (t.status === 'Activo') {
+                                if (!isFinished && t.status === 'Activo') {
                                     statusText = hasOpenRegistrations ? 'Inscripciones Abiertas' : 'Inscripciones Cerradas';
                                     statusColor = hasOpenRegistrations ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800';
                                 }
