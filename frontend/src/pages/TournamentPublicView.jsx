@@ -534,10 +534,34 @@ const buildDisplayBracketRounds = (rounds) => {
     return projected;
 };
 
+const getRoundImportanceRank = (roundName = '') => {
+    const name = roundName.trim().toLowerCase();
+    if (name === 'final') return 0;
+    if (name.includes('tercer') || name.includes('3er')) return 1;
+    if (name.includes('semifinal')) return 2;
+    if (name.includes('cuartos')) return 3;
+    if (name.includes('octavos')) return 4;
+    const match = name.match(/ronda de (\d+)/);
+    if (match) return 4 + Number(match[1]);
+    return 100;
+};
+
 const PlayoffBracket = ({ rounds }) => {
     const [viewMode, setViewMode] = useState(() => (typeof window !== 'undefined' && window.innerWidth < 640 ? 'list' : 'bracket'));
 
     const displayMainRounds = useMemo(() => buildDisplayBracketRounds(rounds), [rounds]);
+    const orderedListRounds = useMemo(() => {
+        if (!Array.isArray(rounds)) return [];
+        return rounds
+            .map((round, index) => ({ round, index }))
+            .sort((a, b) => {
+                const rankA = getRoundImportanceRank(a.round.roundName);
+                const rankB = getRoundImportanceRank(b.round.roundName);
+                if (rankA !== rankB) return rankA - rankB;
+                return b.index - a.index;
+            })
+            .map(item => item.round);
+    }, [rounds]);
 
     if (!rounds || rounds.length === 0) {
         return <p className="text-gray-500">La llave de playoffs aún no ha sido generada.</p>;
@@ -649,10 +673,10 @@ const PlayoffBracket = ({ rounds }) => {
             </div>
 
             {viewMode === 'list' ? (
-                /* Modo lista detallada con tarjetas MatchDisplay */
+                /* Modo lista detallada con tarjetas MatchDisplay ordenada de Final hacia atrás */
                 <div className="space-y-6 animate-fade-in">
-                    {rounds.map((round) => (
-                        <div key={round._id} className="glass-card p-5 rounded-2xl space-y-3">
+                    {orderedListRounds.map((round) => (
+                        <div key={round._id || round.roundName} className="glass-card p-5 rounded-2xl space-y-3">
                             <h5 className="text-base font-bold text-primary flex items-center gap-2">
                                 <i className="fas fa-trophy text-xs text-yellow-500"></i>
                                 {round.roundName}
