@@ -73,17 +73,26 @@ function WinnersShowcase() {
                 <div className="p-8">
                     {currentCategory && currentCategory.finishers && currentCategory.finishers.length > 0 ? (
                         <ul className="space-y-4">
-                            {currentCategory.finishers.map(({ position, team }) => (
-                                <li key={team._id} className="flex items-center gap-4 p-3 bg-gray-800/50 rounded-lg">
-                                    <div className={`flex-shrink-0 w-24 text-center font-bold ${getShadowClass(position)}`}>
-                                        <p className="text-xl">{getPositionText(position)}</p>
-                                    </div>
-                                    <div className="border-l border-gray-700 pl-4">
-                                        <p className="text-lg font-bold text-white">{team.teamName}</p>
-                                        {/* Se ha quitado la línea de jugadores individuales para evitar errores visuales */}
-                                    </div>
-                                </li>
-                            ))}
+                            {currentCategory.finishers.map(({ position, team }) => {
+                                const rawName = (team?.teamName || '').trim();
+                                const players = rawName.includes('/')
+                                    ? rawName.split('/').map(p => p.trim()).filter(Boolean)
+                                    : (Array.isArray(team?.players) && team.players.length > 0
+                                        ? team.players.map(p => p?.playerName?.trim()).filter(Boolean)
+                                        : [rawName || 'A definir']);
+                                return (
+                                    <li key={team._id || position} className="flex items-center gap-3 sm:gap-4 p-3 bg-gray-800/50 rounded-lg">
+                                        <div className={`flex-shrink-0 w-20 sm:w-24 text-center font-bold ${getShadowClass(position)}`}>
+                                            <p className="text-base sm:text-xl">{getPositionText(position)}</p>
+                                        </div>
+                                        <div className="min-w-0 flex-1 border-l border-gray-700 pl-3 sm:pl-4 space-y-0.5">
+                                            {players.map((player, idx) => (
+                                                <p key={idx} className="text-base sm:text-lg font-bold text-white leading-snug break-words">{player}</p>
+                                            ))}
+                                        </div>
+                                    </li>
+                                );
+                            })}
                         </ul>
                     ) : (
                         <p className="text-center text-gray-500">Resultados no disponibles para esta categoría.</p>

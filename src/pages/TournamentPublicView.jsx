@@ -790,21 +790,27 @@ const WinnersDisplay = ({ finishers }) => {
     };
 
     return (
-        <div className="glass-panel border-emerald-500/40 rounded-2xl p-6 my-8 animate-fade-in">
-            <h3 className="text-2xl font-bold text-white text-center mb-6">Podio de la Categoría</h3>
-            <ul className="space-y-4">
-                {sortedFinishers.map(({ position, team }) => (
-                    <li key={position} className="flex items-center gap-4 p-3.5 glass-subcard rounded-xl">
-                        <div className="flex-shrink-0 w-24 text-center">
-                            <i className={`${getPositionIcon(position)} text-3xl`}></i>
-                            <p className="text-sm font-bold text-text-secondary mt-1">{getPositionText(position)}</p>
-                        </div>
-                        <div className="border-l border-gray-700 pl-4">
-                            <p className="text-xl font-bold text-text-primary">{team.teamName}</p>
-                            {/* Se ha quitado la línea team.players.map para ocultar los nombres antiguos */}
-                        </div>
-                    </li>
-                ))}
+        <div className="glass-panel border-emerald-500/40 rounded-2xl p-4 sm:p-6 my-8 animate-fade-in">
+            <h3 className="text-xl sm:text-2xl font-bold text-white text-center mb-5 sm:mb-6">Podio de la Categoría</h3>
+            <ul className="space-y-3 sm:space-y-4">
+                {sortedFinishers.map(({ position, team }) => {
+                    const players = getTeamPlayers(team);
+                    return (
+                        <li key={position} className="flex items-center gap-3 sm:gap-4 p-3 sm:p-3.5 glass-subcard rounded-xl">
+                            <div className="flex-shrink-0 w-20 sm:w-24 text-center">
+                                <i className={`${getPositionIcon(position)} text-2xl sm:text-3xl`}></i>
+                                <p className="text-xs sm:text-sm font-bold text-text-secondary mt-1">{getPositionText(position)}</p>
+                            </div>
+                            <div className="min-w-0 flex-1 border-l border-gray-700 pl-3 sm:pl-4 space-y-0.5">
+                                {players.map((player, idx) => (
+                                    <p key={idx} className="text-base sm:text-xl font-bold text-text-primary leading-snug break-words">
+                                        {player}
+                                    </p>
+                                ))}
+                            </div>
+                        </li>
+                    );
+                })}
             </ul>
         </div>
     );
