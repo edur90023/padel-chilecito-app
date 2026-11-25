@@ -11,22 +11,70 @@ const CommunityPost = require('../models/CommunityPost');
 const Gallery = require('../models/Gallery');
 const LiveStream = require('../models/LiveStream');
 const User = require('../models/User');
+const Ranking = require('../models/Ranking');
+const Professor = require('../models/Professor');
+const Complex = require('../models/Complex');
+const SiteSettings = require('../models/SiteSettings');
 const TournamentManager = require('../services/tournament-manager');
-const jwt = require('jsonwebtoken');
+const auth = require('../middleware/auth');
 
-function isAuthenticated(req, res, next) {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(401).json({ error: 'No autorizado' });
+// DESCARGAR RESPALDO COMPLETO EN JSON (SOLO ADMIN)
+router.get('/backup', auth(['admin']), async (req, res) => {
     try {
-        const secret = process.env.JWT_SECRET || 'padel-chilecito-secret-key-2024';
-        req.user = jwt.verify(token, secret);
-        next();
-    } catch (error) {
-        res.status(401).json({ error: 'Token inválido' });
-    }
-}
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(503).json({ error: 'La base de datos no está conectada.' });
+        }
 
-router.post('/tournament', isAuthenticated, async (req, res) => {
+        const [
+            tournaments,
+            players,
+            ranking,
+            news,
+            ads,
+            gallery,
+            professors,
+            complexes,
+            communityPosts,
+            liveStreams,
+            siteSettings
+        ] = await Promise.all([
+            Tournament.find({}).lean(),
+            Player.find({}).lean(),
+            Ranking.find({}).lean(),
+            News.find({}).lean(),
+            Ad.find({}).lean(),
+            Gallery.find({}).lean(),
+            Professor.find({}).lean(),
+            Complex.find({}).lean(),
+            CommunityPost.find({}).lean(),
+            LiveStream.find({}).lean(),
+            SiteSettings.find({}).lean()
+        ]);
+
+        res.status(200).json({
+            exportedAt: new Date().toISOString(),
+            platform: 'Red Padel LR',
+            collections: {
+                tournaments,
+                players,
+                ranking,
+                news,
+                ads,
+                gallery,
+                professors,
+                complexes,
+                communityPosts,
+                liveStreams,
+                siteSettings
+            }
+        });
+    } catch (error) {
+        console.error('Error generando respaldo JSON:', error);
+        res.status(500).json({ error: 'No se pudo generar el respaldo de datos.' });
+    }
+});
+
+router.post('/tournament', auth(['admin']), async (req, res) => {
     try {
         const { categories } = req.body;
         if (!categories || !Array.isArray(categories) || categories.length === 0) {
@@ -197,9 +245,13 @@ router.post('/tournament', isAuthenticated, async (req, res) => {
 });
 
 
-// Ruta para resetear la base de datos (¡USAR CON CUIDADO!)
-router.post('/reset-database', isAuthenticated, async (req, res) => {
+// Ruta para resetear la base de datos (SOLO ADMIN + CONFIRMACIÓN EXPLÍCITA)
+router.post('/reset-database', auth(['admin']), async (req, res) => {
     try {
+        if (req.body?.confirmation !== 'CONFIRMAR') {
+            return res.status(400).json({ error: 'Confirmación inválida. Envía "CONFIRMAR" para continuar.' });
+        }
+
         await Tournament.deleteMany({});
         await News.deleteMany({});
         await Ad.deleteMany({});
@@ -209,14 +261,14 @@ router.post('/reset-database', isAuthenticated, async (req, res) => {
         await LiveStream.deleteMany({});
         await User.deleteMany({});
 
-        const adminPassword = process.env.ADMIN_PASSWORD || '1234';
+        const adminPassword = process.env.ADMIN_PASSWORD || 'PadelCHI_2025';
         const adminUser = new User({
-            username: process.env.ADMIN_USERNAME || 'admin',
+            username: process.env.ADMIN_USERNAME || 'PadelCHI',
             password: adminPassword,
         });
         await adminUser.save();
 
-        res.status(200).json({ message: 'Base de datos reseteada y administrador creado.' });
+        res.status(200).json({ message: 'Base de datos reseteada y administrador restaurado.' });
     } catch (error) {
         console.error("Error reseteando la base de datos:", error);
         res.status(500).json({ error: 'Error al resetear la base de datos.', details: error.message });

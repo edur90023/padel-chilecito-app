@@ -468,28 +468,83 @@ const PublicLayout = () => {
     );
 };
 
+class ErrorBoundary extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = { hasError: false };
+    }
+
+    static getDerivedStateFromError() {
+        return { hasError: true };
+    }
+
+    componentDidCatch(error, errorInfo) {
+        console.error('ErrorBoundary capturó un error:', error, errorInfo);
+    }
+
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div className="min-h-screen flex items-center justify-center p-6 bg-slate-950 text-white">
+                    <div className="glass-modal max-w-md w-full p-7 rounded-2xl text-center space-y-4">
+                        <div className="w-14 h-14 mx-auto rounded-full bg-red-500/20 border border-red-500/40 flex items-center justify-center text-red-400 text-2xl">
+                            <i className="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <h2 className="text-xl font-extrabold">Ocurrió un problema inesperado</h2>
+                        <p className="text-sm text-slate-300">
+                            No te preocupes, los datos están seguros. Podés recargar la pantalla para continuar normalmente.
+                        </p>
+                        <div className="flex gap-3 pt-2">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    this.setState({ hasError: false });
+                                    window.location.href = '/';
+                                }}
+                                className="flex-1 py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-sm transition"
+                            >
+                                Ir al Inicio
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => window.location.reload()}
+                                className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 font-extrabold text-sm transition"
+                            >
+                                Recargar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+        return this.props.children;
+    }
+}
+
 function App() {
     useEffect(() => {
         wakeUpServer();
     }, []);
 
     return (
-        <AuthProvider>
-            <Router>
-                <Suspense fallback={<PageLoader />}>
-                    <Routes>
-                        <Route path="/login" element={<LoginPage />} />
-                        <Route path="/operate" element={<OperatorPage />} />
-                        <Route path="/admin/*" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-                        <Route path="/operator/tournament/:tournamentId" element={<OperatorRoute><OperatorTournamentView /></OperatorRoute>} />
-                        <Route path="/*" element={<PublicLayout />} />
-                    </Routes>
-                </Suspense>
-            </Router>
-            <ServerWakeupBanner />
-            <AutoUpdater />
-            <Analytics />
-        </AuthProvider>
+        <ErrorBoundary>
+            <AuthProvider>
+                <Router>
+                    <Suspense fallback={<PageLoader />}>
+                        <Routes>
+                            <Route path="/login" element={<LoginPage />} />
+                            <Route path="/operate" element={<OperatorPage />} />
+                            <Route path="/admin/*" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+                            <Route path="/operator/tournament/:tournamentId" element={<OperatorRoute><OperatorTournamentView /></OperatorRoute>} />
+                            <Route path="/*" element={<PublicLayout />} />
+                        </Routes>
+                    </Suspense>
+                </Router>
+                <ServerWakeupBanner />
+                <AutoUpdater />
+                <Analytics />
+            </AuthProvider>
+        </ErrorBoundary>
     );
 }
 

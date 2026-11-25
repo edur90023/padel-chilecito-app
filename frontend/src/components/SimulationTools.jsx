@@ -54,6 +54,30 @@ function SimulationTools() {
         }
     };
 
+    const handleDownloadBackup = async () => {
+        setLoading(true);
+        setMessage('');
+        setError('');
+        try {
+            const response = await axios.get('/seed/backup');
+            const blob = new Blob([JSON.stringify(response.data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const dateTag = new Date().toISOString().slice(0, 10);
+            a.href = url;
+            a.download = `respaldo-red-padel-${dateTag}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            setMessage('Respaldo descargado correctamente.');
+        } catch (err) {
+            setError(err.response?.data?.error || 'Error al descargar el respaldo.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleResetDatabase = async () => {
         const confirmation = prompt('Esta acción es irreversible y borrará TODOS los datos (torneos, noticias, jugadores, etc.). Escribe "CONFIRMAR" para proceder.');
         if (confirmation !== 'CONFIRMAR') {
@@ -65,7 +89,7 @@ function SimulationTools() {
         setMessage('');
         setError('');
         try {
-            const response = await axios.post('/seed/reset-database');
+            const response = await axios.post('/seed/reset-database', { confirmation: 'CONFIRMAR' });
             setMessage(response.data.message);
         } catch (err) {
             setError(err.response?.data?.error || 'Error al resetear la base de datos.');
@@ -76,6 +100,24 @@ function SimulationTools() {
 
     return (
         <div className="space-y-8">
+            <div className="bg-gray-800 p-6 rounded-lg border border-emerald-500/40">
+                <h3 className="text-xl font-bold text-emerald-400 mb-2 flex items-center gap-2">
+                    <i className="fas fa-database"></i> Copia de Seguridad (Backup)
+                </h3>
+                <p className="text-gray-300 text-sm mb-4">
+                    Descargá un archivo JSON con todos los torneos, jugadores, ranking, noticias, profesores, complejos y configuración actual. Recomendado antes de iniciar una nueva temporada o realizar limpiezas.
+                </p>
+                <button
+                    type="button"
+                    onClick={handleDownloadBackup}
+                    disabled={loading}
+                    className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 px-5 rounded-lg transition disabled:bg-gray-600 flex items-center justify-center gap-2"
+                >
+                    <i className="fas fa-download"></i>
+                    <span>{loading ? 'Generando archivo...' : 'Descargar Respaldo Completo (.JSON)'}</span>
+                </button>
+            </div>
+
             <div className="bg-gray-800 p-6 rounded-lg">
                 <h3 className="text-xl font-bold text-white mb-4">Herramientas de Simulación</h3>
                 <p className="text-gray-400 mb-6">Crea un torneo de prueba con categorías y un número de parejas personalizados para probar la aplicación a gran escala.</p>

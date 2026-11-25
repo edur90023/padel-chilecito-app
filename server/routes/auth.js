@@ -7,9 +7,56 @@ const auth = require('../middleware/auth');
 
 const isAdmin = auth(['admin']);
 
+// Rate limiter simple en memoria para prevenir fuerza bruta en login
+const loginAttempts = new Map();
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const MAX_LOGIN_ATTEMPTS = 15;
+
+const getClientIp = (req) => {
+    const forwarded = req.headers['x-forwarded-for'];
+    if (typeof forwarded === 'string' && forwarded.trim()) {
+        return forwarded.split(',')[0].trim();
+    }
+    return req.ip || req.socket?.remoteAddress || 'unknown';
+};
+
+const checkLoginRateLimit = (ip) => {
+    const now = Date.now();
+    const record = loginAttempts.get(ip);
+    if (!record || now > record.resetAt) {
+        return { blocked: false, count: 0 };
+    }
+    if (record.count >= MAX_LOGIN_ATTEMPTS) {
+        return { blocked: true, retryAfterMin: Math.ceil((record.resetAt - now) / 60000) };
+    }
+    return { blocked: false, count: record.count };
+};
+
+const recordFailedLogin = (ip) => {
+    const now = Date.now();
+    const record = loginAttempts.get(ip);
+    if (!record || now > record.resetAt) {
+        loginAttempts.set(ip, { count: 1, resetAt: now + LOGIN_WINDOW_MS });
+    } else {
+        record.count += 1;
+    }
+};
+
+const clearLoginAttempts = (ip) => {
+    loginAttempts.delete(ip);
+};
+
 // LOGIN
 router.post('/login', async (req, res) => {
     try {
+        const ip = getClientIp(req);
+        const rate = checkLoginRateLimit(ip);
+        if (rate.blocked) {
+            return res.status(429).json({
+                error: `Demasiados intentos fallidos. Intentá nuevamente en ${rate.retryAfterMin} min.`
+            });
+        }
+
         let { username, password } = req.body;
         username = (username || '').trim();
         password = (password || '').trim();
@@ -24,14 +71,14 @@ router.post('/login', async (req, res) => {
 
         // Si MongoDB está desconectado (modo local / vista previa):
         if (mongoose.connection.readyState !== 1) {
-            const isMatch = (username.toLowerCase() === expectedUser && password === expectedPass) ||
-                            (username.toLowerCase() === 'padelchi' && password === 'PadelCHI_2025') ||
-                            (username.toLowerCase() === 'admin' && (password === expectedPass || password === 'admin' || password === 'PadelCHI_2025'));
+            const isMatch = username.toLowerCase() === expectedUser && password === expectedPass;
 
             if (!isMatch) {
+                recordFailedLogin(ip);
                 return res.status(401).json({ error: 'Usuario o contraseña incorrectos.' });
             }
 
+            clearLoginAttempts(ip);
             console.log(`[AUTH] Acceso administrativo concedido para: "${username}"`);
             const token = jwt.sign(
                 { id: 'admin-local-id', role: 'admin', username: username },
@@ -42,13 +89,14 @@ router.post('/login', async (req, res) => {
         }
 
         // Si MongoDB está conectado:
-        let user = await User.findOne({ username: new RegExp(`^${username}$`, 'i') });
+        let user = await User.findOne({ username: new RegExp(`^${username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') });
 
-        // Si el usuario no existe en la base de datos, lo registramos si coincide con las credenciales maestras
+        // Si el usuario no existe en la base de datos, lo registramos si coincide con las credenciales maestras configuradas
         if (!user) {
-            if ((username.toLowerCase() === expectedUser && password === expectedPass) || (username.toLowerCase() === 'admin' && password === 'admin')) {
+            if (username.toLowerCase() === expectedUser && password === expectedPass) {
                 user = new User({ username, password });
                 await user.save();
+                clearLoginAttempts(ip);
                 const token = jwt.sign(
                     { id: user._id, role: 'admin', username: user.username },
                     secret,
@@ -56,16 +104,18 @@ router.post('/login', async (req, res) => {
                 );
                 return res.json({ user: { username: user.username, role: 'admin' }, token });
             }
+            recordFailedLogin(ip);
             return res.status(401).json({ error: 'Usuario o contraseña incorrectos.' });
         }
 
         // Si el usuario existe, verificar clave
         const isMatch = await user.comparePassword(password);
         if (!isMatch) {
-            // Auto-reparar acceso si introduce la clave maestra
-            if (['admin', 'padelchi'].includes(username.toLowerCase()) && password === expectedPass) {
+            // Auto-reparar acceso solo si introduce la clave maestra configurada para el usuario principal
+            if (username.toLowerCase() === expectedUser && password === expectedPass) {
                 user.password = password;
                 await user.save();
+                clearLoginAttempts(ip);
                 const token = jwt.sign(
                     { id: user._id, role: 'admin', username: user.username },
                     secret,
@@ -73,9 +123,11 @@ router.post('/login', async (req, res) => {
                 );
                 return res.json({ user: { username: user.username, role: 'admin' }, token });
             }
+            recordFailedLogin(ip);
             return res.status(401).json({ error: 'Contraseña incorrecta. Por favor, verifica tus datos.' });
         }
 
+        clearLoginAttempts(ip);
         const token = jwt.sign(
             { id: user._id, role: 'admin', username: user.username },
             secret,
@@ -92,6 +144,9 @@ router.post('/login', async (req, res) => {
 router.put('/change-password', isAdmin, async (req, res) => {
     try {
         const { currentPassword, newPassword } = req.body;
+        if (!newPassword || String(newPassword).trim().length < 6) {
+            return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 6 caracteres.' });
+        }
         const secret = process.env.JWT_SECRET || 'padel-chilecito-secret-key-2024';
 
         if (mongoose.connection.readyState !== 1) {

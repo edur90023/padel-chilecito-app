@@ -10,6 +10,7 @@ function AdminPage() {
     const [selectedTournament, setSelectedTournament] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [notice, setNotice] = useState('');
 
     const fetchTournaments = async () => {
         try {
@@ -56,6 +57,21 @@ function AdminPage() {
         }
     };
 
+    const handleDuplicateTournament = async (tournamentId, tournamentName) => {
+        if (!window.confirm(`¿Crear una copia en Borrador con las mismas categorías de "${tournamentName}"?`)) {
+            return;
+        }
+        try {
+            setNotice('');
+            await axios.post(`/tournaments/${tournamentId}/duplicate`);
+            setNotice(`Plantilla "Copia de ${tournamentName}" creada en modo Borrador.`);
+            setTimeout(() => setNotice(''), 5000);
+            fetchTournaments();
+        } catch (err) {
+            alert(err.response?.data?.error || 'No se pudo duplicar el torneo.');
+        }
+    };
+
     return (
         <div className="animate-fade-in">
             {view === 'list' && (
@@ -67,6 +83,7 @@ function AdminPage() {
                         </button>
                     </div>
                     {loading && <div className="loading-spinner mx-auto"></div>}
+                    {notice && <p className="mb-4 p-3 rounded-lg bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-sm text-center font-semibold">{notice}</p>}
                     {error && <p className="text-red-400 text-center">{error}</p>}
                     {!loading && !error && (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -123,7 +140,15 @@ function AdminPage() {
                                             <button onClick={() => handleViewDetails(t)} className="flex-1 bg-indigo-600 text-white py-2 rounded-md hover:bg-indigo-700 transition font-semibold text-sm">
                                                 Gestionar
                                             </button>
-                                            <button onClick={() => handleDeleteTournament(t._id, t.name)} className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleDuplicateTournament(t._id, t.name)}
+                                                className="bg-slate-700 text-cyan-300 px-3 py-2 rounded-md hover:bg-slate-600 transition"
+                                                title="Duplicar estructura como plantilla en borrador"
+                                            >
+                                                <i className="fas fa-copy"></i>
+                                            </button>
+                                            <button onClick={() => handleDeleteTournament(t._id, t.name)} className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition" title="Eliminar torneo">
                                                 <i className="fas fa-trash"></i>
                                             </button>
                                         </div>

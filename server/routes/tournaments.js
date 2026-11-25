@@ -211,6 +211,26 @@ const getOptionalUser = (req) => {
     }
 };
 
+// Rate limiter en memoria para prevenir spam en inscripciones públicas
+const regAttempts = new Map();
+const REG_WINDOW_MS = 10 * 60 * 1000;
+const MAX_REG_PER_WINDOW = 25;
+
+const checkRegRateLimit = (req) => {
+    const forwarded = req.headers['x-forwarded-for'];
+    const ip = (typeof forwarded === 'string' && forwarded.trim())
+        ? forwarded.split(',')[0].trim()
+        : (req.ip || req.socket?.remoteAddress || 'unknown');
+    const now = Date.now();
+    const record = regAttempts.get(ip);
+    if (!record || now > record.resetAt) {
+        regAttempts.set(ip, { count: 1, resetAt: now + REG_WINDOW_MS });
+        return false;
+    }
+    record.count += 1;
+    return record.count > MAX_REG_PER_WINDOW;
+};
+
 // MOCK DATA CUANDO LA BASE DE DATOS ESTÁ OFFLINE
 const mockTournaments = [
     {
@@ -551,6 +571,10 @@ router.delete('/:id', auth(['admin']), async (req, res) => {
 // REGISTRAR PAREJA A UN TORNEO
 router.post('/:tournamentId/register', async (req, res) => {
     try {
+        if (checkRegRateLimit(req)) {
+            return res.status(429).json({ error: 'Demasiadas inscripciones desde esta conexión. Esperá unos minutos.' });
+        }
+
         const { tournamentId } = req.params;
         const { categoryName, player1Name, player1Phone, player2Name, player2Phone, club, availabilityNote } = req.body;
         const cleanP1 = (player1Name || '').trim();
@@ -748,7 +772,9 @@ router.delete('/:tournamentId/category/:categoryId/team/:teamId', auth(['admin']
     try {
         const { tournamentId, categoryId, teamId } = req.params;
         const tournament = await Tournament.findById(tournamentId);
+        if (!tournament) return res.status(404).json({ error: 'Torneo no encontrado' });
         const category = tournament.categories.id(categoryId);
+        if (!category) return res.status(404).json({ error: 'Categoría no encontrada' });
         category.registeredPlayers.pull({ _id: teamId });
         const updatedTournament = await tournament.save();
         res.status(200).json({ message: "Pareja eliminada", tournament: formatTournamentResponse(updatedTournament) });
@@ -764,9 +790,12 @@ router.post('/:tournamentId/move-team', auth(['admin']), async (req, res) => {
         const { tournamentId } = req.params;
         const { teamId, currentCategoryId, newCategoryId } = req.body;
         const tournament = await Tournament.findById(tournamentId);
+        if (!tournament) return res.status(404).json({ error: 'Torneo no encontrado' });
         const currentCategory = tournament.categories.id(currentCategoryId);
         const newCategory = tournament.categories.id(newCategoryId);
+        if (!currentCategory || !newCategory) return res.status(404).json({ error: 'Categoría no encontrada' });
         const teamToMove = currentCategory.registeredPlayers.find(p => p._id.equals(teamId));
+        if (!teamToMove) return res.status(404).json({ error: 'Pareja no encontrada' });
         currentCategory.registeredPlayers.pull({ _id: teamId });
         newCategory.registeredPlayers.push(teamToMove);
         const updatedTournament = await tournament.save();
@@ -788,12 +817,14 @@ router.put('/:tournamentId/category/:categoryId/match/:matchId', auth(['admin', 
             swapTeams
         } = req.body;
 
-        if (req.user.role === 'operator' && req.user.tournamentId !== tournamentId) {
+        if (req.user.role === 'operator' && String(req.user.tournamentId) !== String(tournamentId)) {
             return res.status(403).json({ error: 'No tiene permiso para este torneo.' });
         }
 
         const tournament = await Tournament.findById(tournamentId);
+        if (!tournament) return res.status(404).json({ error: 'Torneo no encontrado' });
         const category = tournament.categories.id(categoryId);
+        if (!category) return res.status(404).json({ error: 'Categoría no encontrada' });
         
         let match;
         let parentZone = null;
@@ -1260,7 +1291,9 @@ router.post('/:tournamentId/category/:categoryId/finish', auth(['admin']), async
     try {
         const { finishers } = req.body;
         const tournament = await Tournament.findById(req.params.tournamentId);
+        if (!tournament) return res.status(404).json({ error: 'Torneo no encontrado.' });
         const category = tournament.categories.id(req.params.categoryId);
+        if (!category) return res.status(404).json({ error: 'Categoría no encontrada.' });
         if (!finishers || finishers.length === 0) return res.status(400).json({ error: "No se proporcionaron datos de los ganadores." });
         category.finishers = finishers;
         category.status = 'Finalizado';
@@ -1330,6 +1363,45 @@ router.put('/:tournamentId/category/:categoryId/team/:teamId/player/:playerIndex
 
     } catch (error) {
         res.status(500).json({ error: 'Error al actualizar el nombre.' });
+    }
+});
+
+// DUPLICAR TORNEO COMO PLANTILLA EN BORRADOR (SOLO ADMIN)
+router.post('/:id/duplicate', auth(['admin']), async (req, res) => {
+    try {
+        const source = await Tournament.findById(req.params.id);
+        if (!source) return res.status(404).json({ error: 'Torneo original no encontrado.' });
+
+        const clonedCategories = (source.categories || []).map(cat => ({
+            name: cat.name,
+            status: cat.isManual ? 'Configuración Manual' : 'Inscripciones Abiertas',
+            isManual: Boolean(cat.isManual),
+            zonePlaySystem: Boolean(cat.zonePlaySystem),
+            useSeedings: Boolean(cat.useSeedings),
+            avoidClubConflicts: Boolean(cat.avoidClubConflicts),
+            registeredPlayers: [],
+            zones: [],
+            playoffRounds: [],
+            finishers: []
+        }));
+
+        const duplicated = new Tournament({
+            name: `Copia de ${source.name}`,
+            startDate: new Date(),
+            organizerPhone: source.organizerPhone || '',
+            categories: clonedCategories,
+            status: 'Activo',
+            visibility: 'borrador'
+        });
+
+        await duplicated.save();
+        res.status(201).json({
+            message: 'Plantilla de torneo duplicada en borrador.',
+            tournament: formatTournamentResponse(duplicated)
+        });
+    } catch (error) {
+        console.error('Error duplicando torneo:', error);
+        res.status(500).json({ error: 'No se pudo duplicar el torneo.' });
     }
 });
 

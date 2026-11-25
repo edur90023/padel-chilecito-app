@@ -2115,6 +2115,62 @@ function TournamentDetails({ tournament, onBack }) {
         onBack();
     };
 
+    const handleExportTeamsCsv = () => {
+        const escapeCsv = (val) => {
+            const raw = String(val ?? '').replace(/\r?\n/g, ' ').trim();
+            const safe = /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw;
+            return `"${safe.replace(/"/g, '""')}"`;
+        };
+
+        const headers = [
+            'Categoría',
+            'Pareja',
+            'Jugador 1',
+            'Teléfono 1',
+            'Jugador 2',
+            'Teléfono 2',
+            'Club',
+            'Estado de Pago',
+            'Disponibilidad / Nota'
+        ];
+
+        const rows = [headers.map(escapeCsv).join(',')];
+
+        (currentTournament.categories || []).forEach((cat) => {
+            const teams = Array.isArray(cat.registeredPlayers) && cat.registeredPlayers.length > 0
+                ? cat.registeredPlayers
+                : (Array.isArray(cat.zones) ? cat.zones.flatMap(z => z.teams || []) : []);
+
+            teams.forEach((team) => {
+                const p1 = team.players?.[0] || {};
+                const p2 = team.players?.[1] || {};
+                rows.push([
+                    cat.name || '',
+                    team.teamName || '',
+                    p1.playerName || '',
+                    p1.phoneNumber || '',
+                    p2.playerName || '',
+                    p2.phoneNumber || '',
+                    team.club || '',
+                    team.paid ? 'Pagado' : 'Pendiente',
+                    team.availabilityNote || ''
+                ].map(escapeCsv).join(','));
+            });
+        });
+
+        const csvContent = '\uFEFF' + rows.join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const slug = (currentTournament.name || 'torneo').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        link.href = url;
+        link.download = `inscriptos-${slug}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+
     const visibilityMeta = {
         borrador: {
             label: 'Borrador (Oculto al público)',
@@ -2144,14 +2200,23 @@ function TournamentDetails({ tournament, onBack }) {
                         <h2 className="text-3xl font-bold text-white">{currentTournament.name}</h2>
                         <p className="text-gray-400">Estado General: <span className="font-semibold">{currentTournament.status}</span></p>
                     </div>
-                    <div className="flex gap-3 flex-wrap">
+                    <div className="flex gap-2.5 flex-wrap">
                         {isAdmin() && (
                              <>
-                                <button onClick={handleGenerateOperatorLink} disabled={linkLoading} className="bg-orange-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-orange-600 transition disabled:bg-gray-600">
+                                <button
+                                    type="button"
+                                    onClick={handleExportTeamsCsv}
+                                    className="bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-2 px-3.5 rounded-lg transition text-sm flex items-center gap-1.5"
+                                    title="Descargar planilla Excel/CSV con todas las parejas, teléfonos y pagos"
+                                >
+                                    <i className="fas fa-file-csv"></i>
+                                    <span>Exportar CSV</span>
+                                </button>
+                                <button onClick={handleGenerateOperatorLink} disabled={linkLoading} className="bg-orange-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-orange-600 transition disabled:bg-gray-600 text-sm">
                                     {linkLoading ? 'Generando...' : 'Generar Enlace de Operador'}
                                 </button>
                                 {hasAnyOpenRegistration && (
-                                    <button onClick={() => { if(window.confirm('¿Seguro?')) { handleAction('close-all-registrations'); } }} className="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition">Cerrar Inscripciones</button>
+                                    <button onClick={() => { if(window.confirm('¿Seguro?')) { handleAction('close-all-registrations'); } }} className="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition text-sm">Cerrar Inscripciones</button>
                                 )}
                              </>
                         )}
