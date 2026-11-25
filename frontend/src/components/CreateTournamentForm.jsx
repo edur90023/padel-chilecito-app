@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import axios from 'axios';
+import TournamentBrandingSelector from './TournamentBrandingSelector';
 
 function CreateTournamentForm({ onTournamentCreated, onClose }) {
     const [formData, setFormData] = useState({
@@ -14,7 +15,11 @@ function CreateTournamentForm({ onTournamentCreated, onClose }) {
         useSeedings: false,
         avoidClubConflicts: false,
         visibility: 'publicado',
+        organizerName: '',
+        organizerLogoUrl: '',
+        sponsorLogos: [],
     });
+    const [showBranding, setShowBranding] = useState(false);
     const [visibilityTouched, setVisibilityTouched] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -58,7 +63,11 @@ function CreateTournamentForm({ onTournamentCreated, onClose }) {
                 useSeedings: false,
                 avoidClubConflicts: false,
                 visibility: 'publicado',
+                organizerName: '',
+                organizerLogoUrl: '',
+                sponsorLogos: [],
             });
+            setShowBranding(false);
             setVisibilityTouched(false);
             setTimeout(() => {
                 if (onTournamentCreated) {
@@ -177,6 +186,41 @@ function CreateTournamentForm({ onTournamentCreated, onClose }) {
                             );
                         })}
                     </div>
+                </div>
+
+                {/* Identidad y Logos del Complejo / Organizador y Placas PNG (Opcional) */}
+                <div className="bg-gray-900/50 border border-gray-700 rounded-xl overflow-hidden">
+                    <button
+                        type="button"
+                        onClick={() => setShowBranding((prev) => !prev)}
+                        className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-800/60 transition"
+                    >
+                        <div className="flex items-center gap-2.5">
+                            <i className="fas fa-award text-cyan-400"></i>
+                            <div>
+                                <span className="text-sm font-bold text-white block">
+                                    Logo del Complejo / Organizador y Logos en Placas PNG
+                                </span>
+                                <span className="text-[11px] text-gray-400">
+                                    Opcional: podés configurarlo ahora o después desde Gestionar Torneo.
+                                </span>
+                            </div>
+                        </div>
+                        <span className="text-xs font-bold text-cyan-300">
+                            {showBranding ? 'Ocultar ▲' : 'Configurar ▼'}
+                        </span>
+                    </button>
+
+                    {showBranding && (
+                        <div className="p-4 border-t border-gray-700">
+                            <TournamentBrandingSelector
+                                organizerName={formData.organizerName}
+                                organizerLogoUrl={formData.organizerLogoUrl}
+                                sponsorLogos={formData.sponsorLogos}
+                                onChange={(branding) => setFormData((prev) => ({ ...prev, ...branding }))}
+                            />
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex gap-4 pt-4">

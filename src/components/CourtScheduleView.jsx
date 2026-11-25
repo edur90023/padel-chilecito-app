@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { shareOrDownloadCourtCard } from '../utils/shareCardGenerator';
+import { shareOrDownloadCourtCard, shareOrDownloadMatchCard } from '../utils/shareCardGenerator';
 
 const getGoogleMapsUrl = (mapUrl, placeName) => {
     if (mapUrl && (mapUrl.startsWith('http://') || mapUrl.startsWith('https://'))) {
@@ -83,6 +83,7 @@ function CourtScheduleView({ tournament, isAdminView = false, onSelectCategory }
     const [selectedCourtKey, setSelectedCourtKey] = useState('all');
     const [selectedDay, setSelectedDay] = useState('all');
     const [selectedCategoryId, setSelectedCategoryId] = useState('all');
+    const [exportingMatchId, setExportingMatchId] = useState(null);
     const [selectedStatus, setSelectedStatus] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [showUnassigned, setShowUnassigned] = useState(false);
@@ -301,12 +302,35 @@ function CourtScheduleView({ tournament, isAdminView = false, onSelectCategory }
             await shareOrDownloadCourtCard({
                 tournamentName: tournament?.name,
                 courtLabel: group.label,
-                matches: group.matches
+                matches: group.matches,
+                organizerName: tournament?.organizerName,
+                organizerLogoUrl: tournament?.organizerLogoUrl,
+                sponsorLogos: tournament?.sponsorLogos
             });
         } catch (err) {
             console.error('Error al generar placa de cancha:', err);
         } finally {
             setExportingCourtKey(null);
+        }
+    };
+
+    const handleShareMatch = async (item) => {
+        setExportingMatchId(item.id);
+        try {
+            await shareOrDownloadMatchCard({
+                tournamentName: tournament?.name,
+                categoryName: item.categoryName,
+                stageLabel: item.stageLabel,
+                match: item.match,
+                fallbackPlace: item.locationQuery,
+                organizerName: tournament?.organizerName,
+                organizerLogoUrl: tournament?.organizerLogoUrl,
+                sponsorLogos: tournament?.sponsorLogos
+            });
+        } catch (err) {
+            console.error('Error al generar placa del partido:', err);
+        } finally {
+            setExportingMatchId(null);
         }
     };
 
@@ -401,35 +425,46 @@ function CourtScheduleView({ tournament, isAdminView = false, onSelectCategory }
                     </div>
                 </div>
 
-                {/* Ubicación directa de este partido + acceso rápido en admin */}
-                {(mapsHref || (isAdminView && onSelectCategory)) && (
-                    <div className="mt-2.5 pt-2 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs">
-                        {mapsHref ? (
-                            <a
-                                href={mapsHref}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-950/80 hover:bg-emerald-800 border border-emerald-500/50 text-emerald-300 text-[11px] font-bold transition"
-                                title={`Ver ubicación de ${locationQuery || 'este partido'} en Google Maps`}
-                            >
-                                <i className="fas fa-map-marker-alt text-red-400 text-[10px]"></i>
-                                <span className="truncate max-w-[190px] sm:max-w-xs">{locationQuery || 'Ver sede'}</span>
-                                <span className="text-emerald-200">• Cómo llegar ↗</span>
-                            </a>
-                        ) : <span />}
+                {/* Ubicación directa, placa PNG de este partido y acceso rápido en admin */}
+                <div className="mt-2.5 pt-2 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs">
+                    {mapsHref ? (
+                        <a
+                            href={mapsHref}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-950/80 hover:bg-emerald-800 border border-emerald-500/50 text-emerald-300 text-[11px] font-bold transition"
+                            title={`Ver ubicación de ${locationQuery || 'este partido'} en Google Maps`}
+                        >
+                            <i className="fas fa-map-marker-alt text-red-400 text-[10px]"></i>
+                            <span className="truncate max-w-[190px] sm:max-w-xs">{locationQuery || 'Ver sede'}</span>
+                            <span className="text-emerald-200">• Cómo llegar ↗</span>
+                        </a>
+                    ) : <span />}
+
+                    <div className="flex items-center gap-1.5 ml-auto">
+                        <button
+                            type="button"
+                            onClick={() => handleShareMatch(item)}
+                            disabled={exportingMatchId === item.id}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-cyan-950/80 hover:bg-cyan-800/80 border border-cyan-500/45 text-cyan-200 text-[11px] font-bold transition disabled:opacity-60"
+                            title="Compartir o descargar placa PNG de este partido con resultado y sponsors"
+                        >
+                            <i className={`fas ${exportingMatchId === item.id ? 'fa-spinner fa-spin' : 'fa-share-alt'} text-[10px]`}></i>
+                            <span>{exportingMatchId === item.id ? 'Generando...' : 'Placa'}</span>
+                        </button>
 
                         {isAdminView && onSelectCategory && (
                             <button
                                 type="button"
                                 onClick={() => onSelectCategory(categoryId)}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 text-[11px] font-semibold transition ml-auto"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 text-[11px] font-semibold transition"
                             >
                                 <span>Editar en {categoryName}</span>
                                 <i className="fas fa-arrow-right text-[10px]"></i>
                             </button>
                         )}
                     </div>
-                )}
+                </div>
             </div>
         );
     };

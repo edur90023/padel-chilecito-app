@@ -3,6 +3,9 @@ import axios from 'axios';
 import ManualSetupManager from './ManualSetupManager';
 import { useAuth } from '../context/AuthContext';
 import CourtScheduleView from './CourtScheduleView';
+import TournamentBrandingSelector from './TournamentBrandingSelector';
+import { resolveMediaUrl } from '../utils/mediaUrl';
+import { shareOrDownloadMatchCard } from '../utils/shareCardGenerator';
 
 export const getGoogleMapsUrl = (mapUrl, placeName) => {
     if (mapUrl && (mapUrl.startsWith('http://') || mapUrl.startsWith('https://'))) {
@@ -763,8 +766,9 @@ function SwapZoneModal({ category, onAction, onClose }) {
 }
 
 // --- Sub-componente para editar los resultados de un partido y nombres de jugadores ---
-function MatchEditor({ tournamentId, categoryId, match, onAction, userRole }) {
+function MatchEditor({ tournamentId, categoryId, match, onAction, userRole, tournament, categoryName, stageLabel, fallbackPlace }) {
     const [isEditing, setIsEditing] = useState(false);
+    const [sharingCard, setSharingCard] = useState(false);
     const [teamAName, setTeamAName] = useState(match.teamA?.teamName || match.placeholderA || '');
     const [teamBName, setTeamBName] = useState(match.teamB?.teamName || match.placeholderB || '');
     
@@ -934,6 +938,26 @@ function MatchEditor({ tournamentId, categoryId, match, onAction, userRole }) {
 
     const canNotify = time.trim() !== '' && place.trim() !== '';
 
+    const handleShareMatchCard = async () => {
+        setSharingCard(true);
+        try {
+            await shareOrDownloadMatchCard({
+                tournamentName: tournament?.name,
+                categoryName,
+                stageLabel,
+                match,
+                fallbackPlace,
+                organizerName: tournament?.organizerName,
+                organizerLogoUrl: tournament?.organizerLogoUrl,
+                sponsorLogos: tournament?.sponsorLogos
+            });
+        } catch (err) {
+            console.error('Error al generar placa del partido:', err);
+        } finally {
+            setSharingCard(false);
+        }
+    };
+
     if (!match.teamA || !match.teamB) {
         if (!isEditing) {
             return (
@@ -941,7 +965,19 @@ function MatchEditor({ tournamentId, categoryId, match, onAction, userRole }) {
                     <span className="flex-1 text-left">{match.placeholderA || 'TBD'}</span>
                     <span className="font-bold text-center flex-1">vs.</span>
                     <span className="flex-1 text-right">{match.placeholderB || 'TBD'}</span>
-                    <button onClick={() => setIsEditing(true)} className="ml-4 bg-blue-600 text-white px-2 py-1 text-xs rounded hover:bg-blue-700">Editar</button>
+                    <div className="ml-4 flex items-center gap-1.5">
+                        <button
+                            type="button"
+                            onClick={handleShareMatchCard}
+                            disabled={sharingCard}
+                            className="bg-cyan-700 hover:bg-cyan-600 text-white px-2 py-1 text-xs rounded font-semibold transition disabled:opacity-60"
+                            title="Compartir o descargar placa PNG de este partido"
+                        >
+                            <i className={`fas ${sharingCard ? 'fa-spinner fa-spin' : 'fa-share-alt'} mr-1`}></i>
+                            Placa
+                        </button>
+                        <button onClick={() => setIsEditing(true)} className="bg-blue-600 text-white px-2 py-1 text-xs rounded hover:bg-blue-700">Editar</button>
+                    </div>
                 </div>
             );
         }
@@ -949,7 +985,7 @@ function MatchEditor({ tournamentId, categoryId, match, onAction, userRole }) {
 
     if (!isEditing) {
         return (
-            <div className="flex items-center justify-between p-2 border-b border-gray-700 text-sm hover:bg-gray-700/50">
+            <div className="flex items-center justify-between p-2 border-b border-gray-700 text-sm hover:bg-gray-700/50 gap-2">
                 <div className="flex-1 text-left">
                     <p className="text-white font-medium">{match.teamA?.teamName || match.placeholderA}</p>
                     <div className="flex items-center gap-2 flex-wrap">
@@ -973,23 +1009,47 @@ function MatchEditor({ tournamentId, categoryId, match, onAction, userRole }) {
                 <div className="flex-1 text-right text-white font-medium">
                     {match.teamB?.teamName || match.placeholderB}
                 </div>
-                <button onClick={() => setIsEditing(true)} className="ml-4 bg-blue-600 text-white px-2 py-1 text-xs rounded hover:bg-blue-700">Editar</button>
+                <div className="ml-2 flex items-center gap-1.5 flex-shrink-0">
+                    <button
+                        type="button"
+                        onClick={handleShareMatchCard}
+                        disabled={sharingCard}
+                        className="bg-cyan-700 hover:bg-cyan-600 text-white px-2 py-1 text-xs rounded font-semibold transition disabled:opacity-60 inline-flex items-center gap-1"
+                        title="Compartir o descargar placa PNG de este partido con resultado y sponsors"
+                    >
+                        <i className={`fas ${sharingCard ? 'fa-spinner fa-spin' : 'fa-share-alt'} text-[10px]`}></i>
+                        <span>Placa</span>
+                    </button>
+                    <button onClick={() => setIsEditing(true)} className="bg-blue-600 text-white px-2 py-1 text-xs rounded hover:bg-blue-700">Editar</button>
+                </div>
             </div>
         );
     }
 
     return (
         <div className="p-4 bg-gray-900 rounded-lg my-2 space-y-3 animate-fade-in border border-blue-500">
-            <div className="flex justify-between items-center pb-2 border-b border-gray-800">
+            <div className="flex flex-wrap justify-between items-center gap-2 pb-2 border-b border-gray-800">
                 <span className="text-xs font-bold text-blue-400">Edición de Partido y Nombres</span>
-                <button 
-                    type="button" 
-                    onClick={handleSwapSides}
-                    className="bg-purple-600 hover:bg-purple-500 text-white text-xs px-2.5 py-1 rounded flex items-center gap-1 transition"
-                    title="Invertir Pareja A con Pareja B"
-                >
-                    ⇄ Invertir Lados (A / B)
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={handleShareMatchCard}
+                        disabled={sharingCard}
+                        className="bg-cyan-700 hover:bg-cyan-600 text-white text-xs px-2.5 py-1 rounded flex items-center gap-1 font-semibold transition disabled:opacity-60"
+                        title="Compartir o descargar placa PNG de este partido"
+                    >
+                        <i className={`fas ${sharingCard ? 'fa-spinner fa-spin' : 'fa-share-alt'}`}></i>
+                        <span>{sharingCard ? 'Generando...' : 'Placa PNG'}</span>
+                    </button>
+                    <button 
+                        type="button" 
+                        onClick={handleSwapSides}
+                        className="bg-purple-600 hover:bg-purple-500 text-white text-xs px-2.5 py-1 rounded flex items-center gap-1 transition"
+                        title="Invertir Pareja A con Pareja B"
+                    >
+                        ⇄ Invertir Lados (A / B)
+                    </button>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-800/60 p-3 rounded-lg border border-gray-700/60">
@@ -1946,7 +2006,18 @@ function CategoryManager({ category, tournament, onAction, userRole }) {
                                     </div>
                                     <div className="space-y-2">
                                         {zone.matches.map(match => (
-                                            <MatchEditor key={match._id} tournamentId={tournament._id} categoryId={category._id} match={match} onAction={onAction} userRole={userRole} />
+                                            <MatchEditor
+                                                key={match._id}
+                                                tournamentId={tournament._id}
+                                                categoryId={category._id}
+                                                match={match}
+                                                onAction={onAction}
+                                                userRole={userRole}
+                                                tournament={tournament}
+                                                categoryName={category.name}
+                                                stageLabel={zone.zoneName}
+                                                fallbackPlace={zone.zonePlace}
+                                            />
                                         ))}
                                     </div>
                                     <ZoneStandings zone={zone} />
@@ -1973,7 +2044,17 @@ function CategoryManager({ category, tournament, onAction, userRole }) {
                                     )}
                                     <div className="space-y-2">
                                         {round.matches.map(match => (
-                                            <MatchEditor key={match._id} tournamentId={tournament._id} categoryId={category._id} match={match} onAction={onAction} userRole={userRole} />
+                                            <MatchEditor
+                                                key={match._id}
+                                                tournamentId={tournament._id}
+                                                categoryId={category._id}
+                                                match={match}
+                                                onAction={onAction}
+                                                userRole={userRole}
+                                                tournament={tournament}
+                                                categoryName={category.name}
+                                                stageLabel={round.roundName}
+                                            />
                                         ))}
                                     </div>
                                 </div>
@@ -1998,9 +2079,20 @@ function TournamentDetails({ tournament, onBack }) {
     const [operatorLink, setOperatorLink] = useState('');
     const [linkLoading, setLinkLoading] = useState(false);
     const [notifyPublishPush, setNotifyPublishPush] = useState(false);
+    const [showBrandingModal, setShowBrandingModal] = useState(false);
+    const [brandingDraft, setBrandingDraft] = useState({
+        organizerName: tournament.organizerName || '',
+        organizerLogoUrl: tournament.organizerLogoUrl || '',
+        sponsorLogos: Array.isArray(tournament.sponsorLogos) ? tournament.sponsorLogos : []
+    });
 
     useEffect(() => {
         setCurrentTournament(tournament);
+        setBrandingDraft({
+            organizerName: tournament.organizerName || '',
+            organizerLogoUrl: tournament.organizerLogoUrl || '',
+            sponsorLogos: Array.isArray(tournament.sponsorLogos) ? tournament.sponsorLogos : []
+        });
     }, [tournament]);
 
     const hasAnyOpenRegistration = useMemo(() => currentTournament.categories.some(cat => cat.status === 'Inscripciones Abiertas'), [currentTournament]);
@@ -2071,6 +2163,9 @@ function TournamentDetails({ tournament, onBack }) {
             
             if (action === 'update-visibility') {
                 response = await axios.put(`${url}/visibility`, data);
+            }
+            else if (action === 'update-branding') {
+                response = await axios.put(`${url}/branding`, data);
             }
             else if (action === 'save-manual-structure') {
                 response = await axios.post(`${url}/category/${categoryId}/save-manual-structure`, data);
@@ -2196,13 +2291,50 @@ function TournamentDetails({ tournament, onBack }) {
             </button>
             <div className="bg-gray-800 p-6 rounded-lg shadow-xl">
                 <div className="flex justify-between items-center mb-4 border-b border-gray-700 pb-4 flex-wrap gap-4">
-                    <div>
-                        <h2 className="text-3xl font-bold text-white">{currentTournament.name}</h2>
-                        <p className="text-gray-400">Estado General: <span className="font-semibold">{currentTournament.status}</span></p>
+                    <div className="flex items-center gap-3.5">
+                        {currentTournament.organizerLogoUrl && (
+                            <div className="w-14 h-14 rounded-xl bg-white/95 border border-emerald-400/50 p-1 flex items-center justify-center overflow-hidden flex-shrink-0 shadow">
+                                <img
+                                    src={resolveMediaUrl(currentTournament.organizerLogoUrl)}
+                                    alt={currentTournament.organizerName || currentTournament.name}
+                                    className="w-full h-full object-contain"
+                                />
+                            </div>
+                        )}
+                        <div>
+                            <h2 className="text-3xl font-bold text-white">{currentTournament.name}</h2>
+                            <div className="flex flex-wrap items-center gap-2 text-gray-400 text-sm">
+                                <span>Estado General: <span className="font-semibold text-gray-200">{currentTournament.status}</span></span>
+                                {currentTournament.organizerName && (
+                                    <span className="text-emerald-300 font-semibold">• Sede/Org: {currentTournament.organizerName}</span>
+                                )}
+                                {Array.isArray(currentTournament.sponsorLogos) && currentTournament.sponsorLogos.length > 0 && (
+                                    <span className="text-xs px-2 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-500/40 text-cyan-300 font-semibold">
+                                        {currentTournament.sponsorLogos.length} {currentTournament.sponsorLogos.length === 1 ? 'logo' : 'logos'} en placas PNG
+                                    </span>
+                                )}
+                            </div>
+                        </div>
                     </div>
                     <div className="flex gap-2.5 flex-wrap">
                         {isAdmin() && (
                              <>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setBrandingDraft({
+                                            organizerName: currentTournament.organizerName || '',
+                                            organizerLogoUrl: currentTournament.organizerLogoUrl || '',
+                                            sponsorLogos: Array.isArray(currentTournament.sponsorLogos) ? currentTournament.sponsorLogos : []
+                                        });
+                                        setShowBrandingModal(true);
+                                    }}
+                                    className="bg-cyan-700 hover:bg-cyan-600 text-white font-bold py-2 px-3.5 rounded-lg transition text-sm flex items-center gap-1.5"
+                                    title="Configurar logo del complejo/organizador y los logos que salen en las placas PNG"
+                                >
+                                    <i className="fas fa-award"></i>
+                                    <span>Logos y Placas PNG</span>
+                                </button>
                                 <button
                                     type="button"
                                     onClick={handleExportTeamsCsv}
@@ -2222,6 +2354,59 @@ function TournamentDetails({ tournament, onBack }) {
                         )}
                     </div>
                 </div>
+
+                {showBrandingModal && (
+                    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+                        <div className="bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] overflow-y-auto p-6 space-y-5">
+                            <div className="flex items-center justify-between border-b border-gray-700 pb-3">
+                                <div>
+                                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                        <i className="fas fa-award text-cyan-400"></i>
+                                        <span>Identidad del Torneo y Logos PNG</span>
+                                    </h3>
+                                    <p className="text-xs text-gray-400 mt-0.5">
+                                        Elegí el logo del complejo u organizador y marcá qué logos querés incluir dentro de las placas PNG de horarios y podio.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowBrandingModal(false)}
+                                    className="text-gray-400 hover:text-white text-2xl leading-none"
+                                >
+                                    &times;
+                                </button>
+                            </div>
+
+                            <TournamentBrandingSelector
+                                organizerName={brandingDraft.organizerName}
+                                organizerLogoUrl={brandingDraft.organizerLogoUrl}
+                                sponsorLogos={brandingDraft.sponsorLogos}
+                                onChange={(next) => setBrandingDraft(next)}
+                            />
+
+                            <div className="flex flex-col sm:flex-row gap-3 pt-2 border-t border-gray-700">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowBrandingModal(false)}
+                                    className="w-full py-2.5 px-4 rounded-xl bg-gray-700 hover:bg-gray-600 text-white font-bold text-sm transition"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={loading}
+                                    onClick={async () => {
+                                        await handleAction('update-branding', null, brandingDraft);
+                                        setShowBrandingModal(false);
+                                    }}
+                                    className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm transition disabled:opacity-60"
+                                >
+                                    {loading ? 'Guardando...' : 'Guardar Identidad y Logos'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Panel de Control de Visibilidad y Publicación (Solo Admin) */}
                 {isAdmin() && (

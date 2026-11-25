@@ -5,7 +5,8 @@ import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import CourtScheduleView from '../components/CourtScheduleView';
 import { isTournamentCompleted } from '../utils/tournamentStatus';
-import { shareOrDownloadPodiumCard } from '../utils/shareCardGenerator';
+import { shareOrDownloadPodiumCard, shareOrDownloadMatchCard } from '../utils/shareCardGenerator';
+import { resolveMediaUrl } from '../utils/mediaUrl';
 
 // --- FUNCIONES Y COMPONENTES HELPER ---
 
@@ -40,13 +41,35 @@ const getTeamPlayers = (team, fallback = 'A definir') => {
     return [rawName || fallback];
 };
 
-const MatchDisplay = ({ match }) => {
+const MatchDisplay = ({ match, tournament, categoryName, stageLabel, fallbackPlace }) => {
     const [showDetails, setShowDetails] = useState(false);
+    const [sharing, setSharing] = useState(false);
     const winner = getMatchWinner(match);
     const formatScore = (scoreArray) => (Array.isArray(scoreArray) ? scoreArray.join(' / ') : '');
     const hasDetails = match.matchTime || match.matchPlace || match.matchMapUrl;
     const playersA = getTeamPlayers(match.teamA, match.placeholderA || 'A definir');
     const playersB = getTeamPlayers(match.teamB, match.placeholderB || 'A definir');
+
+    const handleShareMatch = async (e) => {
+        e.stopPropagation();
+        setSharing(true);
+        try {
+            await shareOrDownloadMatchCard({
+                tournamentName: tournament?.name,
+                categoryName,
+                stageLabel,
+                match,
+                fallbackPlace,
+                organizerName: tournament?.organizerName,
+                organizerLogoUrl: tournament?.organizerLogoUrl,
+                sponsorLogos: tournament?.sponsorLogos
+            });
+        } catch (err) {
+            console.error('Error al generar placa del partido:', err);
+        } finally {
+            setSharing(false);
+        }
+    };
 
     return (
         <div className="relative group">
@@ -80,30 +103,45 @@ const MatchDisplay = ({ match }) => {
                     </div>
                 </div>
 
-                {/* Visible para todos los jugadores y público general sin necesidad de contraseña */}
-                {(match.matchPlace || match.matchTime || match.matchMapUrl) && (
-                    <div className="pt-2 border-t border-gray-800/80 flex flex-wrap items-center justify-between gap-1.5 text-xs text-gray-400">
-                        <div className="flex items-center gap-2 flex-wrap">
-                            {match.matchPlace && (
-                                <span className="flex items-center gap-1 text-emerald-400 font-medium">
-                                    <i className="fas fa-map-marker-alt text-red-400 text-xs"></i>
-                                    {match.matchPlace}
-                                </span>
-                            )}
-                            {match.matchTime && (
-                                <span className="flex items-center gap-1 text-blue-300 font-medium">
-                                    <i className="fas fa-clock text-xs"></i>
-                                    {match.matchTime}
-                                </span>
-                            )}
-                        </div>
+                {/* Sede, Horario, Google Maps y botón Placa PNG */}
+                <div className="pt-2 border-t border-gray-800/80 flex flex-wrap items-center justify-between gap-1.5 text-xs text-gray-400">
+                    <div className="flex items-center gap-2 flex-wrap">
+                        {match.matchPlace && (
+                            <span className="flex items-center gap-1 text-emerald-400 font-medium">
+                                <i className="fas fa-map-marker-alt text-red-400 text-xs"></i>
+                                {match.matchPlace}
+                            </span>
+                        )}
+                        {match.matchTime && (
+                            <span className="flex items-center gap-1 text-blue-300 font-medium">
+                                <i className="fas fa-clock text-xs"></i>
+                                {match.matchTime}
+                            </span>
+                        )}
+                        {!match.matchPlace && !match.matchTime && (
+                            <span className="text-[11px] text-slate-500">
+                                {match.status === 'Finalizado' ? 'Finalizado' : match.status || 'Pendiente'}
+                            </span>
+                        )}
+                    </div>
+                    <div className="flex items-center gap-1.5 ml-auto">
+                        <button
+                            type="button"
+                            onClick={handleShareMatch}
+                            disabled={sharing}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-cyan-950/80 hover:bg-cyan-800/80 border border-cyan-500/40 text-cyan-200 text-[11px] font-bold transition disabled:opacity-60"
+                            title="Compartir o descargar placa PNG de este partido"
+                        >
+                            <i className={`fas ${sharing ? 'fa-spinner fa-spin' : 'fa-share-alt'} text-[10px]`}></i>
+                            <span>{sharing ? '...' : 'Placa'}</span>
+                        </button>
                         {(match.matchMapUrl || match.matchPlace) && (
                             <a
                                 href={getGoogleMapsUrl(match.matchMapUrl, match.matchPlace)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 onClick={(e) => e.stopPropagation()}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-950 hover:bg-emerald-800 border border-emerald-500/50 text-emerald-300 text-[11px] font-bold transition shadow-sm ml-auto"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-950 hover:bg-emerald-800 border border-emerald-500/50 text-emerald-300 text-[11px] font-bold transition shadow-sm"
                                 title="Abrir ubicación en Google Maps"
                             >
                                 <i className="fas fa-location-arrow text-emerald-400 text-[10px]"></i>
@@ -111,7 +149,7 @@ const MatchDisplay = ({ match }) => {
                             </a>
                         )}
                     </div>
-                )}
+                </div>
             </div>
             {showDetails && hasDetails && (
                  <div
@@ -299,8 +337,9 @@ const BracketByeItem = ({ team, subtitle = 'Avanza directo' }) => {
     );
 };
 
-const BracketMatchItem = ({ match, matchLabel }) => {
+const BracketMatchItem = ({ match, matchLabel, tournament, categoryName, stageLabel }) => {
     const [showDetails, setShowDetails] = useState(false);
+    const [sharing, setSharing] = useState(false);
     const winner = getMatchWinner(match);
     const hasDetails = Boolean(match.matchTime || match.matchPlace || match.matchMapUrl);
     const mapsLink = getGoogleMapsUrl(match.matchMapUrl, match.matchPlace);
@@ -308,18 +347,50 @@ const BracketMatchItem = ({ match, matchLabel }) => {
     const playersB = getTeamPlayers(match.teamB, match.placeholderB || 'A definir');
     const isProjected = Boolean(match._isProjected);
 
+    const handleShareBracketMatch = async (e) => {
+        e.stopPropagation();
+        setSharing(true);
+        try {
+            await shareOrDownloadMatchCard({
+                tournamentName: tournament?.name,
+                categoryName,
+                stageLabel: stageLabel || matchLabel,
+                match,
+                organizerName: tournament?.organizerName,
+                organizerLogoUrl: tournament?.organizerLogoUrl,
+                sponsorLogos: tournament?.sponsorLogos
+            });
+        } catch (err) {
+            console.error('Error al generar placa del partido:', err);
+        } finally {
+            setSharing(false);
+        }
+    };
+
     return (
         <div className="bracket-match-slot relative">
             <div 
                 className={`bracket-match transition-all duration-200 ${isProjected ? 'bracket-match-projected' : ''} ${hasDetails ? 'cursor-pointer hover:ring-2 hover:ring-primary/60' : ''}`}
                 onClick={() => hasDetails && setShowDetails(!showDetails)}
             >
-                {(matchLabel || isProjected) && (
-                    <div className="px-2.5 py-1 border-b border-white/10 bg-slate-950/50 rounded-t-[0.65rem] flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-wider">
-                        <span className="text-slate-400">{matchLabel || 'Cruce'}</span>
+                <div className="px-2.5 py-1 border-b border-white/10 bg-slate-950/50 rounded-t-[0.65rem] flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-wider">
+                    <span className="text-slate-400">{matchLabel || stageLabel || 'Cruce'}</span>
+                    <div className="flex items-center gap-1.5">
                         {isProjected && <span className="text-amber-300/90">Proyección</span>}
+                        {!isProjected && (
+                            <button
+                                type="button"
+                                onClick={handleShareBracketMatch}
+                                disabled={sharing}
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-cyan-950/90 hover:bg-cyan-800 border border-cyan-500/40 text-cyan-200 text-[9px] font-bold normal-case transition disabled:opacity-60"
+                                title="Compartir placa PNG de este partido"
+                            >
+                                <i className={`fas ${sharing ? 'fa-spinner fa-spin' : 'fa-share-alt'}`}></i>
+                                <span>Placa</span>
+                            </button>
+                        )}
                     </div>
-                )}
+                </div>
 
                 <div className={`bracket-team ${winner === 'A' ? 'winner' : ''}`}>
                     <span className={`team-name space-y-0.5 ${!match.teamA ? 'text-slate-400 italic text-xs' : ''}`} title={match.teamA?.teamName || match.placeholderA}>
@@ -548,7 +619,7 @@ const getRoundImportanceRank = (roundName = '') => {
     return 100;
 };
 
-const PlayoffBracket = ({ rounds }) => {
+const PlayoffBracket = ({ rounds, tournament, categoryName }) => {
     const [viewMode, setViewMode] = useState(() => (typeof window !== 'undefined' && window.innerWidth < 640 ? 'list' : 'bracket'));
 
     const displayMainRounds = useMemo(() => buildDisplayBracketRounds(rounds), [rounds]);
@@ -593,7 +664,7 @@ const PlayoffBracket = ({ rounds }) => {
             return (
                 <div className="bracket-pair bracket-pair-connected">
                     <BracketByeItem team={byes[0]} subtitle="Avanza a Final" />
-                    <BracketMatchItem match={matches[0]} matchLabel="Partido 1" />
+                    <BracketMatchItem match={matches[0]} matchLabel="Partido 1" tournament={tournament} categoryName={categoryName} stageLabel={round.roundName} />
                 </div>
             );
         }
@@ -603,10 +674,10 @@ const PlayoffBracket = ({ rounds }) => {
                 <>
                     <div className="bracket-pair bracket-pair-connected">
                         <BracketByeItem team={byes[0]} subtitle="Avanza a Semis" />
-                        <BracketMatchItem match={matches[0]} matchLabel="Partido 1" />
+                        <BracketMatchItem match={matches[0]} matchLabel="Partido 1" tournament={tournament} categoryName={categoryName} stageLabel={round.roundName} />
                     </div>
                     <div className="bracket-pair bracket-pair-connected">
-                        <BracketMatchItem match={matches[1]} matchLabel="Partido 2" />
+                        <BracketMatchItem match={matches[1]} matchLabel="Partido 2" tournament={tournament} categoryName={categoryName} stageLabel={round.roundName} />
                         <BracketByeItem team={byes[1]} subtitle="Avanza a Semis" />
                     </div>
                 </>
@@ -632,6 +703,9 @@ const PlayoffBracket = ({ rounds }) => {
                             key={match._id || `${pIdx}-${mIdx}`}
                             match={match}
                             matchLabel={`Partido ${pIdx * 2 + mIdx + 1}`}
+                            tournament={tournament}
+                            categoryName={categoryName}
+                            stageLabel={round.roundName}
                         />
                     ))}
                 </div>
@@ -643,6 +717,9 @@ const PlayoffBracket = ({ rounds }) => {
                 key={match._id || idx}
                 match={match}
                 matchLabel={matches.length > 1 ? `Partido ${idx + 1}` : undefined}
+                tournament={tournament}
+                categoryName={categoryName}
+                stageLabel={round.roundName}
             />
         ));
     };
@@ -698,7 +775,13 @@ const PlayoffBracket = ({ rounds }) => {
                             )}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 {round.matches.map((match, idx) => (
-                                    <MatchDisplay key={match._id || idx} match={match} />
+                                    <MatchDisplay
+                                        key={match._id || idx}
+                                        match={match}
+                                        tournament={tournament}
+                                        categoryName={categoryName}
+                                        stageLabel={round.roundName}
+                                    />
                                 ))}
                             </div>
                         </div>
@@ -747,10 +830,10 @@ const PlayoffBracket = ({ rounds }) => {
                                 </h4>
                                 <div className="bracket-matches">
                                     {finalRound && finalRound.matches?.[0] && (
-                                        <BracketMatchItem match={finalRound.matches[0]} matchLabel="Final" />
+                                        <BracketMatchItem match={finalRound.matches[0]} matchLabel="Final" tournament={tournament} categoryName={categoryName} stageLabel="Final" />
                                     )}
                                     {thirdPlaceRound && thirdPlaceRound.matches?.[0] && (
-                                        <BracketMatchItem match={thirdPlaceRound.matches[0]} matchLabel="3er y 4to Puesto" />
+                                        <BracketMatchItem match={thirdPlaceRound.matches[0]} matchLabel="3er y 4to Puesto" tournament={tournament} categoryName={categoryName} stageLabel="Tercer y Cuarto Puesto" />
                                     )}
                                 </div>
                             </div>
@@ -765,7 +848,7 @@ const PlayoffBracket = ({ rounds }) => {
 
 // frontend/src/pages/TournamentPublicView.jsx - Fragmento de WinnersDisplay actualizado
 
-const WinnersDisplay = ({ finishers, tournamentName, categoryName }) => {
+const WinnersDisplay = ({ finishers, tournamentName, categoryName, organizerName, organizerLogoUrl, sponsorLogos }) => {
     const [sharing, setSharing] = useState(false);
 
     if (!finishers || finishers.length === 0) {
@@ -799,7 +882,10 @@ const WinnersDisplay = ({ finishers, tournamentName, categoryName }) => {
             await shareOrDownloadPodiumCard({
                 tournamentName,
                 categoryName,
-                finishers: sortedFinishers
+                finishers: sortedFinishers,
+                organizerName,
+                organizerLogoUrl,
+                sponsorLogos
             });
         } catch (err) {
             console.error('Error al generar placa de podio:', err);
@@ -1098,7 +1184,7 @@ const PlayerMatchFinder = ({ tournament, onSelectCategory }) => {
                                             </div>
                                         </div>
 
-                                        {/* Sede, Horario y Maps */}
+                                        {/* Sede, Horario, Placa PNG y Maps */}
                                         <div className="pt-2 border-t border-gray-800/80 flex flex-wrap items-center justify-between gap-2 text-xs">
                                             <div className="flex items-center gap-2 flex-wrap">
                                                 {venue && (
@@ -1118,17 +1204,37 @@ const PlayerMatchFinder = ({ tournament, onSelectCategory }) => {
                                                 )}
                                             </div>
 
-                                            {(venue || mapUrl) && (
-                                                <a
-                                                    href={mapsLink}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold transition shadow-sm ml-auto"
+                                            <div className="flex items-center gap-1.5 ml-auto">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => shareOrDownloadMatchCard({
+                                                        tournamentName: tournament?.name,
+                                                        categoryName: category?.name,
+                                                        stageLabel: item.zone?.zoneName || item.round?.roundName || matchType,
+                                                        match,
+                                                        fallbackPlace: venue,
+                                                        organizerName: tournament?.organizerName,
+                                                        organizerLogoUrl: tournament?.organizerLogoUrl,
+                                                        sponsorLogos: tournament?.sponsorLogos
+                                                    })}
+                                                    className="inline-flex items-center gap-1 px-2 py-1 rounded bg-cyan-950/80 hover:bg-cyan-800/80 border border-cyan-500/45 text-cyan-200 text-[11px] font-bold transition"
+                                                    title="Compartir o descargar placa PNG de este partido"
                                                 >
-                                                    <i className="fas fa-location-arrow text-[10px]"></i>
-                                                    <span>Cómo llegar ↗</span>
-                                                </a>
-                                            )}
+                                                    <i className="fas fa-share-alt text-[10px]"></i>
+                                                    <span>Placa</span>
+                                                </button>
+                                                {(venue || mapUrl) && (
+                                                    <a
+                                                        href={mapsLink}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold transition shadow-sm"
+                                                    >
+                                                        <i className="fas fa-location-arrow text-[10px]"></i>
+                                                        <span>Cómo llegar ↗</span>
+                                                    </a>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 );
@@ -1246,7 +1352,26 @@ function TournamentPublicView() {
                     <span className="inline-flex items-center gap-2 px-3.5 py-1 rounded-lg bg-amber-400/15 border border-amber-400/40 text-amber-300 text-xs font-bold uppercase tracking-wider">
                         <i className="fas fa-fire"></i> Próximamente • Armando Zonas
                     </span>
+                    {tournament.organizerLogoUrl && (
+                        <div className="flex flex-col items-center gap-2">
+                            <div className="w-20 h-20 rounded-2xl bg-white/95 border-2 border-emerald-400/50 p-1.5 flex items-center justify-center overflow-hidden shadow-lg">
+                                <img
+                                    src={resolveMediaUrl(tournament.organizerLogoUrl)}
+                                    alt={tournament.organizerName || tournament.name}
+                                    className="w-full h-full object-contain"
+                                />
+                            </div>
+                            {tournament.organizerName && (
+                                <span className="text-xs font-bold uppercase tracking-wider text-emerald-300">
+                                    Organiza: {tournament.organizerName}
+                                </span>
+                            )}
+                        </div>
+                    )}
                     <h1 className="text-3xl sm:text-4xl font-extrabold text-white">{tournament.name}</h1>
+                    {!tournament.organizerLogoUrl && tournament.organizerName && (
+                        <p className="text-sm font-semibold text-emerald-300">Organiza: {tournament.organizerName}</p>
+                    )}
                     <p className="text-slate-300 text-sm">
                         Fecha estimada de inicio: <strong className="text-white">{new Date(tournament.startDate).toLocaleDateString()}</strong>
                     </p>
@@ -1279,32 +1404,48 @@ function TournamentPublicView() {
                 <i className="fas fa-arrow-left text-emerald-400"></i>Volver a Torneos
             </Link>
             <div className="glass-panel p-6 rounded-2xl mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl sm:text-4xl font-extrabold text-white">{tournament.name}</h1>
-                    {(() => {
-                        const isFinished = isTournamentCompleted(tournament);
-                        const hasOpen = (tournament.categories || []).some(c => c.status === 'Inscripciones Abiertas');
-                        const displayStatus = tournament.status === 'Cancelado'
-                            ? 'Cancelado'
-                            : isFinished
-                                ? 'Finalizado'
-                                : hasOpen
-                                    ? 'Inscripciones Abiertas'
-                                    : 'En Curso';
-                        const statusBadgeClass = isFinished
-                            ? 'text-cyan-300'
-                            : tournament.status === 'Cancelado'
-                                ? 'text-red-400'
-                                : hasOpen
-                                    ? 'text-emerald-400'
-                                    : 'text-amber-300';
-                        return (
-                            <p className="text-slate-300 mt-2">
-                                Fecha: {new Date(tournament.startDate).toLocaleDateString()} - Estado:{' '}
-                                <span className={`font-semibold ${statusBadgeClass}`}>{displayStatus}</span>
+                <div className="flex items-center gap-4">
+                    {tournament.organizerLogoUrl && (
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white/95 border-2 border-emerald-400/45 p-1.5 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-lg">
+                            <img
+                                src={resolveMediaUrl(tournament.organizerLogoUrl)}
+                                alt={tournament.organizerName || tournament.name}
+                                className="w-full h-full object-contain"
+                            />
+                        </div>
+                    )}
+                    <div>
+                        <h1 className="text-3xl sm:text-4xl font-extrabold text-white">{tournament.name}</h1>
+                        {tournament.organizerName && (
+                            <p className="text-sm font-bold text-emerald-300 mt-1">
+                                Organiza / Sede: {tournament.organizerName}
                             </p>
-                        );
-                    })()}
+                        )}
+                        {(() => {
+                            const isFinished = isTournamentCompleted(tournament);
+                            const hasOpen = (tournament.categories || []).some(c => c.status === 'Inscripciones Abiertas');
+                            const displayStatus = tournament.status === 'Cancelado'
+                                ? 'Cancelado'
+                                : isFinished
+                                    ? 'Finalizado'
+                                    : hasOpen
+                                        ? 'Inscripciones Abiertas'
+                                        : 'En Curso';
+                            const statusBadgeClass = isFinished
+                                ? 'text-cyan-300'
+                                : tournament.status === 'Cancelado'
+                                    ? 'text-red-400'
+                                    : hasOpen
+                                        ? 'text-emerald-400'
+                                        : 'text-amber-300';
+                            return (
+                                <p className="text-slate-300 mt-1.5">
+                                    Fecha: {new Date(tournament.startDate).toLocaleDateString()} - Estado:{' '}
+                                    <span className={`font-semibold ${statusBadgeClass}`}>{displayStatus}</span>
+                                </p>
+                            );
+                        })()}
+                    </div>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-center">
@@ -1379,8 +1520,15 @@ function TournamentPublicView() {
                         finishers={selectedCategory.finishers}
                         tournamentName={tournament.name}
                         categoryName={selectedCategory.name}
+                        organizerName={tournament.organizerName}
+                        organizerLogoUrl={tournament.organizerLogoUrl}
+                        sponsorLogos={tournament.sponsorLogos}
                     />
-                    <PlayoffBracket rounds={selectedCategory.playoffRounds} />
+                    <PlayoffBracket
+                        rounds={selectedCategory.playoffRounds}
+                        tournament={tournament}
+                        categoryName={selectedCategory.name}
+                    />
                     {selectedCategory.zones && selectedCategory.zones.length > 0 && (
                         <div className="mt-10">
                             <h3 className="text-2xl font-semibold text-white mb-4">Fase de Zonas</h3>
@@ -1403,7 +1551,18 @@ function TournamentPublicView() {
                                                 </a>
                                             )}
                                         </div>
-                                        <div className="space-y-2">{zone.matches.map((match, idx) => <MatchDisplay key={match._id || idx} match={match} />)}</div>
+                                        <div className="space-y-2">
+                                            {zone.matches.map((match, idx) => (
+                                                <MatchDisplay
+                                                    key={match._id || idx}
+                                                    match={match}
+                                                    tournament={tournament}
+                                                    categoryName={selectedCategory.name}
+                                                    stageLabel={zone.zoneName}
+                                                    fallbackPlace={zone.zonePlace}
+                                                />
+                                            ))}
+                                        </div>
                                         <ZoneStandings zone={zone} />
                                     </div>
                                 ))}

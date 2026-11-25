@@ -3,6 +3,7 @@ import axios from 'axios';
 import CreateTournamentForm from '../components/CreateTournamentForm';
 import TournamentDetails from '../components/TournamentDetails';
 import { isTournamentCompleted } from '../utils/tournamentStatus';
+import { resolveMediaUrl } from '../utils/mediaUrl';
 
 function AdminPage() {
     const [view, setView] = useState('list');
@@ -120,7 +121,23 @@ function AdminPage() {
                                 return (
                                     <div key={t._id} className="bg-gray-800 p-5 rounded-lg shadow-lg flex flex-col border border-gray-700/70">
                                         <div className="flex items-start justify-between gap-2 mb-1">
-                                            <h3 className="text-xl font-bold text-white">{t.name}</h3>
+                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                {t.organizerLogoUrl && (
+                                                    <div className="w-10 h-10 rounded-lg bg-white/95 border border-emerald-400/40 p-0.5 flex items-center justify-center overflow-hidden flex-shrink-0">
+                                                        <img
+                                                            src={resolveMediaUrl(t.organizerLogoUrl)}
+                                                            alt={t.organizerName || t.name}
+                                                            className="w-full h-full object-contain"
+                                                        />
+                                                    </div>
+                                                )}
+                                                <div className="min-w-0">
+                                                    <h3 className="text-xl font-bold text-white truncate">{t.name}</h3>
+                                                    {t.organizerName && (
+                                                        <p className="text-[11px] text-emerald-300 font-semibold truncate">{t.organizerName}</p>
+                                                    )}
+                                                </div>
+                                            </div>
                                             <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 text-[11px] font-bold rounded-full flex-shrink-0 ${visibilityBadge.cls}`}>
                                                 <i className={`fas ${visibilityBadge.icon}`}></i>
                                                 {visibilityBadge.text}

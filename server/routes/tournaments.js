@@ -2,10 +2,74 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
+const dns = require('dns').promises;
+const net = require('net');
 const Tournament = require('../models/Tournament');
 const TournamentManager = require('../services/tournament-manager');
 const auth = require('../middleware/auth');
+const upload = require('../config/cloudinary');
 const notificationsRouter = require('./notifications');
+
+const isPrivateOrReservedIp = (ip) => {
+    if (!ip) return true;
+    const normalized = ip.replace(/^::ffff:/i, '');
+    if (net.isIPv4(normalized)) {
+        const parts = normalized.split('.').map(Number);
+        if (parts.length !== 4 || parts.some(Number.isNaN)) return true;
+        const [a, b] = parts;
+        if (a === 0 || a === 10 || a === 127) return true;
+        if (a === 169 && b === 254) return true;
+        if (a === 172 && b >= 16 && b <= 31) return true;
+        if (a === 192 && b === 168) return true;
+        if (a === 100 && b >= 64 && b <= 127) return true;
+        if (a >= 224) return true;
+        return false;
+    }
+    if (net.isIPv6(normalized)) {
+        const lower = normalized.toLowerCase();
+        if (lower === '::1' || lower === '::') return true;
+        if (lower.startsWith('fc') || lower.startsWith('fd') || lower.startsWith('fe80')) return true;
+        return false;
+    }
+    return true;
+};
+
+const sanitizeLogoUrl = (value) => {
+    if (typeof value !== 'string') return '';
+    const trimmed = value.trim();
+    if (!trimmed) return '';
+    if (trimmed.startsWith('/uploads/') || trimmed.startsWith('/')) {
+        return trimmed;
+    }
+    try {
+        const parsed = new URL(trimmed);
+        if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+            return trimmed;
+        }
+    } catch {
+        return '';
+    }
+    return '';
+};
+
+const sanitizeBrandingPayload = (body = {}) => {
+    const organizerName = typeof body.organizerName === 'string'
+        ? body.organizerName.trim().slice(0, 80)
+        : '';
+    const organizerLogoUrl = sanitizeLogoUrl(body.organizerLogoUrl || '');
+    const rawList = Array.isArray(body.sponsorLogos) ? body.sponsorLogos : [];
+    const seen = new Set();
+    const sponsorLogos = [];
+    for (const item of rawList) {
+        const clean = sanitizeLogoUrl(item);
+        if (clean && !seen.has(clean)) {
+            seen.add(clean);
+            sponsorLogos.push(clean);
+            if (sponsorLogos.length >= 6) break;
+        }
+    }
+    return { organizerName, organizerLogoUrl, sponsorLogos };
+};
 
 const getCategoryPairsCount = (cat) => {
     const zoneTeamsCount = Array.isArray(cat?.zones)
@@ -324,6 +388,104 @@ router.get('/latest-finished', async (req, res) => {
     }
 });
 
+// PROXY DE IMAGEN PARA RENDERIZADO SEGURO EN PLACAS PNG (EVITA TAINTED CANVAS POR CORS)
+router.get('/proxy-image', async (req, res) => {
+    try {
+        const rawUrl = req.query.url;
+        if (typeof rawUrl !== 'string' || !rawUrl.trim()) {
+            return res.status(400).json({ error: 'URL de imagen requerida.' });
+        }
+
+        let parsed;
+        try {
+            parsed = new URL(rawUrl.trim());
+        } catch {
+            return res.status(400).json({ error: 'URL inválida.' });
+        }
+
+        if (!['http:', 'https:'].includes(parsed.protocol)) {
+            return res.status(400).json({ error: 'Protocolo no permitido.' });
+        }
+
+        const hostname = parsed.hostname.toLowerCase();
+        if (
+            hostname === 'localhost' ||
+            hostname.endsWith('.local') ||
+            hostname.endsWith('.internal') ||
+            hostname.endsWith('.localhost')
+        ) {
+            return res.status(403).json({ error: 'Host no permitido.' });
+        }
+
+        if (net.isIP(hostname) && isPrivateOrReservedIp(hostname)) {
+            return res.status(403).json({ error: 'Dirección IP no permitida.' });
+        }
+
+        try {
+            const resolved = await dns.lookup(hostname);
+            if (resolved?.address && isPrivateOrReservedIp(resolved.address)) {
+                return res.status(403).json({ error: 'Dirección de destino no permitida.' });
+            }
+        } catch {
+            return res.status(400).json({ error: 'No se pudo resolver el dominio de la imagen.' });
+        }
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 6500);
+        let upstream;
+        try {
+            upstream = await fetch(parsed.toString(), {
+                signal: controller.signal,
+                headers: { 'Accept': 'image/*' }
+            });
+        } finally {
+            clearTimeout(timeout);
+        }
+
+        if (!upstream.ok) {
+            return res.status(404).json({ error: 'No se pudo descargar la imagen.' });
+        }
+
+        const contentType = (upstream.headers.get('content-type') || '').toLowerCase();
+        if (!contentType.startsWith('image/')) {
+            return res.status(400).json({ error: 'El recurso solicitado no es una imagen válida.' });
+        }
+
+        const contentLength = Number(upstream.headers.get('content-length') || 0);
+        if (contentLength > 5 * 1024 * 1024) {
+            return res.status(413).json({ error: 'La imagen supera el tamaño máximo permitido (5 MB).' });
+        }
+
+        const arrayBuffer = await upstream.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        if (buffer.length > 5 * 1024 * 1024) {
+            return res.status(413).json({ error: 'La imagen supera el tamaño máximo permitido (5 MB).' });
+        }
+
+        res.setHeader('Content-Type', contentType.split(';')[0]);
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        return res.status(200).send(buffer);
+    } catch (error) {
+        return res.status(502).json({ error: 'Error al obtener la imagen remota.' });
+    }
+});
+
+// SUBIR LOGO PERSONALIZADO PARA TORNEO O PLACA PNG (SOLO ADMIN)
+router.post('/upload-logo', auth(['admin']), upload.single('logo'), (req, res) => {
+    try {
+        if (!req.file || !req.file.path) {
+            return res.status(400).json({ error: 'No se recibió ningún archivo de imagen.' });
+        }
+        return res.status(200).json({
+            message: 'Logo subido correctamente.',
+            url: req.file.path
+        });
+    } catch (error) {
+        return res.status(500).json({ error: 'Error al subir el logo.' });
+    }
+});
+
 // OBTENER UN TORNEO POR ID
 router.get('/:id', async (req, res) => {
     try {
@@ -379,6 +541,7 @@ router.post('/', auth(['admin']), async (req, res) => {
         const resolvedVisibility = allowedVisibilities.includes(visibility)
             ? visibility
             : (isManual ? 'borrador' : 'publicado');
+        const branding = sanitizeBrandingPayload(req.body);
         
         const newTournament = new Tournament({ 
             name, 
@@ -386,13 +549,38 @@ router.post('/', auth(['admin']), async (req, res) => {
             organizerPhone, 
             categories: categoriesArray, 
             status: 'Activo',
-            visibility: resolvedVisibility
+            visibility: resolvedVisibility,
+            organizerName: branding.organizerName,
+            organizerLogoUrl: branding.organizerLogoUrl,
+            sponsorLogos: branding.sponsorLogos
         });
         
         await newTournament.save();
         res.status(201).json({ message: 'Torneo creado exitosamente.', tournament: formatTournamentResponse(newTournament) });
     } catch (error) {
         res.status(500).json({ error: 'Error al crear el torneo.' });
+    }
+});
+
+// ACTUALIZAR IDENTIDAD, LOGO DEL COMPLEJO / ORGANIZADOR Y LOGOS DE PLACAS PNG (SOLO ADMIN)
+router.put('/:id/branding', auth(['admin']), async (req, res) => {
+    try {
+        const tournament = await Tournament.findById(req.params.id);
+        if (!tournament) return res.status(404).json({ error: 'Torneo no encontrado.' });
+
+        const branding = sanitizeBrandingPayload(req.body);
+        tournament.organizerName = branding.organizerName;
+        tournament.organizerLogoUrl = branding.organizerLogoUrl;
+        tournament.sponsorLogos = branding.sponsorLogos;
+
+        await tournament.save();
+        res.status(200).json({
+            message: 'Identidad visual y logos para placas PNG actualizados.',
+            tournament: formatTournamentResponse(tournament)
+        });
+    } catch (error) {
+        console.error('Error actualizando identidad del torneo:', error);
+        res.status(500).json({ error: 'Error al guardar los logos del torneo.' });
     }
 });
 
@@ -1391,7 +1579,10 @@ router.post('/:id/duplicate', auth(['admin']), async (req, res) => {
             organizerPhone: source.organizerPhone || '',
             categories: clonedCategories,
             status: 'Activo',
-            visibility: 'borrador'
+            visibility: 'borrador',
+            organizerName: source.organizerName || '',
+            organizerLogoUrl: source.organizerLogoUrl || '',
+            sponsorLogos: Array.isArray(source.sponsorLogos) ? source.sponsorLogos : []
         });
 
         await duplicated.save();

@@ -108,6 +108,20 @@ const tournamentSchema = new mongoose.Schema({
         type: String,
         enum: ['borrador', 'expectativa', 'publicado'],
         default: 'publicado'
+    },
+    organizerName: {
+        type: String,
+        default: '',
+        trim: true
+    },
+    organizerLogoUrl: {
+        type: String,
+        default: '',
+        trim: true
+    },
+    sponsorLogos: {
+        type: [String],
+        default: []
     }
 });
 

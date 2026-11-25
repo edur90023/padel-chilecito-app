@@ -1,13 +1,65 @@
 // Generador de placas PNG de alta calidad visual para WhatsApp e Instagram (100% cliente)
+import { API_BASE_URL } from '../api/axiosConfig';
+import { resolveMediaUrl } from './mediaUrl';
 
-const loadLogoImage = () => {
+const loadDirectCorsImage = (src, timeoutMs = 4500) => {
     return new Promise((resolve) => {
+        if (!src) {
+            resolve(null);
+            return;
+        }
         const img = new Image();
+        let settled = false;
+        const timer = setTimeout(() => {
+            if (!settled) {
+                settled = true;
+                resolve(null);
+            }
+        }, timeoutMs);
+
         img.crossOrigin = 'anonymous';
-        img.onload = () => resolve(img);
-        img.onerror = () => resolve(null);
-        img.src = '/logo.png';
+        img.onload = () => {
+            if (!settled) {
+                settled = true;
+                clearTimeout(timer);
+                resolve(img);
+            }
+        };
+        img.onerror = () => {
+            if (!settled) {
+                settled = true;
+                clearTimeout(timer);
+                resolve(null);
+            }
+        };
+        img.src = src;
     });
+};
+
+const loadImageSafe = async (src) => {
+    const resolved = resolveMediaUrl(src);
+    if (!resolved) return null;
+
+    const directImg = await loadDirectCorsImage(resolved);
+    if (directImg) return directImg;
+
+    // Si es externa y falló por CORS, reintentar vía proxy same-origin/backend
+    if (/^https?:\/\//i.test(resolved)) {
+        const proxyBase = API_BASE_URL ? `${API_BASE_URL}/api` : '/api';
+        const proxiedUrl = `${proxyBase}/tournaments/proxy-image?url=${encodeURIComponent(resolved)}`;
+        return loadDirectCorsImage(proxiedUrl, 6000);
+    }
+    return null;
+};
+
+const drawImageContained = (ctx, img, x, y, boxW, boxH) => {
+    if (!img || !img.width || !img.height) return;
+    const scale = Math.min(boxW / img.width, boxH / img.height);
+    const drawW = img.width * scale;
+    const drawH = img.height * scale;
+    const dx = x + (boxW - drawW) / 2;
+    const dy = y + (boxH - drawH) / 2;
+    ctx.drawImage(img, dx, dy, drawW, drawH);
 };
 
 const drawRoundedRect = (ctx, x, y, w, h, r) => {
@@ -137,7 +189,7 @@ const drawPadelCourtTexture = (ctx, width, height) => {
     ctx.fill();
 };
 
-const drawBackgroundAndHeader = async (ctx, width, height, { subtitle, title, badge }) => {
+const drawBackgroundAndHeader = async (ctx, width, height, { subtitle, title, badge, organizerName, organizerLogoUrl }) => {
     drawPadelCourtTexture(ctx, width, height);
 
     // Banda superior del encabezado
@@ -148,8 +200,9 @@ const drawBackgroundAndHeader = async (ctx, width, height, { subtitle, title, ba
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    // Logo circular con halo
-    const logo = await loadLogoImage();
+    // Logo circular con halo (prioriza logo del complejo/organizador, sino fallback /logo.png)
+    const customLogo = organizerLogoUrl ? await loadImageSafe(organizerLogoUrl) : null;
+    const logo = customLogo || await loadImageSafe('/logo.png');
     if (logo) {
         const lx = 114;
         const ly = 111;
@@ -166,7 +219,13 @@ const drawBackgroundAndHeader = async (ctx, width, height, { subtitle, title, ba
         ctx.arc(lx, ly, 38, 0, Math.PI * 2);
         ctx.closePath();
         ctx.clip();
-        ctx.drawImage(logo, lx - 38, ly - 38, 76, 76);
+        if (customLogo) {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.96)';
+            ctx.fillRect(lx - 38, ly - 38, 76, 76);
+            drawImageContained(ctx, logo, lx - 33, ly - 33, 66, 66);
+        } else {
+            ctx.drawImage(logo, lx - 38, ly - 38, 76, 76);
+        }
         ctx.restore();
 
         ctx.strokeStyle = '#34d399';
@@ -176,24 +235,12 @@ const drawBackgroundAndHeader = async (ctx, width, height, { subtitle, title, ba
         ctx.stroke();
     }
 
-    // Marca y club
-    ctx.textAlign = 'left';
-    const textX = logo ? 172 : 84;
-    const brandGrad = ctx.createLinearGradient(textX, 80, textX + 260, 110);
-    brandGrad.addColorStop(0, '#34d399');
-    brandGrad.addColorStop(1, '#22d3ee');
-    ctx.fillStyle = brandGrad;
-    ctx.font = '900 30px system-ui, -apple-system, Segoe UI, sans-serif';
-    ctx.fillText('RED PADEL LR', textX, 105);
-
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = '700 16px system-ui, -apple-system, Segoe UI, sans-serif';
-    ctx.fillText('GRUPO PADEL CHILECITO • LA RIOJA', textX, 134);
-
-    // Pill badge derecha
+    // Pill badge derecha (medir primero para no pisar nombres largos de organizadores)
+    let badgeWidthReserved = 0;
     if (badge) {
         ctx.font = '800 17px system-ui, -apple-system, Segoe UI, sans-serif';
         const bw = ctx.measureText(badge.toUpperCase()).width + 42;
+        badgeWidthReserved = bw + 28;
         const bx = width - 80 - bw;
         drawRoundedRect(ctx, bx, 86, bw, 48, 14);
         const bGrad = ctx.createLinearGradient(bx, 86, bx + bw, 134);
@@ -209,6 +256,31 @@ const drawBackgroundAndHeader = async (ctx, width, height, { subtitle, title, ba
         ctx.textAlign = 'center';
         ctx.fillText(badge.toUpperCase(), bx + bw / 2, 116);
     }
+
+    // Marca y complejo / organizador
+    ctx.textAlign = 'left';
+    const textX = logo ? 172 : 84;
+    const maxBrandW = Math.max(260, width - 80 - badgeWidthReserved - textX);
+    const cleanOrgName = typeof organizerName === 'string' ? organizerName.trim() : '';
+    const brandTitle = cleanOrgName ? cleanOrgName.toUpperCase() : 'RED PADEL LR';
+    const brandSub = cleanOrgName ? 'TORNEO OFICIAL • RED PADEL LR' : 'GRUPO PADEL CHILECITO • LA RIOJA';
+
+    let brandFontSize = 30;
+    while (brandFontSize > 19) {
+        ctx.font = `900 ${brandFontSize}px system-ui, -apple-system, Segoe UI, sans-serif`;
+        if (ctx.measureText(brandTitle).width <= maxBrandW) break;
+        brandFontSize -= 2;
+    }
+
+    const brandGrad = ctx.createLinearGradient(textX, 80, textX + 260, 110);
+    brandGrad.addColorStop(0, '#34d399');
+    brandGrad.addColorStop(1, '#22d3ee');
+    ctx.fillStyle = brandGrad;
+    ctx.fillText(brandTitle, textX, 105, maxBrandW);
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '700 15px system-ui, -apple-system, Segoe UI, sans-serif';
+    ctx.fillText(brandSub, textX, 134, maxBrandW);
 
     // Subtítulo del torneo + título principal
     ctx.textAlign = 'left';
@@ -305,6 +377,59 @@ const drawTrophyEmblem = (ctx, cx, cy, position, accent) => {
     ctx.restore();
 };
 
+const loadSponsorImages = async (sponsorLogos) => {
+    if (!Array.isArray(sponsorLogos) || sponsorLogos.length === 0) return [];
+    const unique = [...new Set(sponsorLogos.map((u) => (typeof u === 'string' ? u.trim() : '')).filter(Boolean))].slice(0, 6);
+    if (unique.length === 0) return [];
+    const loaded = await Promise.all(unique.map((url) => loadImageSafe(url)));
+    return loaded.filter(Boolean);
+};
+
+const drawSponsorStripAndFooter = (ctx, width, height, sponsorImages) => {
+    if (Array.isArray(sponsorImages) && sponsorImages.length > 0) {
+        const stripX = 56;
+        const stripW = width - 112;
+        const stripH = 122;
+        const stripY = height - 234;
+
+        drawRoundedRect(ctx, stripX, stripY, stripW, stripH, 20);
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(52, 211, 153, 0.28)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '800 13px system-ui, -apple-system, Segoe UI, sans-serif';
+        ctx.fillText('ORGANIZAN Y AUSPICIAN', width / 2, stripY + 23);
+
+        const count = sponsorImages.length;
+        const gap = 16;
+        const innerPadX = 24;
+        const usableW = stripW - innerPadX * 2 - gap * (count - 1);
+        const tileW = Math.min(185, Math.floor(usableW / count));
+        const tileH = 74;
+        const totalRowW = tileW * count + gap * (count - 1);
+        let startX = Math.round((width - totalRowW) / 2);
+        const tileY = stripY + 34;
+
+        sponsorImages.forEach((img) => {
+            drawRoundedRect(ctx, startX, tileY, tileW, tileH, 14);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.94)';
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(52, 211, 153, 0.35)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            drawImageContained(ctx, img, startX + 10, tileY + 8, tileW - 20, tileH - 16);
+            startX += tileW + gap;
+        });
+    }
+
+    drawFooter(ctx, width, height);
+};
+
 const drawFooter = (ctx, width, height) => {
     drawRoundedRect(ctx, 56, height - 96, width - 112, 52, 16);
     ctx.fillStyle = 'rgba(15, 23, 42, 0.72)';
@@ -377,13 +502,23 @@ const formatPlayersText = (team, fallback = 'A definir') => {
     return extractPlayerNames(team, fallback).join(' / ');
 };
 
-export async function shareOrDownloadCourtCard({ tournamentName, courtLabel, matches }) {
+export async function shareOrDownloadCourtCard({
+    tournamentName,
+    courtLabel,
+    matches,
+    organizerName,
+    organizerLogoUrl,
+    sponsorLogos
+}) {
+    const sponsorImages = await loadSponsorImages(sponsorLogos);
+    const sponsorExtraH = sponsorImages.length > 0 ? 136 : 0;
+
     const visibleMatches = (matches || []).slice(0, 7);
     const extraCount = Math.max(0, (matches || []).length - visibleMatches.length);
     const width = 1080;
     const cardHeight = 148;
     const startEst = 360;
-    const height = Math.max(1180, startEst + visibleMatches.length * (cardHeight + 20) + (extraCount > 0 ? 54 : 0) + 130);
+    const height = Math.max(1180 + sponsorExtraH, startEst + visibleMatches.length * (cardHeight + 20) + (extraCount > 0 ? 54 : 0) + 130 + sponsorExtraH);
 
     const canvas = document.createElement('canvas');
     canvas.width = width;
@@ -393,7 +528,9 @@ export async function shareOrDownloadCourtCard({ tournamentName, courtLabel, mat
     let y = await drawBackgroundAndHeader(ctx, width, height, {
         subtitle: tournamentName || 'Torneo Oficial',
         title: courtLabel || 'Cronograma de Cancha',
-        badge: `${matches.length} ${matches.length === 1 ? 'Partido' : 'Partidos'}`
+        badge: `${matches.length} ${matches.length === 1 ? 'Partido' : 'Partidos'}`,
+        organizerName,
+        organizerLogoUrl
     });
 
     visibleMatches.forEach((item) => {
@@ -517,7 +654,7 @@ export async function shareOrDownloadCourtCard({ tournamentName, courtLabel, mat
         ctx.fillText(`+ ${extraCount} partido(s) más en el cronograma completo de la app`, width / 2, y + 26);
     }
 
-    drawFooter(ctx, width, height);
+    drawSponsorStripAndFooter(ctx, width, height, sponsorImages);
 
     const slug = (courtLabel || 'cancha').toLowerCase().replace(/[^a-z0-9]+/g, '-');
     return deliverCanvasImage(
@@ -528,7 +665,17 @@ export async function shareOrDownloadCourtCard({ tournamentName, courtLabel, mat
     );
 }
 
-export async function shareOrDownloadPodiumCard({ tournamentName, categoryName, finishers }) {
+export async function shareOrDownloadPodiumCard({
+    tournamentName,
+    categoryName,
+    finishers,
+    organizerName,
+    organizerLogoUrl,
+    sponsorLogos
+}) {
+    const sponsorImages = await loadSponsorImages(sponsorLogos);
+    const sponsorExtraH = sponsorImages.length > 0 ? 136 : 0;
+
     const sorted = [...(finishers || [])].sort((a, b) => a.position - b.position).slice(0, 4);
     const width = 1080;
 
@@ -538,7 +685,7 @@ export async function shareOrDownloadPodiumCard({ tournamentName, categoryName, 
         return players.length > 1 ? 216 : 168;
     });
     const totalCardsH = cardHeights.reduce((sum, h) => sum + h + 26, 0);
-    const height = Math.max(1220, 390 + totalCardsH + 140);
+    const height = Math.max(1220 + sponsorExtraH, 390 + totalCardsH + 140 + sponsorExtraH);
 
     const canvas = document.createElement('canvas');
     canvas.width = width;
@@ -548,7 +695,9 @@ export async function shareOrDownloadPodiumCard({ tournamentName, categoryName, 
     let y = await drawBackgroundAndHeader(ctx, width, height, {
         subtitle: tournamentName || 'Torneo Oficial',
         title: categoryName || 'Categoría',
-        badge: 'Cuadro de Honor'
+        badge: 'Cuadro de Honor',
+        organizerName,
+        organizerLogoUrl
     });
 
     y += 14;
@@ -664,7 +813,7 @@ export async function shareOrDownloadPodiumCard({ tournamentName, categoryName, 
         y += cardH + 26;
     });
 
-    drawFooter(ctx, width, height);
+    drawSponsorStripAndFooter(ctx, width, height, sponsorImages);
 
     const slug = (categoryName || 'categoria').toLowerCase().replace(/[^a-z0-9]+/g, '-');
     return deliverCanvasImage(
@@ -672,5 +821,298 @@ export async function shareOrDownloadPodiumCard({ tournamentName, categoryName, 
         `podio-${slug}.png`,
         `Podio ${categoryName} — ${tournamentName || 'Red Padel LR'}`,
         `Cuadro de honor de ${categoryName} en ${tournamentName || 'Red Padel LR'}`
+    );
+}
+
+const resolveWinnerSide = (match) => {
+    if (!match || match.status !== 'Finalizado') return null;
+    const scoreA = Array.isArray(match.scoreA) ? match.scoreA : [];
+    const scoreB = Array.isArray(match.scoreB) ? match.scoreB : [];
+    if (scoreA.length === 0) return null;
+    let setsA = 0;
+    let setsB = 0;
+    scoreA.forEach((s, i) => {
+        const sb = Number(scoreB[i] ?? 0);
+        const sa = Number(s ?? 0);
+        if (sa > sb) setsA++;
+        else if (sb > sa) setsB++;
+    });
+    if (setsA === setsB) return null;
+    return setsA > setsB ? 'A' : 'B';
+};
+
+const fitPlayerLinesCentered = (ctx, text, cx, startY, maxWidth, color = '#ffffff') => {
+    let size = 30;
+    let lines = [text];
+    while (size >= 20) {
+        ctx.font = `800 ${size}px system-ui, -apple-system, Segoe UI, sans-serif`;
+        lines = wrapLines(ctx, text, maxWidth);
+        if (lines.length <= 2) break;
+        size -= 2;
+    }
+    ctx.fillStyle = color;
+    ctx.textAlign = 'center';
+    const step = Math.round(size * 1.18);
+    lines.slice(0, 2).forEach((line, idx) => {
+        ctx.fillText(line, cx, startY + idx * step, maxWidth);
+    });
+    return lines.slice(0, 2).length * step;
+};
+
+export async function shareOrDownloadMatchCard({
+    tournamentName,
+    categoryName,
+    stageLabel,
+    match,
+    fallbackPlace,
+    organizerName,
+    organizerLogoUrl,
+    sponsorLogos
+}) {
+    const m = match || {};
+    const sponsorImages = await loadSponsorImages(sponsorLogos);
+    const sponsorExtraH = sponsorImages.length > 0 ? 136 : 0;
+
+    const width = 1080;
+    const height = 1080 + sponsorExtraH;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+
+    const subtitleParts = [tournamentName || 'Torneo Oficial', stageLabel].filter(Boolean);
+    const headerBottomY = await drawBackgroundAndHeader(ctx, width, height, {
+        subtitle: subtitleParts.join('  •  '),
+        title: categoryName || 'Partido del Torneo',
+        badge: m.status === 'Finalizado' ? 'Resultado Final' : m.status === 'En Juego' ? 'En Vivo' : 'Partido',
+        organizerName,
+        organizerLogoUrl
+    });
+
+    const bottomBound = sponsorImages.length > 0 ? height - 252 : height - 116;
+    const cardH = Math.min(470, Math.max(410, bottomBound - headerBottomY - 24));
+    const cardY = Math.round(headerBottomY + Math.max(12, (bottomBound - headerBottomY - cardH) / 2));
+    const cardX = 56;
+    const cardW = width - 112;
+
+    const isFinished = m.status === 'Finalizado';
+    const isLive = m.status === 'En Juego';
+    const winner = resolveWinnerSide(m);
+    const playersA = extractPlayerNames(m.teamA, m.placeholderA || 'A definir');
+    const playersB = extractPlayerNames(m.teamB, m.placeholderB || 'A definir');
+    const scoreA = Array.isArray(m.scoreA) ? m.scoreA : [];
+    const scoreB = Array.isArray(m.scoreB) ? m.scoreB : [];
+    const hasScores = scoreA.length > 0 && (isFinished || isLive);
+
+    // Tarjeta central del partido
+    drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 28);
+    const cardGrad = ctx.createLinearGradient(cardX, cardY, cardX + cardW, cardY + cardH);
+    cardGrad.addColorStop(0, 'rgba(15, 29, 54, 0.90)');
+    cardGrad.addColorStop(1, 'rgba(7, 15, 32, 0.94)');
+    ctx.fillStyle = cardGrad;
+    ctx.fill();
+    ctx.strokeStyle = isLive
+        ? 'rgba(52, 211, 153, 0.65)'
+        : isFinished
+            ? 'rgba(56, 189, 248, 0.45)'
+            : 'rgba(148, 163, 184, 0.30)';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // Franja superior de estado y ronda
+    const topBarY = cardY + 24;
+    if (stageLabel) {
+        ctx.font = '800 17px system-ui, -apple-system, Segoe UI, sans-serif';
+        const stgText = stageLabel.toUpperCase();
+        const stgW = Math.min(420, ctx.measureText(stgText).width + 32);
+        drawRoundedRect(ctx, cardX + 28, topBarY, stgW, 36, 10);
+        ctx.fillStyle = 'rgba(34, 211, 238, 0.14)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(34, 211, 238, 0.45)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#67e8f9';
+        ctx.fillText(stgText, cardX + 44, topBarY + 24, stgW - 32);
+    }
+
+    const statusTxt = isFinished ? 'FINALIZADO' : isLive ? '● EN JUEGO' : 'PROGRAMADO';
+    ctx.font = '900 16px system-ui, -apple-system, Segoe UI, sans-serif';
+    const statW = ctx.measureText(statusTxt).width + 32;
+    drawRoundedRect(ctx, cardX + cardW - 28 - statW, topBarY, statW, 36, 10);
+    ctx.fillStyle = isFinished
+        ? 'rgba(16, 185, 129, 0.20)'
+        : isLive
+            ? 'rgba(16, 185, 129, 0.28)'
+            : 'rgba(245, 158, 11, 0.18)';
+    ctx.fill();
+    ctx.strokeStyle = isFinished || isLive ? 'rgba(52, 211, 153, 0.55)' : 'rgba(251, 191, 36, 0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.textAlign = 'right';
+    ctx.fillStyle = isFinished || isLive ? '#6ee7b7' : '#fde68a';
+    ctx.fillText(statusTxt, cardX + cardW - 44, topBarY + 24);
+
+    // Zona principal: Pareja A | Marcador / VS | Pareja B
+    const boxY = cardY + 80;
+    const boxH = cardH - 168;
+    const sidePad = 28;
+    const centerColW = hasScores ? 186 : 112;
+    const boxW = Math.floor((cardW - sidePad * 2 - centerColW - 24) / 2);
+    const leftBoxX = cardX + sidePad;
+    const rightBoxX = cardX + cardW - sidePad - boxW;
+    const centerX = width / 2;
+
+    const drawTeamBox = (bx, players, isWinner) => {
+        drawRoundedRect(ctx, bx, boxY, boxW, boxH, 22);
+        const tGrad = ctx.createLinearGradient(bx, boxY, bx, boxY + boxH);
+        if (isWinner) {
+            tGrad.addColorStop(0, 'rgba(16, 185, 129, 0.24)');
+            tGrad.addColorStop(1, 'rgba(15, 23, 42, 0.85)');
+        } else {
+            tGrad.addColorStop(0, 'rgba(30, 41, 59, 0.58)');
+            tGrad.addColorStop(1, 'rgba(15, 23, 42, 0.82)');
+        }
+        ctx.fillStyle = tGrad;
+        ctx.fill();
+        ctx.strokeStyle = isWinner ? 'rgba(52, 211, 153, 0.78)' : 'rgba(255, 255, 255, 0.12)';
+        ctx.lineWidth = isWinner ? 2.5 : 1.5;
+        ctx.stroke();
+
+        const cx = bx + boxW / 2;
+        if (isWinner) {
+            ctx.font = '900 14px system-ui, -apple-system, Segoe UI, sans-serif';
+            const badgeTxt = '★ GANADORES';
+            const bw = ctx.measureText(badgeTxt).width + 24;
+            drawRoundedRect(ctx, cx - bw / 2, boxY + 18, bw, 28, 8);
+            ctx.fillStyle = 'rgba(250, 204, 21, 0.18)';
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(250, 204, 21, 0.65)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#fde047';
+            ctx.fillText(badgeTxt, cx, boxY + 37);
+        }
+
+        const shownPlayers = players.slice(0, 2);
+        const startOffset = shownPlayers.length === 1 ? boxH * 0.52 : boxH * 0.39;
+        let py = boxY + startOffset + (isWinner && shownPlayers.length > 1 ? 10 : 0);
+        shownPlayers.forEach((playerName, idx) => {
+            const drawnH = fitPlayerLinesCentered(
+                ctx,
+                playerName,
+                cx,
+                py,
+                boxW - 32,
+                isWinner ? '#ffffff' : '#e2e8f0'
+            );
+            if (idx === 0 && shownPlayers.length > 1) {
+                py += Math.max(46, drawnH + 14);
+            }
+        });
+    };
+
+    drawTeamBox(leftBoxX, playersA, winner === 'A');
+    drawTeamBox(rightBoxX, playersB, winner === 'B');
+
+    // Columna central: Marcador por sets o medallón VS
+    const midY = boxY + boxH / 2;
+    if (hasScores) {
+        const setsToShow = scoreA.slice(0, 3);
+        const rowH = 54;
+        const rowGap = 12;
+        const totalScoreH = setsToShow.length * rowH + (setsToShow.length - 1) * rowGap;
+        let sy = midY - totalScoreH / 2 + 12;
+
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '800 13px system-ui, -apple-system, Segoe UI, sans-serif';
+        ctx.fillText(isFinished ? 'RESULTADO' : 'MARCADOR', centerX, sy - 16);
+
+        setsToShow.forEach((saRaw, idx) => {
+            const sa = Number(saRaw ?? 0);
+            const sb = Number(scoreB[idx] ?? 0);
+            const pillW = centerColW - 18;
+            const px = centerX - pillW / 2;
+
+            drawRoundedRect(ctx, px, sy, pillW, rowH, 14);
+            ctx.fillStyle = 'rgba(2, 8, 23, 0.85)';
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(52, 211, 153, 0.40)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            ctx.font = '900 30px monospace';
+            ctx.textAlign = 'right';
+            ctx.fillStyle = sa > sb ? '#34d399' : '#cbd5e1';
+            ctx.fillText(String(sa), centerX - 16, sy + 37);
+
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#64748b';
+            ctx.font = '900 22px system-ui, -apple-system, Segoe UI, sans-serif';
+            ctx.fillText('-', centerX, sy + 35);
+
+            ctx.font = '900 30px monospace';
+            ctx.textAlign = 'left';
+            ctx.fillStyle = sb > sa ? '#34d399' : '#cbd5e1';
+            ctx.fillText(String(sb), centerX + 16, sy + 37);
+
+            sy += rowH + rowGap;
+        });
+    } else {
+        const vsGlow = ctx.createRadialGradient(centerX, midY, 10, centerX, midY, 54);
+        vsGlow.addColorStop(0, 'rgba(34, 211, 238, 0.35)');
+        vsGlow.addColorStop(1, 'rgba(34, 211, 238, 0)');
+        ctx.fillStyle = vsGlow;
+        ctx.beginPath();
+        ctx.arc(centerX, midY, 54, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(centerX, midY, 36, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(2, 8, 23, 0.88)';
+        ctx.fill();
+        ctx.strokeStyle = '#22d3ee';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '900 26px system-ui, -apple-system, Segoe UI, sans-serif';
+        ctx.fillText('VS', centerX, midY + 9);
+    }
+
+    // Barra inferior de horario y sede/cancha dentro de la tarjeta
+    const metaY = cardY + cardH - 64;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(cardX + 28, metaY - 12);
+    ctx.lineTo(cardX + cardW - 28, metaY - 12);
+    ctx.stroke();
+
+    const timeText = (m.matchTime || 'Horario a confirmar').trim();
+    const placeText = (m.matchPlace || fallbackPlace || 'Sede a confirmar').trim();
+
+    ctx.font = '700 18px system-ui, -apple-system, Segoe UI, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#93c5fd';
+    ctx.fillText(`🕒 ${timeText}`, cardX + 32, metaY + 24, cardW * 0.45);
+
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#6ee7b7';
+    ctx.fillText(`📍 ${placeText}`, cardX + cardW - 32, metaY + 24, cardW * 0.48);
+
+    drawSponsorStripAndFooter(ctx, width, height, sponsorImages);
+
+    const teamASlug = (playersA[0] || 'pareja-a').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const teamBSlug = (playersB[0] || 'pareja-b').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    return deliverCanvasImage(
+        canvas,
+        `partido-${teamASlug}-vs-${teamBSlug}.png`,
+        `${formatPlayersText(m.teamA, m.placeholderA)} vs ${formatPlayersText(m.teamB, m.placeholderB)}`,
+        `${tournamentName || 'Red Padel LR'} • ${categoryName || ''}`
     );
 }

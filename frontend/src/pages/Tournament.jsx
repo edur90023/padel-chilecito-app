@@ -5,6 +5,7 @@ import axios from 'axios';
 import { Link } from 'react-router-dom';
 import RegistrationForm from '../components/RegistrationForm';
 import { isTournamentCompleted } from '../utils/tournamentStatus';
+import { resolveMediaUrl } from '../utils/mediaUrl';
 
 function Tournament() {
     const [tournaments, setTournaments] = useState([]);
@@ -122,7 +123,25 @@ function Tournament() {
 
                         return (
                             <div key={tournament._id} className="glass-card rounded-2xl p-6 flex flex-col hover:border-emerald-400/40 transition-all duration-300">
-                                <h3 className="text-2xl font-bold text-white mb-2">{tournament.name}</h3>
+                                <div className="flex items-start gap-3 mb-2">
+                                    {tournament.organizerLogoUrl && (
+                                        <div className="w-12 h-12 rounded-xl bg-white/95 border border-emerald-400/40 p-1 flex items-center justify-center overflow-hidden flex-shrink-0 shadow">
+                                            <img
+                                                src={resolveMediaUrl(tournament.organizerLogoUrl)}
+                                                alt={tournament.organizerName || tournament.name}
+                                                className="w-full h-full object-contain"
+                                            />
+                                        </div>
+                                    )}
+                                    <div className="min-w-0">
+                                        <h3 className="text-2xl font-bold text-white leading-tight">{tournament.name}</h3>
+                                        {tournament.organizerName && (
+                                            <p className="text-xs font-semibold text-emerald-300 mt-0.5 truncate">
+                                                Organiza: {tournament.organizerName}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
                                 <p className="text-slate-300 text-sm mb-1"><strong className="text-slate-200">Fecha:</strong> {new Date(tournament.startDate).toLocaleDateString()}</p>
                                 <p className="text-slate-300 text-sm mb-4"><strong className="text-slate-200">Categorías:</strong> {tournament.categories.map(cat => cat.name).join(', ')}</p>
                                 <div className="flex-grow"></div>
