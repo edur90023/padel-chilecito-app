@@ -1199,52 +1199,304 @@ const ZoneStandings = ({ zone }) => {
     );
 };
 
-// --- Sub-componente para gestionar la finalización de la categoría ---
-function FinishCategoryManager({ category, onAction }) {
-    const finalRound = category.playoffRounds.find(r => r.roundName === 'Final');
-    const finalMatch = finalRound?.matches[0];
-    const canFinish = finalMatch?.status === 'Finalizado';
+// --- Sub-componente modal para editar ganadores / agregar apodos en el podio ---
+const parsePodiumPlayers = (team) => {
+    if (!team) return ['', ''];
+    const raw = (team.teamName || '').trim();
+    if (raw.includes('/')) {
+        const parts = raw.split('/').map((s) => s.trim());
+        return [parts[0] || '', parts[1] || ''];
+    }
+    if (Array.isArray(team.players) && team.players.length > 0) {
+        return [
+            (team.players[0]?.playerName || '').trim(),
+            (team.players[1]?.playerName || '').trim()
+        ];
+    }
+    return [raw, ''];
+};
 
-    if (!finalMatch) return null;
+function PodiumEditorModal({ initialEntries, categoryName, onSave, onClose }) {
+    const [entries, setEntries] = useState(() =>
+        initialEntries.map((item) => {
+            const [p1, p2] = parsePodiumPlayers(item.team);
+            return {
+                position: item.position,
+                originalTeam: item.team || null,
+                player1: p1,
+                player2: p2
+            };
+        })
+    );
+    const [formError, setFormError] = useState('');
+
+    const positionLabel = (pos) => {
+        if (pos === 1) return '1° Puesto — Campeones';
+        if (pos === 2) return '2° Puesto — Subcampeones';
+        if (pos === 3) return '3° Puesto';
+        if (pos === 4) return '4° Puesto';
+        return `${pos}° Puesto`;
+    };
+
+    const handleFieldChange = (index, field, value) => {
+        setEntries((prev) =>
+            prev.map((entry, idx) => (idx === index ? { ...entry, [field]: value } : entry))
+        );
+    };
+
+    const handleAddPosition = () => {
+        const used = new Set(entries.map((e) => e.position));
+        const nextPos = [3, 4].find((p) => !used.has(p));
+        if (!nextPos) return;
+        setEntries((prev) => [
+            ...prev,
+            { position: nextPos, originalTeam: null, player1: '', player2: '' }
+        ]);
+    };
+
+    const handleRemovePosition = (position) => {
+        setEntries((prev) => prev.filter((e) => e.position !== position));
+    };
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        setFormError('');
+
+        const validEntries = entries.filter((item) => item.player1.trim() || item.player2.trim());
+        if (validEntries.length === 0) {
+            setFormError('Debes ingresar al menos un ganador para el podio.');
+            return;
+        }
+
+        const finishers = validEntries
+            .sort((a, b) => a.position - b.position)
+            .map((item) => {
+                const p1 = item.player1.trim();
+                const p2 = item.player2.trim();
+                const orig = item.originalTeam || {};
+                const origPlayers = Array.isArray(orig.players) ? orig.players : [];
+
+                const players = [p1, p2]
+                    .map((name, idx) =>
+                        name
+                            ? {
+                                  playerName: name,
+                                  phoneNumber: origPlayers[idx]?.phoneNumber || ''
+                              }
+                            : null
+                    )
+                    .filter(Boolean);
+
+                const teamName = [p1, p2].filter(Boolean).join(' / ');
+
+                return {
+                    position: item.position,
+                    team: {
+                        ...(orig._id ? { _id: orig._id } : {}),
+                        teamName,
+                        players,
+                        club: orig.club || ''
+                    }
+                };
+            });
+
+        onSave(finishers);
+    };
+
+    const canAddThirdOrFourth = entries.length < 4 && (!entries.some((e) => e.position === 3) || !entries.some((e) => e.position === 4));
+
+    return (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex justify-center items-center z-50 p-4 animate-fade-in">
+            <div className="bg-gray-800 border border-gray-700 p-5 sm:p-6 rounded-2xl shadow-2xl w-full max-w-xl text-white max-h-[90vh] overflow-y-auto space-y-4">
+                <div className="flex justify-between items-center border-b border-gray-700 pb-3">
+                    <div>
+                        <h3 className="text-lg font-bold text-yellow-400 flex items-center gap-2">
+                            <i className="fas fa-trophy"></i>
+                            <span>Editar Podio — {categoryName}</span>
+                        </h3>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                            Modificá nombres o agregá apodos (ej: <em>Juan &quot;El Toro&quot; Pérez</em>) tal como querés que salgan en el podio y en la placa PNG.
+                        </p>
+                    </div>
+                    <button type="button" onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none px-1">&times;</button>
+                </div>
+
+                {formError && (
+                    <p className="text-xs text-red-300 bg-red-900/40 border border-red-500/40 p-2.5 rounded-lg">{formError}</p>
+                )}
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    {entries.map((entry, idx) => (
+                        <div key={entry.position} className="bg-gray-900/70 border border-gray-700 rounded-xl p-3.5 space-y-2.5">
+                            <div className="flex items-center justify-between gap-2">
+                                <span className={`text-xs font-extrabold uppercase tracking-wider ${entry.position === 1 ? 'text-yellow-400' : entry.position === 2 ? 'text-gray-300' : 'text-amber-400'}`}>
+                                    {positionLabel(entry.position)}
+                                </span>
+                                {entry.position >= 3 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRemovePosition(entry.position)}
+                                        className="text-xs text-red-400 hover:text-red-300"
+                                    >
+                                        Quitar
+                                    </button>
+                                )}
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                <div>
+                                    <label className="block text-[11px] text-gray-400 mb-1">Jugador 1 (con apodo opcional)</label>
+                                    <input
+                                        type="text"
+                                        value={entry.player1}
+                                        onChange={(e) => handleFieldChange(idx, 'player1', e.target.value)}
+                                        placeholder="Nombre / Apodo"
+                                        className="w-full p-2.5 rounded-lg bg-gray-800 border border-gray-600 text-sm text-white focus:outline-none focus:border-yellow-400"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[11px] text-gray-400 mb-1">Jugador 2 (con apodo opcional)</label>
+                                    <input
+                                        type="text"
+                                        value={entry.player2}
+                                        onChange={(e) => handleFieldChange(idx, 'player2', e.target.value)}
+                                        placeholder="Nombre / Apodo"
+                                        className="w-full p-2.5 rounded-lg bg-gray-800 border border-gray-600 text-sm text-white focus:outline-none focus:border-yellow-400"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+
+                    {canAddThirdOrFourth && (
+                        <button
+                            type="button"
+                            onClick={handleAddPosition}
+                            className="w-full py-2 rounded-lg border border-dashed border-gray-600 hover:border-yellow-400/60 text-xs font-semibold text-gray-300 hover:text-yellow-300 transition"
+                        >
+                            + Agregar 3° o 4° Puesto
+                        </button>
+                    )}
+
+                    <div className="flex justify-end gap-2.5 pt-2 border-t border-gray-700">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-xs font-bold text-gray-200 transition"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="submit"
+                            className="px-5 py-2 rounded-lg bg-yellow-500 hover:bg-yellow-400 text-xs font-extrabold text-black transition"
+                        >
+                            Guardar Podio
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+// --- Sub-componente para gestionar y editar el podio / finalización de la categoría ---
+function FinishCategoryManager({ category, onAction }) {
+    const [showEditor, setShowEditor] = useState(false);
+
+    const finalRound = (category.playoffRounds || []).find(r => r.roundName === 'Final');
+    const finalMatch = finalRound?.matches?.[0];
+    const thirdPlaceRound = (category.playoffRounds || []).find(r => r.roundName === '3er y 4to Puesto');
+    const thirdPlaceMatch = thirdPlaceRound?.matches?.[0];
+    const canFinish = finalMatch?.status === 'Finalizado';
+    const hasFinishers = Array.isArray(category.finishers) && category.finishers.length > 0;
+
+    if (!finalMatch && !hasFinishers) return null;
 
     const getWinnerLoser = (match) => {
-        if (!match || match.status !== 'Finalizado') return { winner: null, loser: null };
+        if (!match || match.status !== 'Finalizado' || !match.teamA || !match.teamB) return { winner: null, loser: null };
         let setsA = 0;
-        match.scoreA.forEach((s, i) => { if (s > match.scoreB[i]) setsA++; });
-        const winner = setsA >= Math.ceil(match.scoreA.length / 2) ? match.teamA : match.teamB;
+        let setsB = 0;
+        (match.scoreA || []).forEach((s, i) => {
+            const sb = match.scoreB?.[i] || 0;
+            if (s > sb) setsA++;
+            else if (sb > s) setsB++;
+        });
+        const winner = setsA >= setsB ? match.teamA : match.teamB;
         const loser = String(winner._id) === String(match.teamA._id) ? match.teamB : match.teamA;
         return { winner, loser };
     };
 
-    const handleFinishCategory = () => {
+    const buildInitialEntries = () => {
+        if (hasFinishers) {
+            return [...category.finishers].sort((a, b) => a.position - b.position);
+        }
+        const entries = [];
         const { winner: champion, loser: runnerUp } = getWinnerLoser(finalMatch);
-        
-        if (!champion || !runnerUp) {
-            alert("Aún faltan resultados para finalizar la categoría.");
-            return;
-        }
-        
-        const confirmationMessage = `¿Confirmar los siguientes resultados?\n- 1° Puesto (Campeón): ${champion.teamName}\n- 2° Puesto (Subcampeón): ${runnerUp.teamName}`;
+        if (champion) entries.push({ position: 1, team: champion });
+        if (runnerUp) entries.push({ position: 2, team: runnerUp });
 
-        if (window.confirm(confirmationMessage)) {
-            const finishers = [
-                { position: 1, team: champion },
-                { position: 2, team: runnerUp }
-            ];
-            
-            onAction('finish', category._id, { finishers });
+        if (thirdPlaceMatch && thirdPlaceMatch.status === 'Finalizado') {
+            const { winner: third, loser: fourth } = getWinnerLoser(thirdPlaceMatch);
+            if (third) entries.push({ position: 3, team: third });
+            if (fourth) entries.push({ position: 4, team: fourth });
         }
+        return entries;
     };
 
+    const handleSavePodium = (finishers) => {
+        onAction('finish', category._id, { finishers });
+        setShowEditor(false);
+    };
+
+    const sortedCurrent = hasFinishers
+        ? [...category.finishers].sort((a, b) => a.position - b.position)
+        : [];
+
     return (
-        <div className="mt-6">
-            <button 
-                onClick={handleFinishCategory} 
-                disabled={!canFinish}
-                className="w-full bg-yellow-500 text-black font-bold py-3 px-4 rounded-lg hover:bg-yellow-400 transition disabled:bg-gray-600"
-            >
-                {canFinish ? 'Declarar Ganadores y Finalizar Categoría' : 'Cargue los resultados de la Final para terminar'}
-            </button>
+        <div className="mt-4 space-y-3">
+            {showEditor && (
+                <PodiumEditorModal
+                    initialEntries={buildInitialEntries()}
+                    categoryName={category.name}
+                    onSave={handleSavePodium}
+                    onClose={() => setShowEditor(false)}
+                />
+            )}
+
+            {hasFinishers ? (
+                <div className="bg-yellow-500/10 border border-yellow-500/35 rounded-xl p-4 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <h4 className="text-sm font-bold text-yellow-300 flex items-center gap-2">
+                            <i className="fas fa-trophy"></i>
+                            <span>Podio Guardado de {category.name}</span>
+                        </h4>
+                        <button
+                            type="button"
+                            onClick={() => setShowEditor(true)}
+                            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-yellow-500 hover:bg-yellow-400 text-black text-xs font-extrabold transition self-start sm:self-auto"
+                        >
+                            <i className="fas fa-edit"></i>
+                            <span>Editar Podio / Apodos</span>
+                        </button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        {sortedCurrent.map(({ position, team }) => (
+                            <div key={position} className="bg-gray-900/70 border border-gray-700 rounded-lg px-3 py-2 flex items-center gap-2">
+                                <span className="font-extrabold text-yellow-400">{position}°</span>
+                                <span className="text-white font-semibold truncate">{team?.teamName}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            ) : (
+                <button
+                    type="button"
+                    onClick={() => setShowEditor(true)}
+                    disabled={!canFinish}
+                    className="w-full bg-yellow-500 text-black font-bold py-3 px-4 rounded-lg hover:bg-yellow-400 transition disabled:bg-gray-600 disabled:text-gray-300"
+                >
+                    {canFinish ? 'Declarar Ganadores y Editar Podio' : 'Cargue los resultados de la Final para terminar'}
+                </button>
+            )}
         </div>
     );
 }
@@ -1469,7 +1721,7 @@ function CategoryManager({ category, tournament, onAction, userRole }) {
                             {category.status === 'Zonas Sorteadas' && areAllZoneMatchesFinished && (
                                 <button onClick={() => onAction('generate-playoffs', category._id)} className="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 transition">Calcular Clasificados y Generar Llave</button>
                             )}
-                            {category.status === 'En Juego' && <FinishCategoryManager category={category} onAction={onAction} />}
+                            {['En Juego', 'Finalizado'].includes(category.status) && <FinishCategoryManager category={category} onAction={onAction} />}
                             {category.registeredPlayers && category.registeredPlayers.length > 0 && (
                                 <div className="bg-gray-900/60 p-4 rounded-lg border border-gray-700">
                                     <div className="flex justify-between items-center cursor-pointer select-none" onClick={() => setShowRegisteredTeams(prev => !prev)}>
