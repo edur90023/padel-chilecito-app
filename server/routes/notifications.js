@@ -312,4 +312,46 @@ router.post('/send', auth(['admin']), async (req, res) => {
     }
 });
 
+// Helper reutilizable para avisos Push opcionales en hitos del torneo
+router.sendPushBroadcast = async ({ title, message, url = '/tournaments' }) => {
+    try {
+        if (!title || !message) return { sentCount: 0, totalSubscribers: 0 };
+        await getVapidConfig();
+        const subscriptions = await getAllSubscriptions();
+        if (subscriptions.length === 0) return { sentCount: 0, totalSubscribers: 0 };
+
+        const safeUrl = typeof url === 'string' && url.startsWith('/') ? url : '/tournaments';
+        const payload = JSON.stringify({
+            title: String(title).trim(),
+            body: String(message).trim(),
+            icon: '/pwa-192x192.png',
+            badge: '/pwa-192x192.png',
+            url: safeUrl,
+            tag: `red-padel-hito-${Date.now()}`
+        });
+
+        let sentCount = 0;
+        await Promise.all(subscriptions.map(async (sub) => {
+            try {
+                await webpush.sendNotification({
+                    endpoint: sub.endpoint,
+                    keys: {
+                        p256dh: sub.keys.p256dh,
+                        auth: sub.keys.auth
+                    }
+                }, payload);
+                sentCount += 1;
+            } catch (error) {
+                if (error?.statusCode === 404 || error?.statusCode === 410) {
+                    await deleteSubscriptionByEndpoint(sub.endpoint);
+                }
+            }
+        }));
+        return { sentCount, totalSubscribers: subscriptions.length };
+    } catch (error) {
+        console.warn('[Push] Error en envío por hito (no bloqueante):', error?.message);
+        return { sentCount: 0, totalSubscribers: 0 };
+    }
+};
+
 module.exports = router;

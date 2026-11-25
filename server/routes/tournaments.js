@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const Tournament = require('../models/Tournament');
 const TournamentManager = require('../services/tournament-manager');
 const auth = require('../middleware/auth');
+const notificationsRouter = require('./notifications');
 
 const getCategoryPairsCount = (cat) => {
     const zoneTeamsCount = Array.isArray(cat?.zones)
@@ -96,7 +97,66 @@ const resolveFinalFinishers = (cat) => {
     ];
 };
 
-const formatTournamentResponse = (tournamentDoc, { sanitizeExpectativa = false } = {}) => {
+const stripPrivateTeamFields = (team) => {
+    if (!team || typeof team !== 'object') return team;
+    const { paid, availabilityNote, ...restTeam } = team;
+    return {
+        ...restTeam,
+        players: Array.isArray(team.players)
+            ? team.players.map((p) => {
+                if (!p || typeof p !== 'object') return p;
+                const { phoneNumber, ...restPlayer } = p;
+                return restPlayer;
+            })
+            : team.players
+    };
+};
+
+const stripPrivateCategoryFields = (cat) => {
+    if (!cat || typeof cat !== 'object') return cat;
+    return {
+        ...cat,
+        registeredPlayers: Array.isArray(cat.registeredPlayers)
+            ? cat.registeredPlayers.map(stripPrivateTeamFields)
+            : cat.registeredPlayers,
+        zones: Array.isArray(cat.zones)
+            ? cat.zones.map((z) => ({
+                ...z,
+                teams: Array.isArray(z.teams) ? z.teams.map(stripPrivateTeamFields) : z.teams,
+                matches: Array.isArray(z.matches)
+                    ? z.matches.map((m) => ({
+                        ...m,
+                        teamA: stripPrivateTeamFields(m.teamA),
+                        teamB: stripPrivateTeamFields(m.teamB)
+                    }))
+                    : z.matches
+            }))
+            : cat.zones,
+        playoffRounds: Array.isArray(cat.playoffRounds)
+            ? cat.playoffRounds.map((r) => ({
+                ...r,
+                teamsWithByes: Array.isArray(r.teamsWithByes)
+                    ? r.teamsWithByes.map(stripPrivateTeamFields)
+                    : r.teamsWithByes,
+                matches: Array.isArray(r.matches)
+                    ? r.matches.map((m) => ({
+                        ...m,
+                        teamA: stripPrivateTeamFields(m.teamA),
+                        teamB: stripPrivateTeamFields(m.teamB)
+                    }))
+                    : r.matches
+            }))
+            : cat.playoffRounds,
+        finishers: Array.isArray(cat.finishers)
+            ? cat.finishers.map((f) => ({
+                ...f,
+                team: stripPrivateTeamFields(f.team)
+            }))
+            : cat.finishers
+    };
+};
+
+const formatTournamentResponse = (tournamentDoc, { sanitizeExpectativa = false, stripPrivateFields = false } = {}) => {
     const obj = typeof tournamentDoc.toObject === 'function'
         ? tournamentDoc.toObject()
         : { ...tournamentDoc };
@@ -129,10 +189,11 @@ const formatTournamentResponse = (tournamentDoc, { sanitizeExpectativa = false }
             };
         }
 
-        return {
+        const enriched = {
             ...cat,
             pairsCount
         };
+        return stripPrivateFields ? stripPrivateCategoryFields(enriched) : enriched;
     });
 
     obj.totalPairsCount = totalPairsCount;
@@ -188,7 +249,7 @@ router.get('/', async (req, res) => {
             return res.status(200).json(mockTournaments);
         }
         const tournaments = await Tournament.find({ visibility: { $ne: 'borrador' } }).sort({ startDate: -1 });
-        const formatted = tournaments.map(t => formatTournamentResponse(t, { sanitizeExpectativa: true }));
+        const formatted = tournaments.map(t => formatTournamentResponse(t, { sanitizeExpectativa: true, stripPrivateFields: true }));
         res.status(200).json(formatted);
     } catch (error) {
         res.status(200).json(mockTournaments);
@@ -236,7 +297,7 @@ router.get('/latest-finished', async (req, res) => {
             return res.status(200).json(null);
         }
         
-        res.status(200).json(formatTournamentResponse(latestFinishedTournament));
+        res.status(200).json(formatTournamentResponse(latestFinishedTournament, { stripPrivateFields: true }));
 
     } catch (error) {
         res.status(200).json(null);
@@ -265,7 +326,7 @@ router.get('/:id', async (req, res) => {
             return res.status(404).json({ error: 'Este torneo aún se encuentra en preparación.' });
         }
 
-        const formatted = formatTournamentResponse(tournament, { sanitizeExpectativa: !isPrivileged });
+        const formatted = formatTournamentResponse(tournament, { sanitizeExpectativa: !isPrivileged, stripPrivateFields: !isPrivileged });
         res.status(200).json(formatted);
     } catch (error) {
         const mock = mockTournaments.find(t => t._id === req.params.id) || mockTournaments[0];
@@ -318,7 +379,7 @@ router.post('/', auth(['admin']), async (req, res) => {
 // CAMBIAR VISIBILIDAD / PUBLICAR TORNEO (BORRADOR, EXPECTATIVA, PUBLICADO)
 router.put('/:id/visibility', auth(['admin']), async (req, res) => {
     try {
-        const { visibility } = req.body;
+        const { visibility, notifyPush } = req.body;
         const allowedVisibilities = ['borrador', 'expectativa', 'publicado'];
         if (!allowedVisibilities.includes(visibility)) {
             return res.status(400).json({ error: 'Modo de visibilidad inválido.' });
@@ -329,6 +390,14 @@ router.put('/:id/visibility', auth(['admin']), async (req, res) => {
 
         tournament.visibility = visibility;
         await tournament.save();
+
+        if (notifyPush && visibility === 'publicado') {
+            notificationsRouter.sendPushBroadcast({
+                title: `¡${tournament.name} ya está publicado!`,
+                message: 'Ingresá para consultar zonas, horarios y cruces actualizados.',
+                url: `/tournaments/${tournament._id}`
+            });
+        }
 
         const labels = {
             borrador: 'Borrador (oculto al público)',
@@ -483,7 +552,13 @@ router.delete('/:id', auth(['admin']), async (req, res) => {
 router.post('/:tournamentId/register', async (req, res) => {
     try {
         const { tournamentId } = req.params;
-        const { categoryName, player1Name, player1Phone, player2Name, player2Phone, club } = req.body;
+        const { categoryName, player1Name, player1Phone, player2Name, player2Phone, club, availabilityNote } = req.body;
+        const cleanP1 = (player1Name || '').trim();
+        const cleanP2 = (player2Name || '').trim();
+        if (!cleanP1 || !cleanP2) {
+            return res.status(400).json({ error: 'El nombre de ambos jugadores es requerido.' });
+        }
+
         const tournament = await Tournament.findById(tournamentId);
         if (!tournament) return res.status(404).json({ error: 'Torneo no encontrado.' });
         if ((tournament.visibility || 'publicado') === 'borrador') {
@@ -492,13 +567,33 @@ router.post('/:tournamentId/register', async (req, res) => {
         const category = tournament.categories.find(cat => cat.name === categoryName);
         if (!category) return res.status(404).json({ error: 'Categoría no encontrada.' });
         if (category.status !== 'Inscripciones Abiertas') return res.status(400).json({ error: 'Las inscripciones para esta categoría ya están cerradas.' });
-        const p1LastName = player1Name.split(' ').pop() || 'Jugador1';
-        const p2LastName = player2Name.split(' ').pop() || 'Jugador2';
+
+        // Prevenir inscripción duplicada accidental por doble clic o reenvío
+        const normalizedPair = [cleanP1.toLowerCase(), cleanP2.toLowerCase()].sort().join('|');
+        const duplicate = (category.registeredPlayers || []).some((existing) => {
+            const existingNames = (existing.players || [])
+                .map((p) => (p?.playerName || '').trim().toLowerCase())
+                .filter(Boolean)
+                .sort()
+                .join('|');
+            return existingNames && existingNames === normalizedPair;
+        });
+        if (duplicate) {
+            return res.status(409).json({ error: 'Esta pareja ya figura inscrita en esta categoría.' });
+        }
+
+        const p1LastName = cleanP1.split(/\s+/).pop() || 'Jugador1';
+        const p2LastName = cleanP2.split(/\s+/).pop() || 'Jugador2';
         const newTeam = {
             _id: new mongoose.Types.ObjectId(),
             teamName: `${p1LastName} / ${p2LastName}`,
-            players: [{ playerName: player1Name, phoneNumber: player1Phone }, { playerName: player2Name, phoneNumber: player2Phone }],
-            club: club || '' 
+            players: [
+                { playerName: cleanP1, phoneNumber: (player1Phone || '').trim() },
+                { playerName: cleanP2, phoneNumber: (player2Phone || '').trim() }
+            ],
+            club: (club || '').trim(),
+            paid: false,
+            availabilityNote: (availabilityNote || '').trim()
         };
         category.registeredPlayers.push(newTeam);
         await tournament.save();
@@ -615,6 +710,15 @@ router.post('/:tournamentId/category/:categoryId/draw-zones', auth(['admin']), a
         category.zones = zones;
         category.status = 'Zonas Sorteadas';
         await tournament.save();
+
+        if (req.body.notifyPush) {
+            notificationsRouter.sendPushBroadcast({
+                title: `¡Zonas Sorteadas en ${category.name}!`,
+                message: `Ya podés consultar las zonas y cruces de ${tournament.name}.`,
+                url: `/tournaments/${tournament._id}`
+            });
+        }
+
         const populatedTournament = await Tournament.findById(tournamentId);
         res.status(200).json({ message: `Zonas para ${category.name} generadas.`, tournament: formatTournamentResponse(populatedTournament) });
     } catch (error) {
@@ -816,7 +920,11 @@ router.put('/:tournamentId/category/:categoryId/match/:matchId', auth(['admin', 
 router.put('/:tournamentId/category/:categoryId/team/:teamId', auth(['admin', 'operator']), async (req, res) => {
     try {
         const { tournamentId, categoryId, teamId } = req.params;
-        const { teamName, players, club } = req.body;
+        if (req.user.role === 'operator' && String(req.user.tournamentId) !== String(tournamentId)) {
+            return res.status(403).json({ error: 'No tiene permiso para modificar este torneo.' });
+        }
+
+        const { teamName, players, club, paid, availabilityNote } = req.body;
 
         const tournament = await Tournament.findById(tournamentId);
         if (!tournament) return res.status(404).json({ error: 'Torneo no encontrado' });
@@ -826,8 +934,10 @@ router.put('/:tournamentId/category/:categoryId/team/:teamId', auth(['admin', 'o
 
         const registered = category.registeredPlayers.id(teamId);
         if (registered) {
-            if (teamName) registered.teamName = teamName.trim();
-            if (club !== undefined) registered.club = club;
+            if (typeof teamName === 'string' && teamName.trim()) registered.teamName = teamName.trim();
+            if (club !== undefined) registered.club = String(club || '').trim();
+            if (typeof paid === 'boolean') registered.paid = paid;
+            if (availabilityNote !== undefined) registered.availabilityNote = String(availabilityNote || '').trim();
             if (Array.isArray(players) && players.length > 0) {
                 registered.players = players.map(p => ({
                     playerName: (p.playerName || '').trim(),
@@ -836,29 +946,37 @@ router.put('/:tournamentId/category/:categoryId/team/:teamId', auth(['admin', 'o
             }
         }
 
-        const effectiveTeamName = (teamName || (registered ? registered.teamName : '')).trim();
+        const effectiveTeamName = (typeof teamName === 'string' && teamName.trim())
+            ? teamName.trim()
+            : (registered ? registered.teamName : '').trim();
+
+        const shouldUpdatePlayers = Array.isArray(players) && players.length > 0;
+        const normalizedPlayers = shouldUpdatePlayers
+            ? players.map(p => ({
+                playerName: (p.playerName || '').trim(),
+                phoneNumber: (p.phoneNumber || '').trim()
+            }))
+            : null;
 
         // Actualizar en zonas (equipos y partidos)
         category.zones.forEach(zone => {
             const zTeam = zone.teams.id(teamId);
             if (zTeam) {
                 if (effectiveTeamName) zTeam.teamName = effectiveTeamName;
-                if (Array.isArray(players) && players.length > 0) {
-                    zTeam.players = players.map(p => ({
-                        playerName: (p.playerName || '').trim(),
-                        phoneNumber: (p.phoneNumber || '').trim()
-                    }));
-                }
+                if (club !== undefined) zTeam.club = String(club || '').trim();
+                if (typeof paid === 'boolean') zTeam.paid = paid;
+                if (availabilityNote !== undefined) zTeam.availabilityNote = String(availabilityNote || '').trim();
+                if (normalizedPlayers) zTeam.players = normalizedPlayers;
             }
 
             zone.matches.forEach(m => {
                 if (m.teamA && String(m.teamA._id) === String(teamId)) {
                     if (effectiveTeamName) m.teamA.teamName = effectiveTeamName;
-                    if (Array.isArray(players) && players.length > 0) m.teamA.players = players;
+                    if (normalizedPlayers) m.teamA.players = normalizedPlayers;
                 }
                 if (m.teamB && String(m.teamB._id) === String(teamId)) {
                     if (effectiveTeamName) m.teamB.teamName = effectiveTeamName;
-                    if (Array.isArray(players) && players.length > 0) m.teamB.players = players;
+                    if (normalizedPlayers) m.teamB.players = normalizedPlayers;
                 }
             });
         });
@@ -868,11 +986,11 @@ router.put('/:tournamentId/category/:categoryId/team/:teamId', auth(['admin', 'o
             round.matches.forEach(m => {
                 if (m.teamA && String(m.teamA._id) === String(teamId)) {
                     if (effectiveTeamName) m.teamA.teamName = effectiveTeamName;
-                    if (Array.isArray(players) && players.length > 0) m.teamA.players = players;
+                    if (normalizedPlayers) m.teamA.players = normalizedPlayers;
                 }
                 if (m.teamB && String(m.teamB._id) === String(teamId)) {
                     if (effectiveTeamName) m.teamB.teamName = effectiveTeamName;
-                    if (Array.isArray(players) && players.length > 0) m.teamB.players = players;
+                    if (normalizedPlayers) m.teamB.players = normalizedPlayers;
                 }
             });
         });
@@ -973,6 +1091,7 @@ router.post('/:tournamentId/category/:categoryId/generate-playoffs', auth(['admi
     try {
         const { tournamentId, categoryId } = req.params;
         const tournament = await Tournament.findById(tournamentId);
+        if (!tournament) return res.status(404).json({ error: 'Torneo no encontrado.' });
         const category = tournament.categories.id(categoryId);
         if (!category) return res.status(404).json({ error: 'Categoría no encontrada.' });
         if (category.status !== 'Zonas Sorteadas') return res.status(400).json({ error: 'La llave solo puede generarse cuando las zonas han finalizado.' });
@@ -1001,6 +1120,15 @@ router.post('/:tournamentId/category/:categoryId/generate-playoffs', auth(['admi
             tournament.status = 'Activo';
         }
         await tournament.save();
+
+        if (req.body?.notifyPush) {
+            notificationsRouter.sendPushBroadcast({
+                title: `¡Playoffs Definidos en ${category.name}!`,
+                message: `Ya podés ver las llaves y cruces eliminatorios de ${tournament.name}.`,
+                url: `/tournaments/${tournament._id}`
+            });
+        }
+
         const populatedTournament = await Tournament.findById(tournamentId);
         res.status(200).json({ message: 'Llave de playoffs generada exitosamente.', tournament: formatTournamentResponse(populatedTournament) });
 

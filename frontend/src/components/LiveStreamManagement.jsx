@@ -25,6 +25,7 @@ function LiveStreamManagement() {
     });
     const [showForm, setShowForm] = useState(false);
     const [previewUrl, setPreviewUrl] = useState(null);
+    const [pushingLive, setPushingLive] = useState(false);
 
     useEffect(() => {
         const fetchSettings = async () => {
@@ -146,6 +147,31 @@ function LiveStreamManagement() {
         handleSaveToServer(isEnabled, updatedStreams);
     };
 
+    const handleNotifyLivePush = async () => {
+        const activeStream = streams.find(s => s.isLive) || streams[0];
+        if (!window.confirm('¿Enviar notificación push a los suscriptores avisando que comenzó la transmisión en vivo?')) {
+            return;
+        }
+        setError('');
+        setSuccess('');
+        setPushingLive(true);
+        try {
+            const response = await axios.post('/notifications/send', {
+                title: '¡Transmisión En Vivo!',
+                message: activeStream?.title
+                    ? `Ya estamos transmitiendo en vivo: ${activeStream.title}.`
+                    : 'Ya podés mirar los partidos en vivo en Red Padel LR.',
+                url: '/live'
+            });
+            setSuccess(response.data?.message || '¡Aviso push de transmisión en vivo enviado!');
+            setTimeout(() => setSuccess(''), 4000);
+        } catch (err) {
+            setError(err.response?.data?.error || 'No se pudo enviar la notificación push.');
+        } finally {
+            setPushingLive(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex justify-center items-center py-12">
@@ -192,13 +218,25 @@ function LiveStreamManagement() {
                 <div className="text-sm text-gray-400">
                     <span className="font-semibold text-white">{streams.length}</span> {streams.length === 1 ? 'transmisión configurada' : 'transmisiones configuradas'}
                 </div>
-                <button
-                    type="button"
-                    onClick={handleOpenCreate}
-                    className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 px-4 rounded-xl shadow-md transition-all flex items-center gap-2 transform active:scale-95"
-                >
-                    <i className="fas fa-plus"></i> Agregar Nueva Cancha / Link
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                    <button
+                        type="button"
+                        disabled={pushingLive || streams.length === 0}
+                        onClick={handleNotifyLivePush}
+                        className="bg-amber-600/90 hover:bg-amber-500 disabled:opacity-50 text-white font-semibold py-2.5 px-4 rounded-xl shadow-md transition-all flex items-center gap-2 text-sm"
+                        title="Enviar alerta Push optativa a los suscriptores"
+                    >
+                        <i className="fas fa-bell"></i>
+                        <span>{pushingLive ? 'Enviando aviso...' : 'Avisar por Push En Vivo'}</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleOpenCreate}
+                        className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 px-4 rounded-xl shadow-md transition-all flex items-center gap-2 transform active:scale-95 text-sm"
+                    >
+                        <i className="fas fa-plus"></i> Agregar Nueva Cancha / Link
+                    </button>
+                </div>
             </div>
 
             {/* Modal / Formulario para Agregar o Editar */}

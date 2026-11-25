@@ -21,6 +21,7 @@ function ZonesPreview({ zones, category, onConfirm, onCancel, onRefreshPreview }
         remainder === 1 ? 'apa_four' : (remainder === 2 ? 'apa_four' : 'apa_four')
     );
     const [zonePlaySystem, setZonePlaySystem] = useState(category?.zonePlaySystem || false);
+    const [notifyPush, setNotifyPush] = useState(false);
 
     const handleOptionChange = (option) => {
         setLeftoverOption(option);
@@ -165,12 +166,26 @@ function ZonesPreview({ zones, category, onConfirm, onCancel, onRefreshPreview }
                     ))}
                 </div>
 
-                <div className="flex gap-4 mt-8">
+                <div className="mt-6 bg-gray-900/70 border border-gray-700 rounded-lg p-3">
+                    <label className="flex items-center gap-2.5 text-xs text-gray-200 cursor-pointer select-none">
+                        <input
+                            type="checkbox"
+                            checked={notifyPush}
+                            onChange={(e) => setNotifyPush(e.target.checked)}
+                            className="h-4 w-4 text-emerald-500 rounded bg-gray-700 border-gray-600"
+                        />
+                        <span>
+                            <strong className="text-emerald-400">Avisar por notificación Push:</strong> notificar a los suscriptores que ya se sortearon las zonas de <strong>{category?.name}</strong>.
+                        </span>
+                    </label>
+                </div>
+
+                <div className="flex gap-4 mt-4">
                     <button onClick={onCancel} className="w-full bg-gray-700 text-white font-bold py-3 rounded-lg hover:bg-gray-600 transition text-sm">
                         Cancelar
                     </button>
                     <button 
-                        onClick={() => onConfirm({ leftoverOption, zonePlaySystem })} 
+                        onClick={() => onConfirm({ leftoverOption, zonePlaySystem, notifyPush })} 
                         className="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition text-sm shadow-lg shadow-green-900/30"
                     >
                         Confirmar y Guardar Zonas
@@ -365,7 +380,21 @@ function AddTeamForm({ categoryId, onAction }) {
 function RegisteredPlayersManager({ tournament, category, onAction }) {
     const [movingTeam, setMovingTeam] = useState(null);
     const [editingTeam, setEditingTeam] = useState(null);
-    const [editForm, setEditForm] = useState({ p1Name: '', p1Phone: '', p2Name: '', p2Phone: '', teamName: '' });
+    const [showOnlyPendingPayment, setShowOnlyPendingPayment] = useState(false);
+    const [editForm, setEditForm] = useState({
+        p1Name: '',
+        p1Phone: '',
+        p2Name: '',
+        p2Phone: '',
+        teamName: '',
+        paid: false,
+        availabilityNote: ''
+    });
+
+    const allTeams = category.registeredPlayers || [];
+    const paidCount = allTeams.filter(t => Boolean(t.paid)).length;
+    const pendingCount = allTeams.length - paidCount;
+    const visibleTeams = showOnlyPendingPayment ? allTeams.filter(t => !t.paid) : allTeams;
 
     const handleDelete = (teamId, teamName) => {
         if (window.confirm(`¿Seguro que quieres eliminar a la pareja "${teamName}"?`)) {
@@ -378,6 +407,13 @@ function RegisteredPlayersManager({ tournament, category, onAction }) {
         setMovingTeam(null);
     };
 
+    const handleTogglePaid = (team) => {
+        onAction('edit-team', category._id, {
+            teamId: team._id,
+            paid: !team.paid
+        });
+    };
+
     const handleStartEdit = (team) => {
         setEditingTeam(team._id);
         setEditForm({
@@ -385,7 +421,9 @@ function RegisteredPlayersManager({ tournament, category, onAction }) {
             p1Phone: team.players?.[0]?.phoneNumber || '',
             p2Name: team.players?.[1]?.playerName || '',
             p2Phone: team.players?.[1]?.phoneNumber || '',
-            teamName: team.teamName || ''
+            teamName: team.teamName || '',
+            paid: Boolean(team.paid),
+            availabilityNote: team.availabilityNote || ''
         });
     };
 
@@ -393,6 +431,8 @@ function RegisteredPlayersManager({ tournament, category, onAction }) {
         const payload = {
             teamId,
             teamName: editForm.teamName.trim(),
+            paid: Boolean(editForm.paid),
+            availabilityNote: editForm.availabilityNote.trim(),
             players: [
                 { playerName: editForm.p1Name.trim(), phoneNumber: editForm.p1Phone.trim() },
                 { playerName: editForm.p2Name.trim(), phoneNumber: editForm.p2Phone.trim() }
@@ -403,8 +443,36 @@ function RegisteredPlayersManager({ tournament, category, onAction }) {
     };
 
     return (
-        <div className="mt-4 space-y-2">
-            {category.registeredPlayers.map((team, index) => (
+        <div className="mt-4 space-y-2.5">
+            {allTeams.length > 0 && (
+                <div className="flex flex-wrap items-center justify-between gap-2 bg-gray-800/70 px-3 py-2 rounded-md border border-gray-700/70 text-xs">
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <span className="text-emerald-300 font-semibold">
+                            Pagadas: <strong>{paidCount}</strong> / {allTeams.length}
+                        </span>
+                        <span className="text-amber-300 font-semibold">
+                            Pendientes: <strong>{pendingCount}</strong>
+                        </span>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setShowOnlyPendingPayment(prev => !prev)}
+                        className={`px-2.5 py-1 rounded text-[11px] font-semibold border transition ${
+                            showOnlyPendingPayment
+                                ? 'bg-amber-600 text-white border-amber-400'
+                                : 'bg-gray-900 text-gray-300 border-gray-600 hover:text-white'
+                        }`}
+                    >
+                        {showOnlyPendingPayment ? 'Ver todas' : `Solo pendientes (${pendingCount})`}
+                    </button>
+                </div>
+            )}
+
+            {visibleTeams.length === 0 ? (
+                <p className="text-xs text-gray-400 py-2 text-center">
+                    No hay parejas pendientes de pago en esta categoría.
+                </p>
+            ) : visibleTeams.map((team, index) => (
                 <div key={team._id} className="p-3 bg-gray-700/80 rounded-md text-sm border border-gray-600/50">
                     {editingTeam === team._id ? (
                         <div className="space-y-3 bg-gray-800 p-3 rounded border border-blue-500 animate-fade-in">
@@ -458,6 +526,28 @@ function RegisteredPlayersManager({ tournament, category, onAction }) {
                                     />
                                 </div>
                             </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-center pt-1">
+                                <div>
+                                    <label className="text-xs text-gray-400 block mb-1">Disponibilidad Horaria / Nota</label>
+                                    <input
+                                        type="text"
+                                        value={editForm.availabilityNote}
+                                        onChange={e => setEditForm({ ...editForm, availabilityNote: e.target.value })}
+                                        placeholder="Ej: Juega viernes desde 20hs"
+                                        maxLength={160}
+                                        className="w-full p-2 bg-gray-700 rounded text-white text-xs"
+                                    />
+                                </div>
+                                <label className="flex items-center gap-2 text-xs text-gray-200 cursor-pointer pt-4 sm:pt-5">
+                                    <input
+                                        type="checkbox"
+                                        checked={editForm.paid}
+                                        onChange={e => setEditForm({ ...editForm, paid: e.target.checked })}
+                                        className="h-4 w-4 text-emerald-500 rounded bg-gray-700 border-gray-600"
+                                    />
+                                    <span>Inscripción pagada</span>
+                                </label>
+                            </div>
                             <div className="flex justify-end gap-2 pt-2">
                                 <button
                                     type="button"
@@ -477,11 +567,30 @@ function RegisteredPlayersManager({ tournament, category, onAction }) {
                         </div>
                     ) : (
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                            <div>
-                                <span className="font-semibold text-white">{index + 1}. {team.teamName}</span>
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="font-semibold text-white">{index + 1}. {team.teamName}</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleTogglePaid(team)}
+                                        className={`px-2 py-0.5 rounded-full text-[11px] font-bold border transition ${
+                                            team.paid
+                                                ? 'bg-emerald-900/70 text-emerald-300 border-emerald-500/50 hover:bg-emerald-800/80'
+                                                : 'bg-amber-900/60 text-amber-300 border-amber-500/50 hover:bg-amber-800/80'
+                                        }`}
+                                        title="Clic para cambiar estado de pago"
+                                    >
+                                        {team.paid ? 'Pagado ✓' : 'Pendiente $'}
+                                    </button>
+                                </div>
                                 {team.players && team.players.length > 0 && (
                                     <p className="text-xs text-gray-400">
                                         {team.players.map(p => `${p.playerName}${p.phoneNumber ? ` (${p.phoneNumber})` : ''}`).join(' • ')}
+                                    </p>
+                                )}
+                                {team.availabilityNote && (
+                                    <p className="text-[11px] text-cyan-300 bg-cyan-950/50 border border-cyan-500/30 inline-block px-2 py-0.5 rounded">
+                                        🕒 {team.availabilityNote}
                                     </p>
                                 )}
                             </div>
@@ -1611,6 +1720,7 @@ function CategoryManager({ category, tournament, onAction, userRole }) {
     const [editingVenueZone, setEditingVenueZone] = useState(null);
     const [showLateTeamModal, setShowLateTeamModal] = useState(false);
     const [editingManualZones, setEditingManualZones] = useState(false);
+    const [notifyPlayoffsPush, setNotifyPlayoffsPush] = useState(false);
     const isAdmin = userRole === 'admin';
 
     useEffect(() => {
@@ -1719,7 +1829,26 @@ function CategoryManager({ category, tournament, onAction, userRole }) {
                                 </button>
                             )}
                             {category.status === 'Zonas Sorteadas' && areAllZoneMatchesFinished && (
-                                <button onClick={() => onAction('generate-playoffs', category._id)} className="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 transition">Calcular Clasificados y Generar Llave</button>
+                                <div className="bg-purple-950/30 border border-purple-500/40 rounded-lg p-3 space-y-2.5">
+                                    <label className="flex items-center gap-2 text-xs text-gray-200 cursor-pointer select-none">
+                                        <input
+                                            type="checkbox"
+                                            checked={notifyPlayoffsPush}
+                                            onChange={(e) => setNotifyPlayoffsPush(e.target.checked)}
+                                            className="h-4 w-4 text-purple-500 rounded bg-gray-700 border-gray-600"
+                                        />
+                                        <span>Avisar por notificación Push que se generaron los Playoffs</span>
+                                    </label>
+                                    <button
+                                        onClick={() => {
+                                            onAction('generate-playoffs', category._id, { notifyPush: notifyPlayoffsPush });
+                                            setNotifyPlayoffsPush(false);
+                                        }}
+                                        className="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 transition"
+                                    >
+                                        Calcular Clasificados y Generar Llave
+                                    </button>
+                                </div>
                             )}
                             {['En Juego', 'Finalizado'].includes(category.status) && <FinishCategoryManager category={category} onAction={onAction} />}
                             {category.registeredPlayers && category.registeredPlayers.length > 0 && (
@@ -1868,6 +1997,7 @@ function TournamentDetails({ tournament, onBack }) {
     const [activeTab, setActiveTab] = useState('category');
     const [operatorLink, setOperatorLink] = useState('');
     const [linkLoading, setLinkLoading] = useState(false);
+    const [notifyPublishPush, setNotifyPublishPush] = useState(false);
 
     useEffect(() => {
         setCurrentTournament(tournament);
@@ -1898,7 +2028,13 @@ function TournamentDetails({ tournament, onBack }) {
                 return;
             }
         }
-        handleAction('update-visibility', null, { visibility: targetVisibility });
+        handleAction('update-visibility', null, {
+            visibility: targetVisibility,
+            notifyPush: targetVisibility === 'publicado' ? notifyPublishPush : false
+        });
+        if (targetVisibility === 'publicado') {
+            setNotifyPublishPush(false);
+        }
     };
 
     const handleGenerateOperatorLink = async () => {
@@ -2038,34 +2174,47 @@ function TournamentDetails({ tournament, onBack }) {
                             </p>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-2">
-                            <button
-                                type="button"
-                                onClick={() => handleChangeVisibility('borrador')}
-                                disabled={loading || currentVisibility === 'borrador'}
-                                className={`px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 border ${currentVisibility === 'borrador' ? 'bg-gray-700 text-white border-gray-400 cursor-default' : 'bg-gray-800 hover:bg-gray-700 text-gray-300 border-gray-600'}`}
-                            >
-                                <i className="fas fa-lock"></i>
-                                <span>Borrador (Ocultar)</span>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => handleChangeVisibility('expectativa')}
-                                disabled={loading || currentVisibility === 'expectativa'}
-                                className={`px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 border ${currentVisibility === 'expectativa' ? 'bg-amber-600 text-white border-amber-400 cursor-default' : 'bg-amber-950/60 hover:bg-amber-900/80 text-amber-300 border-amber-600/50'}`}
-                            >
-                                <i className="fas fa-fire"></i>
-                                <span>Modo Expectativa</span>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => handleChangeVisibility('publicado')}
-                                disabled={loading || currentVisibility === 'publicado'}
-                                className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow ${currentVisibility === 'publicado' ? 'bg-emerald-700 text-white border border-emerald-400 cursor-default' : 'bg-emerald-600 hover:bg-emerald-500 text-white'}`}
-                            >
-                                <i className="fas fa-globe"></i>
-                                <span>{currentVisibility === 'publicado' ? 'Publicado' : 'Publicar Torneo'}</span>
-                            </button>
+                        <div className="flex flex-col items-start lg:items-end gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => handleChangeVisibility('borrador')}
+                                    disabled={loading || currentVisibility === 'borrador'}
+                                    className={`px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 border ${currentVisibility === 'borrador' ? 'bg-gray-700 text-white border-gray-400 cursor-default' : 'bg-gray-800 hover:bg-gray-700 text-gray-300 border-gray-600'}`}
+                                >
+                                    <i className="fas fa-lock"></i>
+                                    <span>Borrador (Ocultar)</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => handleChangeVisibility('expectativa')}
+                                    disabled={loading || currentVisibility === 'expectativa'}
+                                    className={`px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 border ${currentVisibility === 'expectativa' ? 'bg-amber-600 text-white border-amber-400 cursor-default' : 'bg-amber-950/60 hover:bg-amber-900/80 text-amber-300 border-amber-600/50'}`}
+                                >
+                                    <i className="fas fa-fire"></i>
+                                    <span>Modo Expectativa</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => handleChangeVisibility('publicado')}
+                                    disabled={loading || currentVisibility === 'publicado'}
+                                    className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow ${currentVisibility === 'publicado' ? 'bg-emerald-700 text-white border border-emerald-400 cursor-default' : 'bg-emerald-600 hover:bg-emerald-500 text-white'}`}
+                                >
+                                    <i className="fas fa-globe"></i>
+                                    <span>{currentVisibility === 'publicado' ? 'Publicado' : 'Publicar Torneo'}</span>
+                                </button>
+                            </div>
+                            {currentVisibility !== 'publicado' && (
+                                <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer select-none">
+                                    <input
+                                        type="checkbox"
+                                        checked={notifyPublishPush}
+                                        onChange={(e) => setNotifyPublishPush(e.target.checked)}
+                                        className="h-3.5 w-3.5 text-emerald-500 rounded bg-gray-700 border-gray-600"
+                                    />
+                                    <span>Avisar por notificación Push al publicar el torneo</span>
+                                </label>
+                            )}
                         </div>
                     </div>
                 )}

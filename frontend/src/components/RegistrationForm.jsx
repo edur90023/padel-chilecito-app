@@ -9,7 +9,8 @@ function RegistrationForm({ tournament, onClose }) {
         player1Phone: '',
         player2Name: '',
         player2Phone: '',
-        club: '', // <--- AÑADIR ESTADO PARA EL CLUB
+        club: '',
+        availabilityNote: '',
     });
 
     const [selectedCategory, setSelectedCategory] = useState(categories[0]?.name || '');
@@ -43,7 +44,8 @@ function RegistrationForm({ tournament, onClose }) {
                 player1Phone: formData.player1Phone,
                 player2Name: formData.player2Name,
                 player2Phone: formData.player2Phone,
-                club: formData.club // <--- ENVIAR EL CLUB
+                club: formData.club,
+                availabilityNote: formData.availabilityNote
             };
             await axios.post(`/tournaments/${tournament._id}/register`, dataToSend);
             
@@ -51,7 +53,10 @@ function RegistrationForm({ tournament, onClose }) {
             if (tournament.organizerPhone && tournament.organizerPhone.trim() !== '') {
                 setSuccess("¡Inscripción exitosa! Serás redirigido a WhatsApp para notificar al organizador.");
                 
-                const message = `¡Nueva inscripción al torneo "${tournament.name}"!\n\n*Categoría:* ${selectedCategory}\n\n*Pareja:*\n1- ${formData.player1Name} (Tel: ${formData.player1Phone})\n2- ${formData.player2Name} (Tel: ${formData.player2Phone})\n\n¡Gracias por organizar!`;
+                const availLine = formData.availabilityNote?.trim()
+                    ? `\n*Disponibilidad:* ${formData.availabilityNote.trim()}`
+                    : '';
+                const message = `¡Nueva inscripción al torneo "${tournament.name}"!\n\n*Categoría:* ${selectedCategory}\n\n*Pareja:*\n1- ${formData.player1Name} (Tel: ${formData.player1Phone})\n2- ${formData.player2Name} (Tel: ${formData.player2Phone})${availLine}\n\n¡Gracias por organizar!`;
                 
                 // Limpiamos el número de teléfono de caracteres no deseados
                 const cleanPhone = tournament.organizerPhone.replace(/[^0-9]/g, '');
@@ -68,7 +73,7 @@ function RegistrationForm({ tournament, onClose }) {
                 }, 2000);
             }
 
-            setFormData({ player1Name: '', player1Phone: '', player2Name: '', player2Phone: '' });
+            setFormData({ player1Name: '', player1Phone: '', player2Name: '', player2Phone: '', club: '', availabilityNote: '' });
             
         } catch (err) {
             setError(err.response?.data?.error || "Error al inscribir. Por favor, inténtelo de nuevo.");
@@ -116,11 +121,14 @@ function RegistrationForm({ tournament, onClose }) {
                         <input type="tel" name="player2Phone" value={formData.player2Phone} onChange={handleChange} required className="w-full p-3 glass-subcard rounded-xl text-white focus:outline-none focus:border-emerald-500" />
                     </div>
 
-                    <h4 className="text-base font-bold text-emerald-400 border-t border-white/10 pt-4">Club o Localidad</h4>
+                    <h4 className="text-base font-bold text-emerald-400 border-t border-white/10 pt-4">Club y Disponibilidad</h4>
                     <div className="form-group">
                         <label className="block text-slate-300 text-sm mb-1.5">Nombre del Club (Opcional):</label>
-                        {/* --- ¡NUEVO CAMPO! --- */}
                         <input type="text" name="club" value={formData.club} onChange={handleChange} placeholder="Ej: Club / Localidad (La Rioja)" className="w-full p-3 glass-subcard rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500" />
+                    </div>
+                    <div className="form-group">
+                        <label className="block text-slate-300 text-sm mb-1.5">Disponibilidad Horaria / Observaciones (Opcional):</label>
+                        <input type="text" name="availabilityNote" value={formData.availabilityNote} onChange={handleChange} maxLength={160} placeholder="Ej: Viernes después de las 20hs / Sábado a la mañana" className="w-full p-3 glass-subcard rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500" />
                     </div>
 
                     <button type="submit" disabled={loading} className="w-full mt-6 bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 font-extrabold py-3 px-4 rounded-xl hover:opacity-95 transition disabled:opacity-50 shadow-lg shadow-emerald-500/20">

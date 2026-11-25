@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink, Navigate, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import axios, { wakeUpServer } from './api/axiosConfig';
@@ -9,22 +9,30 @@ import ServerWakeupBanner from './components/ServerWakeupBanner';
 import { isPushSupported } from './utils/notifications';
 const Analytics = () => null;
 
-import Admin from './components/Admin';
 import LoginPage from './pages/LoginPage';
 import Home from './pages/Home';
-import Gallery from './pages/Gallery';
 import Tournament from './pages/Tournament';
-import Standings from './pages/Standings';
-import TournamentPublicView from './pages/TournamentPublicView';
 import Contact from './pages/Contact';
-import CommunityPage from './pages/CommunityPage';
-import ProfessorsPage from './pages/ProfessorsPage';
-import LivePage from './pages/LivePage';
-import ComplexesPage from './pages/ComplexesPage';
-import OperatorPage from './pages/OperatorPage';
-import OperatorTournamentView from './pages/OperatorTournamentView';
+
+const Admin = lazy(() => import('./components/Admin'));
+const Gallery = lazy(() => import('./pages/Gallery'));
+const Standings = lazy(() => import('./pages/Standings'));
+const TournamentPublicView = lazy(() => import('./pages/TournamentPublicView'));
+const CommunityPage = lazy(() => import('./pages/CommunityPage'));
+const ProfessorsPage = lazy(() => import('./pages/ProfessorsPage'));
+const LivePage = lazy(() => import('./pages/LivePage'));
+const ComplexesPage = lazy(() => import('./pages/ComplexesPage'));
+const OperatorPage = lazy(() => import('./pages/OperatorPage'));
+const OperatorTournamentView = lazy(() => import('./pages/OperatorTournamentView'));
 
 import './index.css';
+
+const PageLoader = () => (
+    <div className="flex flex-col items-center justify-center py-20 gap-3">
+        <div className="loading-spinner"></div>
+        <span className="text-xs font-semibold text-slate-400">Cargando sección...</span>
+    </div>
+);
 
 // Componente para proteger rutas de Administrador
 const ProtectedRoute = ({ children }) => {
@@ -387,18 +395,20 @@ const PublicLayout = () => {
 
             {/* Contenido principal */}
             <main className="flex-1 content px-3 py-5 sm:p-8 max-w-7xl w-full min-w-0 overflow-x-hidden mx-auto">
-                <Routes>
-                    <Route path="/live" element={<LivePage />} />
-                    <Route path="/" element={<Home />} />
-                    <Route path="/tournaments" element={<Tournament />} />
-                    <Route path="/tournaments/:id" element={<TournamentPublicView />} />
-                    <Route path="/gallery" element={<Gallery />} />
-                    <Route path="/standings" element={siteSettings.isRankingEnabled ? <Standings /> : <DisabledSection title="Rankings" />} />
-                    <Route path="/contact" element={<Contact />} />
-                    <Route path="/community" element={siteSettings.isCommunityEnabled ? <CommunityPage /> : <DisabledSection title="Comunidad" />} />
-                    <Route path="/profesores" element={<ProfessorsPage />} />
-                    <Route path="/complejos" element={<ComplexesPage />} />
-                </Routes>
+                <Suspense fallback={<PageLoader />}>
+                    <Routes>
+                        <Route path="/live" element={<LivePage />} />
+                        <Route path="/" element={<Home />} />
+                        <Route path="/tournaments" element={<Tournament />} />
+                        <Route path="/tournaments/:id" element={<TournamentPublicView />} />
+                        <Route path="/gallery" element={<Gallery />} />
+                        <Route path="/standings" element={siteSettings.isRankingEnabled ? <Standings /> : <DisabledSection title="Rankings" />} />
+                        <Route path="/contact" element={<Contact />} />
+                        <Route path="/community" element={siteSettings.isCommunityEnabled ? <CommunityPage /> : <DisabledSection title="Comunidad" />} />
+                        <Route path="/profesores" element={<ProfessorsPage />} />
+                        <Route path="/complejos" element={<ComplexesPage />} />
+                    </Routes>
+                </Suspense>
             </main>
 
             {/* Pie de Página Institucional */}
@@ -466,13 +476,15 @@ function App() {
     return (
         <AuthProvider>
             <Router>
-                <Routes>
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route path="/operate" element={<OperatorPage />} />
-                    <Route path="/admin/*" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-                    <Route path="/operator/tournament/:tournamentId" element={<OperatorRoute><OperatorTournamentView /></OperatorRoute>} />
-                    <Route path="/*" element={<PublicLayout />} />
-                </Routes>
+                <Suspense fallback={<PageLoader />}>
+                    <Routes>
+                        <Route path="/login" element={<LoginPage />} />
+                        <Route path="/operate" element={<OperatorPage />} />
+                        <Route path="/admin/*" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+                        <Route path="/operator/tournament/:tournamentId" element={<OperatorRoute><OperatorTournamentView /></OperatorRoute>} />
+                        <Route path="/*" element={<PublicLayout />} />
+                    </Routes>
+                </Suspense>
             </Router>
             <ServerWakeupBanner />
             <AutoUpdater />

@@ -10,7 +10,9 @@ const playerInTeamSchema = new mongoose.Schema({
 const teamSchema = new mongoose.Schema({
     teamName: { type: String, required: true },
     players: { type: [playerInTeamSchema], required: true },
-    club: { type: String, default: '' }
+    club: { type: String, default: '' },
+    paid: { type: Boolean, default: false },
+    availabilityNote: { type: String, default: '' }
 });
 
 const matchSchema = new mongoose.Schema({
