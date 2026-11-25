@@ -47,6 +47,33 @@ function NotificationManager() {
                 });
             }
         }
+
+        const handleOpenPrompt = () => {
+            try {
+                sessionStorage.removeItem('push_banner_dismissed');
+            } catch {}
+            const latestPerm = Notification.permission;
+            setPermission(latestPerm);
+            setErrorMsg('');
+            setIsDismissed(false);
+
+            if (latestPerm === 'granted') {
+                setLoading(true);
+                subscribeUserToPush({ forceRefresh: true }).then((res) => {
+                    setLoading(false);
+                    if (res?.ok) {
+                        setActivated(true);
+                        window.dispatchEvent(new CustomEvent('redpadel:push-status-changed', { detail: 'granted' }));
+                        setTimeout(() => setIsDismissed(true), 3500);
+                    } else {
+                        setErrorMsg(res?.error || 'No se pudo sincronizar la suscripción.');
+                    }
+                });
+            }
+        };
+
+        window.addEventListener('redpadel:open-push-prompt', handleOpenPrompt);
+        return () => window.removeEventListener('redpadel:open-push-prompt', handleOpenPrompt);
     }, []);
 
     const handleSubscribe = async () => {
@@ -57,6 +84,7 @@ function NotificationManager() {
             if (currentPerm === 'default') {
                 currentPerm = await Notification.requestPermission();
                 setPermission(currentPerm);
+                window.dispatchEvent(new CustomEvent('redpadel:push-status-changed', { detail: currentPerm }));
             }
 
             if (currentPerm === 'granted') {
@@ -72,8 +100,6 @@ function NotificationManager() {
                 } else {
                     setErrorMsg(res.error || 'No se pudo activar el aviso.');
                 }
-            } else if (currentPerm === 'denied') {
-                setIsDismissed(true);
             }
         } catch (err) {
             setErrorMsg('No se pudieron activar las notificaciones en este navegador.');
@@ -87,6 +113,7 @@ function NotificationManager() {
             sessionStorage.setItem('push_banner_dismissed', '1');
         } catch {}
         setIsDismissed(true);
+        setActivated(false);
     };
 
     if (!isSupported || isDismissed) {
@@ -109,7 +136,32 @@ function NotificationManager() {
         );
     }
 
-    if (permission !== 'default') {
+    if (permission === 'denied') {
+        return (
+            <div className="fixed bottom-20 lg:bottom-5 left-4 right-4 sm:left-auto sm:right-5 sm:w-80 glass-modal text-white p-4 rounded-2xl animate-fade-in z-50 border border-amber-500/40">
+                <button
+                    onClick={handleDismiss}
+                    className="absolute top-2.5 right-3 text-slate-400 hover:text-white text-xl leading-none transition"
+                    aria-label="Cerrar"
+                >
+                    &times;
+                </button>
+                <div className="flex items-start gap-3 pr-5">
+                    <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/35 text-amber-300 flex items-center justify-center flex-shrink-0">
+                        <i className="fas fa-bell-slash text-sm"></i>
+                    </div>
+                    <div>
+                        <p className="text-xs font-extrabold uppercase tracking-wider text-amber-300">Avisos bloqueados</p>
+                        <p className="text-xs text-slate-200 mt-0.5 leading-snug">
+                            Para activarlos, permite las notificaciones para este sitio en los ajustes de tu navegador.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (permission !== 'default' && !errorMsg) {
         return null;
     }
 

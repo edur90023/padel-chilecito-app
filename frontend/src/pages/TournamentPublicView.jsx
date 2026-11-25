@@ -1,10 +1,11 @@
 // frontend/src/pages/TournamentPublicView.jsx
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import CourtScheduleView from '../components/CourtScheduleView';
 import { isTournamentCompleted } from '../utils/tournamentStatus';
+import { shareOrDownloadPodiumCard } from '../utils/shareCardGenerator';
 
 // --- FUNCIONES Y COMPONENTES HELPER ---
 
@@ -764,7 +765,9 @@ const PlayoffBracket = ({ rounds }) => {
 
 // frontend/src/pages/TournamentPublicView.jsx - Fragmento de WinnersDisplay actualizado
 
-const WinnersDisplay = ({ finishers }) => {
+const WinnersDisplay = ({ finishers, tournamentName, categoryName }) => {
+    const [sharing, setSharing] = useState(false);
+
     if (!finishers || finishers.length === 0) {
         return null;
     }
@@ -790,9 +793,36 @@ const WinnersDisplay = ({ finishers }) => {
         }
     };
 
+    const handleSharePodium = async () => {
+        setSharing(true);
+        try {
+            await shareOrDownloadPodiumCard({
+                tournamentName,
+                categoryName,
+                finishers: sortedFinishers
+            });
+        } catch (err) {
+            console.error('Error al generar placa de podio:', err);
+        } finally {
+            setSharing(false);
+        }
+    };
+
     return (
         <div className="glass-panel border-emerald-500/40 rounded-2xl p-4 sm:p-6 my-8 animate-fade-in">
-            <h3 className="text-xl sm:text-2xl font-bold text-white text-center mb-5 sm:mb-6">Podio de la Categoría</h3>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 sm:mb-6">
+                <h3 className="text-xl sm:text-2xl font-bold text-white text-center sm:text-left">Podio de la Categoría</h3>
+                <button
+                    type="button"
+                    onClick={handleSharePodium}
+                    disabled={sharing}
+                    className="inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-emerald-400/35 text-xs font-bold text-emerald-300 transition self-center sm:self-auto disabled:opacity-60"
+                    title="Descargar o compartir placa del podio para WhatsApp / Instagram"
+                >
+                    <i className={`fas ${sharing ? 'fa-spinner fa-spin' : 'fa-share-alt'}`}></i>
+                    <span>{sharing ? 'Generando...' : 'Compartir Podio'}</span>
+                </button>
+            </div>
             <ul className="space-y-3 sm:space-y-4">
                 {sortedFinishers.map(({ position, team }) => {
                     const players = getTeamPlayers(team);
@@ -817,8 +847,32 @@ const WinnersDisplay = ({ finishers }) => {
     );
 };
 
+const FOLLOWED_PLAYER_KEY = 'redpadel_followed_player';
+
+const teamMatchesTerm = (team, term) => {
+    if (!team || !term) return false;
+    if ((team.teamName || '').toLowerCase().includes(term)) return true;
+    if (Array.isArray(team.players)) {
+        return team.players.some((p) => (p?.playerName || '').toLowerCase().includes(term));
+    }
+    return false;
+};
+
 const PlayerMatchFinder = ({ tournament, onSelectCategory }) => {
-    const [searchTerm, setSearchTerm] = useState('');
+    const [followedName, setFollowedName] = useState(() => {
+        try {
+            return localStorage.getItem(FOLLOWED_PLAYER_KEY) || '';
+        } catch {
+            return '';
+        }
+    });
+    const [searchTerm, setSearchTerm] = useState(() => {
+        try {
+            return localStorage.getItem(FOLLOWED_PLAYER_KEY) || '';
+        } catch {
+            return '';
+        }
+    });
 
     const matchedMatches = useMemo(() => {
         if (!searchTerm.trim() || !tournament || !tournament.categories) return [];
@@ -830,9 +884,9 @@ const PlayerMatchFinder = ({ tournament, onSelectCategory }) => {
                 category.zones.forEach(zone => {
                     if (Array.isArray(zone.matches)) {
                         zone.matches.forEach(match => {
-                            const nameA = match.teamA?.teamName?.toLowerCase() || '';
-                            const nameB = match.teamB?.teamName?.toLowerCase() || '';
-                            if (nameA.includes(term) || nameB.includes(term)) {
+                            const matchA = teamMatchesTerm(match.teamA, term);
+                            const matchB = teamMatchesTerm(match.teamB, term);
+                            if (matchA || matchB) {
                                 results.push({
                                     category,
                                     zone,
@@ -841,7 +895,7 @@ const PlayerMatchFinder = ({ tournament, onSelectCategory }) => {
                                     matchType: `Zona: ${zone.zoneName}`,
                                     venue: match.matchPlace || zone.zonePlace,
                                     mapUrl: match.matchMapUrl || zone.zoneMapUrl,
-                                    isTeamA: nameA.includes(term)
+                                    isTeamA: matchA
                                 });
                             }
                         });
@@ -853,9 +907,9 @@ const PlayerMatchFinder = ({ tournament, onSelectCategory }) => {
                 category.playoffRounds.forEach(round => {
                     if (Array.isArray(round.matches)) {
                         round.matches.forEach(match => {
-                            const nameA = match.teamA?.teamName?.toLowerCase() || '';
-                            const nameB = match.teamB?.teamName?.toLowerCase() || '';
-                            if (nameA.includes(term) || nameB.includes(term)) {
+                            const matchA = teamMatchesTerm(match.teamA, term);
+                            const matchB = teamMatchesTerm(match.teamB, term);
+                            if (matchA || matchB) {
                                 results.push({
                                     category,
                                     zone: null,
@@ -864,7 +918,7 @@ const PlayerMatchFinder = ({ tournament, onSelectCategory }) => {
                                     matchType: `Playoffs: ${round.roundName}`,
                                     venue: match.matchPlace,
                                     mapUrl: match.matchMapUrl,
-                                    isTeamA: nameA.includes(term)
+                                    isTeamA: matchA
                                 });
                             }
                         });
@@ -875,6 +929,31 @@ const PlayerMatchFinder = ({ tournament, onSelectCategory }) => {
 
         return results;
     }, [searchTerm, tournament]);
+
+    const trimmedSearch = searchTerm.trim();
+    const isCurrentlyFollowed = Boolean(
+        followedName && trimmedSearch && followedName.toLowerCase() === trimmedSearch.toLowerCase()
+    );
+    const nextPendingMatch = matchedMatches.find((item) => item.match?.status !== 'Finalizado') || null;
+
+    const handleToggleFollow = () => {
+        if (!trimmedSearch) return;
+        try {
+            if (isCurrentlyFollowed) {
+                localStorage.removeItem(FOLLOWED_PLAYER_KEY);
+                setFollowedName('');
+            } else {
+                localStorage.setItem(FOLLOWED_PLAYER_KEY, trimmedSearch);
+                setFollowedName(trimmedSearch);
+            }
+        } catch {
+            // ignorar si localStorage no está disponible
+        }
+    };
+
+    const handleClearSearch = () => {
+        setSearchTerm('');
+    };
 
     return (
         <div className="glass-panel border-emerald-500/35 rounded-2xl p-5 sm:p-6 mb-8">
@@ -890,33 +969,73 @@ const PlayerMatchFinder = ({ tournament, onSelectCategory }) => {
                 </div>
             </div>
 
-            <div className="relative">
-                <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-emerald-400"></i>
-                <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Escribe tu nombre o apellido (ej: Gomez, Lucas, Martinez)..."
-                    className="w-full pl-11 pr-10 py-3 glass-subcard focus:border-emerald-500 rounded-xl text-white placeholder-slate-400 text-sm focus:outline-none transition"
-                />
-                {searchTerm && (
+            <div className="flex flex-col sm:flex-row gap-2.5">
+                <div className="relative flex-1">
+                    <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-emerald-400"></i>
+                    <input
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Escribe tu nombre o apellido (ej: Gomez, Lucas, Martinez)..."
+                        className="w-full pl-11 pr-10 py-3 glass-subcard focus:border-emerald-500 rounded-xl text-white placeholder-slate-400 text-sm focus:outline-none transition"
+                    />
+                    {searchTerm && (
+                        <button
+                            type="button"
+                            onClick={handleClearSearch}
+                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white text-sm"
+                            aria-label="Limpiar búsqueda"
+                        >
+                            &times;
+                        </button>
+                    )}
+                </div>
+
+                {trimmedSearch.length > 1 && (
                     <button
-                        onClick={() => setSearchTerm('')}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white text-sm"
+                        type="button"
+                        onClick={handleToggleFollow}
+                        className={`px-4 py-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 border whitespace-nowrap ${
+                            isCurrentlyFollowed
+                                ? 'bg-amber-400/20 border-amber-400/50 text-amber-200 hover:bg-amber-400/30'
+                                : 'bg-white/[0.06] border-white/15 text-slate-200 hover:bg-white/[0.12]'
+                        }`}
+                        title="Recordar tu nombre en este dispositivo al abrir torneos"
                     >
-                        &times;
+                        <i className={`fas ${isCurrentlyFollowed ? 'fa-star text-amber-300' : 'fa-thumbtack text-emerald-400'}`}></i>
+                        <span>{isCurrentlyFollowed ? 'Siguiendo' : 'Seguir mi pareja'}</span>
                     </button>
                 )}
             </div>
 
+            {followedName && !trimmedSearch && (
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-300">
+                    <span>Búsqueda guardada:</span>
+                    <button
+                        type="button"
+                        onClick={() => setSearchTerm(followedName)}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-400/40 text-emerald-300 font-bold hover:bg-emerald-500/25 transition"
+                    >
+                        <i className="fas fa-star text-[10px] text-amber-300"></i>
+                        <span>{followedName}</span>
+                    </button>
+                </div>
+            )}
+
             {/* Resultados */}
-            {searchTerm.trim().length > 1 && (
+            {trimmedSearch.length > 1 && (
                 <div className="mt-5 space-y-3 animate-fade-in">
-                    <div className="flex items-center justify-between text-xs text-gray-400 px-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-400 px-1">
                         <span>Resultados encontrados: <strong className="text-white">{matchedMatches.length}</strong></span>
-                        {matchedMatches.length > 0 && (
-                            <span className="text-emerald-400 font-medium">Partidos programados o jugados</span>
-                        )}
+                        {nextPendingMatch ? (
+                            <span className="inline-flex items-center gap-1.5 text-emerald-300 font-semibold">
+                                <i className="fas fa-clock text-[11px]"></i>
+                                Próximo: {nextPendingMatch.match?.matchTime || 'Horario a confirmar'}
+                                {nextPendingMatch.venue ? ` • ${nextPendingMatch.venue}` : ''}
+                            </span>
+                        ) : matchedMatches.length > 0 ? (
+                            <span className="text-slate-400 font-medium">Todos los partidos disputados</span>
+                        ) : null}
                     </div>
 
                     {matchedMatches.length === 0 ? (
@@ -1026,26 +1145,73 @@ function TournamentPublicView() {
     const { id } = useParams();
     const [tournament, setTournament] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [lastUpdated, setLastUpdated] = useState(null);
     const [error, setError] = useState(null);
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [activeTab, setActiveTab] = useState('category');
 
-    useEffect(() => {
-        const fetchTournament = async () => {
-            try {
-                const response = await axios.get(`/tournaments/${id}`);
-                setTournament(response.data);
-                if (response.data && response.data.categories.length > 0) {
-                    setSelectedCategory(response.data.categories[0]);
-                }
-            } catch (err) {
+    const fetchTournament = useCallback(async ({ silent = false } = {}) => {
+        if (!id) return;
+        if (silent) {
+            setRefreshing(true);
+        }
+        try {
+            const response = await axios.get(`/tournaments/${id}`, silent ? { skipWakeupBanner: true } : undefined);
+            const data = response.data;
+            setTournament(data);
+            setLastUpdated(new Date());
+            setError(null);
+            if (data && Array.isArray(data.categories) && data.categories.length > 0) {
+                setSelectedCategory((prev) => {
+                    if (prev?._id) {
+                        return data.categories.find((c) => c._id === prev._id) || data.categories[0];
+                    }
+                    return data.categories[0];
+                });
+            }
+        } catch (err) {
+            if (!silent) {
                 setError(err.response?.data?.error || 'No se pudo cargar la información del torneo.');
-            } finally {
-                setLoading(false);
+            }
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    }, [id]);
+
+    useEffect(() => {
+        fetchTournament({ silent: false });
+    }, [fetchTournament]);
+
+    const tournamentCompleted = useMemo(() => isTournamentCompleted(tournament), [tournament]);
+    const shouldAutoRefresh = Boolean(
+        tournament &&
+        !tournamentCompleted &&
+        tournament.status !== 'Cancelado'
+    );
+
+    useEffect(() => {
+        if (!shouldAutoRefresh) return;
+
+        const interval = setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                fetchTournament({ silent: true });
+            }
+        }, 40000);
+
+        const onVisibility = () => {
+            if (document.visibilityState === 'visible') {
+                fetchTournament({ silent: true });
             }
         };
-        if (id) fetchTournament();
-    }, [id]);
+        document.addEventListener('visibilitychange', onVisibility);
+
+        return () => {
+            clearInterval(interval);
+            document.removeEventListener('visibilitychange', onVisibility);
+        };
+    }, [shouldAutoRefresh, fetchTournament]);
 
     if (loading) return <div className="loading-spinner mx-auto mt-10"></div>;
     if (error) {
@@ -1112,32 +1278,58 @@ function TournamentPublicView() {
             <Link to="/tournaments" className="inline-flex items-center gap-2 mb-6 glass-subcard text-white px-4 py-2 rounded-xl font-semibold hover:bg-white/10 transition text-sm">
                 <i className="fas fa-arrow-left text-emerald-400"></i>Volver a Torneos
             </Link>
-            <div className="glass-panel p-6 rounded-2xl mb-8">
-                <h1 className="text-3xl sm:text-4xl font-extrabold text-white">{tournament.name}</h1>
-                {(() => {
-                    const isFinished = isTournamentCompleted(tournament);
-                    const hasOpen = (tournament.categories || []).some(c => c.status === 'Inscripciones Abiertas');
-                    const displayStatus = tournament.status === 'Cancelado'
-                        ? 'Cancelado'
-                        : isFinished
-                            ? 'Finalizado'
-                            : hasOpen
-                                ? 'Inscripciones Abiertas'
-                                : 'En Curso';
-                    const statusBadgeClass = isFinished
-                        ? 'text-cyan-300'
-                        : tournament.status === 'Cancelado'
-                            ? 'text-red-400'
-                            : hasOpen
-                                ? 'text-emerald-400'
-                                : 'text-amber-300';
-                    return (
-                        <p className="text-slate-300 mt-2">
-                            Fecha: {new Date(tournament.startDate).toLocaleDateString()} - Estado:{' '}
-                            <span className={`font-semibold ${statusBadgeClass}`}>{displayStatus}</span>
-                        </p>
-                    );
-                })()}
+            <div className="glass-panel p-6 rounded-2xl mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl sm:text-4xl font-extrabold text-white">{tournament.name}</h1>
+                    {(() => {
+                        const isFinished = isTournamentCompleted(tournament);
+                        const hasOpen = (tournament.categories || []).some(c => c.status === 'Inscripciones Abiertas');
+                        const displayStatus = tournament.status === 'Cancelado'
+                            ? 'Cancelado'
+                            : isFinished
+                                ? 'Finalizado'
+                                : hasOpen
+                                    ? 'Inscripciones Abiertas'
+                                    : 'En Curso';
+                        const statusBadgeClass = isFinished
+                            ? 'text-cyan-300'
+                            : tournament.status === 'Cancelado'
+                                ? 'text-red-400'
+                                : hasOpen
+                                    ? 'text-emerald-400'
+                                    : 'text-amber-300';
+                        return (
+                            <p className="text-slate-300 mt-2">
+                                Fecha: {new Date(tournament.startDate).toLocaleDateString()} - Estado:{' '}
+                                <span className={`font-semibold ${statusBadgeClass}`}>{displayStatus}</span>
+                            </p>
+                        );
+                    })()}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-center">
+                    {shouldAutoRefresh && (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-400/30 text-[11px] font-semibold text-emerald-300">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                            En vivo
+                        </span>
+                    )}
+                    {lastUpdated && (
+                        <span className="text-[11px] text-slate-400">
+                            Act. {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                    )}
+                    <button
+                        type="button"
+                        onClick={() => fetchTournament({ silent: true })}
+                        disabled={refreshing}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/15 text-xs font-bold text-slate-200 transition disabled:opacity-60"
+                        title="Actualizar resultados y horarios"
+                    >
+                        <i className={`fas fa-sync-alt ${refreshing ? 'fa-spin text-emerald-400' : 'text-cyan-300'}`}></i>
+                        <span>{refreshing ? 'Actualizando...' : 'Actualizar'}</span>
+                    </button>
+                </div>
             </div>
 
             {/* Buscador de partidos para jugadores */}
@@ -1183,7 +1375,11 @@ function TournamentPublicView() {
                 <CourtScheduleView tournament={tournament} isAdminView={false} />
             ) : selectedCategory && (
                 <div key={selectedCategory._id}>
-                    <WinnersDisplay finishers={selectedCategory.finishers} />
+                    <WinnersDisplay
+                        finishers={selectedCategory.finishers}
+                        tournamentName={tournament.name}
+                        categoryName={selectedCategory.name}
+                    />
                     <PlayoffBracket rounds={selectedCategory.playoffRounds} />
                     {selectedCategory.zones && selectedCategory.zones.length > 0 && (
                         <div className="mt-10">

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { shareOrDownloadCourtCard } from '../utils/shareCardGenerator';
 
 const getGoogleMapsUrl = (mapUrl, placeName) => {
     if (mapUrl && (mapUrl.startsWith('http://') || mapUrl.startsWith('https://'))) {
@@ -81,9 +82,13 @@ const buildLocationQuery = (matchPlace, zonePlace) => {
 function CourtScheduleView({ tournament, isAdminView = false, onSelectCategory }) {
     const [selectedCourtKey, setSelectedCourtKey] = useState('all');
     const [selectedDay, setSelectedDay] = useState('all');
+    const [selectedCategoryId, setSelectedCategoryId] = useState('all');
+    const [selectedStatus, setSelectedStatus] = useState('all');
+    const [searchQuery, setSearchQuery] = useState('');
     const [showUnassigned, setShowUnassigned] = useState(false);
+    const [exportingCourtKey, setExportingCourtKey] = useState(null);
 
-    const { courtGroups, unassignedMatches, availableDays, totalScheduledCount, totalConflicts } = useMemo(() => {
+    const { courtGroups, unassignedMatches, availableDays, availableCategories, totalScheduledCount, totalConflicts } = useMemo(() => {
         const items = [];
         const categories = Array.isArray(tournament?.categories) ? tournament.categories : [];
 
@@ -154,8 +159,12 @@ function CourtScheduleView({ tournament, isAdminView = false, onSelectCategory }
         const groupsMap = new Map();
         const unassigned = [];
         const daysMap = new Map();
+        const categoriesMap = new Map();
 
         items.forEach((item) => {
+            if (item.categoryId && item.categoryName && !categoriesMap.has(String(item.categoryId))) {
+                categoriesMap.set(String(item.categoryId), item.categoryName);
+            }
             if (item.dayLabel) {
                 daysMap.set(item.dayLabel, item.dayOrder);
             }
@@ -235,26 +244,71 @@ function CourtScheduleView({ tournament, isAdminView = false, onSelectCategory }
             .sort((a, b) => a[1] - b[1])
             .map(([label]) => label);
 
+        const sortedCategories = Array.from(categoriesMap.entries()).map(([id, name]) => ({ id, name }));
+
         return {
             courtGroups: sortedGroups,
             unassignedMatches: unassigned,
             availableDays: sortedDays,
+            availableCategories: sortedCategories,
             totalScheduledCount: items.length - unassigned.length,
             totalConflicts: conflictsCount
         };
     }, [tournament]);
 
+    const normalizedSearch = searchQuery.trim().toLowerCase();
+
+    const matchesFilter = (item) => {
+        if (selectedDay !== 'all' && item.dayLabel !== selectedDay) return false;
+        if (selectedCategoryId !== 'all' && String(item.categoryId) !== selectedCategoryId) return false;
+        if (selectedStatus === 'pending' && item.match?.status === 'Finalizado') return false;
+        if (selectedStatus === 'finished' && item.match?.status !== 'Finalizado') return false;
+        if (normalizedSearch) {
+            const teamAStr = [
+                item.match?.teamA?.teamName,
+                ...(item.match?.teamA?.players || []).map(p => p?.playerName),
+                item.match?.placeholderA
+            ].filter(Boolean).join(' ').toLowerCase();
+            const teamBStr = [
+                item.match?.teamB?.teamName,
+                ...(item.match?.teamB?.players || []).map(p => p?.playerName),
+                item.match?.placeholderB
+            ].filter(Boolean).join(' ').toLowerCase();
+            if (!teamAStr.includes(normalizedSearch) && !teamBStr.includes(normalizedSearch)) {
+                return false;
+            }
+        }
+        return true;
+    };
+
     const visibleGroups = useMemo(() => {
         return courtGroups
             .filter(group => selectedCourtKey === 'all' || group.key === selectedCourtKey)
-            .map((group) => {
-                const filteredMatches = selectedDay === 'all'
-                    ? group.matches
-                    : group.matches.filter(m => m.dayLabel === selectedDay);
-                return { ...group, matches: filteredMatches };
-            })
+            .map((group) => ({
+                ...group,
+                matches: group.matches.filter(matchesFilter)
+            }))
             .filter(group => group.matches.length > 0);
-    }, [courtGroups, selectedCourtKey, selectedDay]);
+    }, [courtGroups, selectedCourtKey, selectedDay, selectedCategoryId, selectedStatus, normalizedSearch]);
+
+    const visibleUnassigned = useMemo(() => {
+        return unassignedMatches.filter(matchesFilter);
+    }, [unassignedMatches, selectedDay, selectedCategoryId, selectedStatus, normalizedSearch]);
+
+    const handleShareCourt = async (group) => {
+        setExportingCourtKey(group.key);
+        try {
+            await shareOrDownloadCourtCard({
+                tournamentName: tournament?.name,
+                courtLabel: group.label,
+                matches: group.matches
+            });
+        } catch (err) {
+            console.error('Error al generar placa de cancha:', err);
+        } finally {
+            setExportingCourtKey(null);
+        }
+    };
 
     const getStatusBadge = (status) => {
         if (status === 'En Juego') {
@@ -446,6 +500,65 @@ function CourtScheduleView({ tournament, isAdminView = false, onSelectCategory }
                     </div>
                 )}
 
+                {/* Filtros por estado, categoría y búsqueda rápida */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 pt-2 border-t border-white/10">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                        {[
+                            { id: 'all', label: 'Todos' },
+                            { id: 'pending', label: 'Próximos / En Juego' },
+                            { id: 'finished', label: 'Finalizados' }
+                        ].map((opt) => (
+                            <button
+                                key={opt.id}
+                                type="button"
+                                onClick={() => setSelectedStatus(opt.id)}
+                                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition border ${
+                                    selectedStatus === opt.id
+                                        ? 'bg-cyan-500/25 text-cyan-200 border-cyan-400/60'
+                                        : 'bg-white/[0.04] text-slate-300 border-white/10 hover:text-white'
+                                }`}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
+
+                        {availableCategories.length > 1 && (
+                            <select
+                                value={selectedCategoryId}
+                                onChange={(e) => setSelectedCategoryId(e.target.value)}
+                                aria-label="Filtrar por categoría"
+                                className="px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-900/90 text-slate-200 border border-white/15 focus:outline-none focus:border-emerald-400"
+                            >
+                                <option value="all">Todas las categorías</option>
+                                {availableCategories.map((cat) => (
+                                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                ))}
+                            </select>
+                        )}
+                    </div>
+
+                    <div className="relative w-full lg:w-64">
+                        <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Buscar pareja en el cronograma..."
+                            className="w-full pl-8 pr-7 py-1.5 rounded-lg bg-slate-900/80 border border-white/10 focus:border-emerald-400 text-xs text-white placeholder-slate-400 focus:outline-none"
+                        />
+                        {searchQuery && (
+                            <button
+                                type="button"
+                                onClick={() => setSearchQuery('')}
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs"
+                                aria-label="Limpiar búsqueda"
+                            >
+                                &times;
+                            </button>
+                        )}
+                    </div>
+                </div>
+
                 {/* Filtros por día si hay días detectados */}
                 {availableDays.length > 1 && (
                     <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-white/10">
@@ -508,18 +621,31 @@ function CourtScheduleView({ tournament, isAdminView = false, onSelectCategory }
                                         </p>
                                     </div>
 
-                                    {headerMapsHref && group.hasSingleLocation && (
-                                        <a
-                                            href={headerMapsHref}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-950/80 hover:bg-emerald-800 border border-emerald-500/50 text-emerald-300 rounded-lg text-xs font-bold transition shadow-sm self-start sm:self-auto"
-                                            title="Abrir ubicación del complejo en Google Maps"
+                                    <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleShareCourt(group)}
+                                            disabled={exportingCourtKey === group.key}
+                                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-white/[0.06] hover:bg-white/[0.12] border border-white/15 text-slate-200 rounded-lg text-xs font-semibold transition disabled:opacity-60"
+                                            title="Generar placa PNG de esta cancha para WhatsApp / Instagram"
                                         >
-                                            <i className="fas fa-location-arrow text-[10px]"></i>
-                                            <span>Cómo llegar ↗</span>
-                                        </a>
-                                    )}
+                                            <i className={`fas ${exportingCourtKey === group.key ? 'fa-spinner fa-spin' : 'fa-share-alt'} text-cyan-300 text-[10px]`}></i>
+                                            <span>Placa</span>
+                                        </button>
+
+                                        {headerMapsHref && group.hasSingleLocation && (
+                                            <a
+                                                href={headerMapsHref}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-950/80 hover:bg-emerald-800 border border-emerald-500/50 text-emerald-300 rounded-lg text-xs font-bold transition shadow-sm"
+                                                title="Abrir ubicación del complejo en Google Maps"
+                                            >
+                                                <i className="fas fa-location-arrow text-[10px]"></i>
+                                                <span>Cómo llegar ↗</span>
+                                            </a>
+                                        )}
+                                    </div>
                                 </div>
 
                                 <div className="space-y-3">
@@ -532,7 +658,7 @@ function CourtScheduleView({ tournament, isAdminView = false, onSelectCategory }
             )}
 
             {/* Partidos sin cancha asignada (colapsable) */}
-            {unassignedMatches.length > 0 && (
+            {visibleUnassigned.length > 0 && (
                 <div className="glass-panel p-4 rounded-2xl border border-white/10">
                     <button
                         type="button"
@@ -541,7 +667,7 @@ function CourtScheduleView({ tournament, isAdminView = false, onSelectCategory }
                     >
                         <span className="flex items-center gap-2">
                             <i className="fas fa-hourglass-half text-amber-400"></i>
-                            <span>Partidos sin cancha asignada ({unassignedMatches.length})</span>
+                            <span>Partidos sin cancha asignada ({visibleUnassigned.length})</span>
                         </span>
                         <span className="text-xs text-emerald-400">
                             {showUnassigned ? 'Ocultar ▲' : 'Ver listado ▼'}
@@ -550,7 +676,7 @@ function CourtScheduleView({ tournament, isAdminView = false, onSelectCategory }
 
                     {showUnassigned && (
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mt-4">
-                            {unassignedMatches.map(renderMatchRow)}
+                            {visibleUnassigned.map(renderMatchRow)}
                         </div>
                     )}
                 </div>

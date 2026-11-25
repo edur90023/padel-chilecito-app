@@ -6,6 +6,7 @@ import { useInstallPWA } from './hooks/useInstallPWA';
 import NotificationManager from './components/NotificationManager';
 import AutoUpdater from './components/AutoUpdater';
 import ServerWakeupBanner from './components/ServerWakeupBanner';
+import { isPushSupported } from './utils/notifications';
 const Analytics = () => null;
 
 import Admin from './components/Admin';
@@ -148,6 +149,27 @@ const PublicLayout = () => {
     const [siteSettings, setSiteSettings] = useState({ isCommunityEnabled: true, isRankingEnabled: true });
     const [showIOSGuide, setShowIOSGuide] = useState(false);
     const { installPrompt, isIOS, isStandalone, canInstall, handleInstall } = useInstallPWA();
+    const pushSupported = isPushSupported();
+    const [pushPermission, setPushPermission] = useState(() => (
+        isPushSupported() ? Notification.permission : ''
+    ));
+
+    useEffect(() => {
+        const onPushChanged = (e) => {
+            if (e?.detail) {
+                setPushPermission(e.detail);
+            } else if (isPushSupported()) {
+                setPushPermission(Notification.permission);
+            }
+        };
+        window.addEventListener('redpadel:push-status-changed', onPushChanged);
+        return () => window.removeEventListener('redpadel:push-status-changed', onPushChanged);
+    }, []);
+
+    const handleOpenPushPrompt = () => {
+        window.dispatchEvent(new CustomEvent('redpadel:open-push-prompt'));
+        closeMenu();
+    };
 
     useEffect(() => {
         const fetchStatus = async () => {
@@ -326,6 +348,15 @@ const PublicLayout = () => {
                                 <i className="fas fa-sync-alt text-xs"></i>
                                 <span>Buscar Actualizaciones</span>
                             </button>
+                            {pushSupported && (
+                                <button
+                                    onClick={handleOpenPushPrompt}
+                                    className="flex items-center justify-center gap-2 w-full py-2.5 px-3 rounded-xl text-xs font-semibold text-emerald-300 bg-slate-950 hover:bg-slate-800 border border-emerald-500/30 transition"
+                                >
+                                    <i className={`fas ${pushPermission === 'granted' ? 'fa-check-circle' : 'fa-bell'} text-xs`}></i>
+                                    <span>{pushPermission === 'granted' ? 'Avisos Push Activos' : 'Activar Avisos Push'}</span>
+                                </button>
+                            )}
                             {canInstall && (
                                 <button
                                     onClick={onInstallClick}
@@ -390,9 +421,21 @@ const PublicLayout = () => {
                             </div>
                         </div>
 
-                        <div className="text-[11px] text-slate-400 sm:text-right">
+                        <div className="text-[11px] text-slate-400 sm:text-right space-y-1.5">
                             <p>© {new Date().getFullYear()} Red Padel LR — Todos los derechos reservados.</p>
-                            <p className="text-slate-500 mt-0.5">La Rioja, Argentina</p>
+                            <div className="flex items-center justify-center sm:justify-end gap-3">
+                                <span className="text-slate-500">La Rioja, Argentina</span>
+                                {pushSupported && (
+                                    <button
+                                        type="button"
+                                        onClick={handleOpenPushPrompt}
+                                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 text-[11px] font-semibold text-emerald-300 transition"
+                                    >
+                                        <i className={`fas ${pushPermission === 'granted' ? 'fa-check-circle' : 'fa-bell'} text-[10px]`}></i>
+                                        <span>{pushPermission === 'granted' ? 'Avisos Activos' : 'Activar Avisos'}</span>
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
