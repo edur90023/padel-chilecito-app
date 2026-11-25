@@ -79,7 +79,12 @@ async function startServer() {
   if (process.env.NODE_ENV === 'production') {
     app.use(express.static(path.resolve(__dirname, 'dist'), {
       setHeaders: (res, filePath) => {
-        if (filePath.endsWith('.html')) {
+        if (
+          filePath.endsWith('.html') ||
+          filePath.endsWith('sw-custom.js') ||
+          filePath.endsWith('manifest.json') ||
+          filePath.endsWith('version.json')
+        ) {
           res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
         } else {
           res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');

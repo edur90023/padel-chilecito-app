@@ -16,7 +16,13 @@ export default function AutoUpdater() {
             }
             if ('serviceWorker' in navigator) {
                 const registrations = await navigator.serviceWorker.getRegistrations();
-                await Promise.all(registrations.map(r => r.unregister()));
+                await Promise.all(registrations.map(r => {
+                    const scriptUrl = r.active?.scriptURL || r.waiting?.scriptURL || r.installing?.scriptURL || '';
+                    if (scriptUrl.endsWith('/sw-custom.js')) {
+                        return r.update().catch(() => {});
+                    }
+                    return r.unregister();
+                }));
             }
         } catch (e) {
             console.error('Error limpiando caché:', e);
