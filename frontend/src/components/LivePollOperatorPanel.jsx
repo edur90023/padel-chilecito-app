@@ -53,19 +53,22 @@ function LivePollOperatorPanel() {
         ? `${origin}/overlay-encuesta`
         : `${origin}/overlay-encuesta?pos=${obsPos}`;
 
+    const shortVoteUrl = `${origin}/encuesta`;
+
     useEffect(() => {
         let active = true;
-        QRCode.toDataURL(publicVoteUrl, {
-            width: 360,
+        QRCode.toDataURL(shortVoteUrl, {
+            width: 440,
             margin: 2,
-            color: { dark: '#0f172a', light: '#ffffff' }
+            errorCorrectionLevel: 'L',
+            color: { dark: '#000000', light: '#ffffff' }
         })
             .then((url) => {
                 if (active) setQrDataUrl(url);
             })
             .catch(() => {});
         return () => { active = false; };
-    }, [publicVoteUrl]);
+    }, [shortVoteUrl]);
 
     const showSuccess = useCallback((msg) => {
         setError('');

@@ -6,23 +6,23 @@ const qrCache = new Map();
 function LivePollOverlayCard({ poll, compact = false, sweepTrigger = 0 }) {
     const [qrSrc, setQrSrc] = useState(() => {
         if (typeof window === 'undefined') return '';
-        const target = `${window.location.origin}/live?tab=encuesta`;
+        const target = `${window.location.origin}/encuesta`;
         return qrCache.get(target) || '';
     });
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
-        const target = `${window.location.origin}/live?tab=encuesta`;
+        const target = `${window.location.origin}/encuesta`;
         if (qrCache.has(target)) {
             setQrSrc(qrCache.get(target));
             return;
         }
         let mounted = true;
         QRCode.toDataURL(target, {
-            width: 240,
-            margin: 1,
-            errorCorrectionLevel: 'M',
-            color: { dark: '#020617', light: '#ffffff' }
+            width: 440,
+            margin: 2,
+            errorCorrectionLevel: 'L',
+            color: { dark: '#000000', light: '#ffffff' }
         })
             .then((url) => {
                 qrCache.set(target, url);
@@ -53,7 +53,7 @@ function LivePollOverlayCard({ poll, compact = false, sweepTrigger = 0 }) {
         <div
             className={`relative overflow-hidden rounded-2xl border ${
                 showResults ? 'border-amber-400/55' : 'border-lime-400/40'
-            } ${compact ? 'w-full p-4' : 'w-[475px] max-w-[92vw] p-5'}`}
+            } ${compact ? 'w-full p-4' : 'w-[510px] max-w-[92vw] p-5'}`}
             style={{
                 background: 'linear-gradient(160deg, rgba(7, 11, 20, 0.97) 0%, rgba(15, 23, 42, 0.96) 55%, rgba(6, 10, 18, 0.98) 100%)',
                 boxShadow: showResults
@@ -252,39 +252,40 @@ function LivePollOverlayCard({ poll, compact = false, sweepTrigger = 0 }) {
             {/* Bloque QR Broadcast integrado mientras la votación está abierta */}
             {isOpen && qrSrc ? (
                 <div
-                    className="mt-3.5 rounded-xl border border-lime-400/25 px-3.5 py-2.5 flex items-center justify-between gap-3"
+                    className="mt-3.5 rounded-xl border border-lime-400/30 px-4 py-3 flex items-center justify-between gap-4"
                     style={{
                         background: 'linear-gradient(135deg, rgba(2, 6, 15, 0.94) 0%, rgba(12, 22, 38, 0.96) 100%)',
                         boxShadow: 'inset 0 2px 6px rgba(0, 0, 0, 0.72), inset 0 1px 0 rgba(255, 255, 255, 0.05)'
                     }}
                 >
-                    <div className="min-w-0 space-y-0.5">
+                    <div className="min-w-0 space-y-1">
                         <div className="flex items-center gap-1.5">
-                            <i className="fas fa-qrcode text-lime-400 text-xs" aria-hidden="true" />
-                            <span className={`font-title font-extrabold text-white tracking-tight ${compact ? 'text-xs' : 'text-sm'}`}>
+                            <i className="fas fa-qrcode text-lime-400 text-sm" aria-hidden="true" />
+                            <span className={`font-title font-extrabold text-white tracking-tight ${compact ? 'text-sm' : 'text-base'}`}>
                                 Escaneá para votar en vivo
                             </span>
                         </div>
-                        <p className={`text-slate-300 leading-snug ${compact ? 'text-[10px]' : 'text-[11px]'}`}>
-                            Apuntá la cámara de tu celular al código QR y elegí a tu favorito.
+                        <p className={`text-slate-300 leading-snug ${compact ? 'text-[11px]' : 'text-xs'}`}>
+                            Apuntá la cámara de tu celular al código QR y elegí al jugador del partido.
                         </p>
-                        <p className="text-[10px] font-bold text-lime-400 tracking-wide truncate">
+                        <p className="text-[11px] font-bold text-lime-400 tracking-wide truncate pt-0.5">
                             Red Padel LR · En Vivo
                         </p>
                     </div>
 
                     <div
-                        className={`flex-shrink-0 rounded-xl bg-white p-1.5 border border-lime-300/60 ${
-                            compact ? 'w-[58px] h-[58px]' : 'w-[76px] h-[76px]'
+                        className={`flex-shrink-0 rounded-xl bg-white p-2 border-2 border-lime-300/70 ${
+                            compact ? 'w-[104px] h-[104px]' : 'w-[136px] h-[136px]'
                         }`}
                         style={{
-                            boxShadow: '0 6px 16px rgba(0, 0, 0, 0.65), 0 0 14px rgba(163, 230, 53, 0.22)'
+                            boxShadow: '0 8px 20px rgba(0, 0, 0, 0.7), 0 0 18px rgba(163, 230, 53, 0.25)'
                         }}
                     >
                         <img
                             src={qrSrc}
                             alt="QR para votar en vivo"
-                            className="w-full h-full object-contain block rounded-sm"
+                            className="w-full h-full object-contain block"
+                            style={{ imageRendering: 'pixelated' }}
                         />
                     </div>
                 </div>
