@@ -1,6 +1,39 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import QRCode from 'qrcode';
+
+const qrCache = new Map();
 
 function LivePollOverlayCard({ poll, compact = false, sweepTrigger = 0 }) {
+    const [qrSrc, setQrSrc] = useState(() => {
+        if (typeof window === 'undefined') return '';
+        const target = `${window.location.origin}/live?tab=encuesta`;
+        return qrCache.get(target) || '';
+    });
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const target = `${window.location.origin}/live?tab=encuesta`;
+        if (qrCache.has(target)) {
+            setQrSrc(qrCache.get(target));
+            return;
+        }
+        let mounted = true;
+        QRCode.toDataURL(target, {
+            width: 240,
+            margin: 1,
+            errorCorrectionLevel: 'M',
+            color: { dark: '#020617', light: '#ffffff' }
+        })
+            .then((url) => {
+                qrCache.set(target, url);
+                if (mounted) setQrSrc(url);
+            })
+            .catch(() => {});
+        return () => {
+            mounted = false;
+        };
+    }, []);
+
     if (!poll) return null;
 
     const options = Array.isArray(poll.options) ? poll.options : [];
@@ -216,19 +249,57 @@ function LivePollOverlayCard({ poll, compact = false, sweepTrigger = 0 }) {
                 })}
             </div>
 
-            {/* Pie discreto informativo */}
-            <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between text-[11px] text-slate-400">
-                <span className="truncate font-medium">
-                    {isOpen && !showResults
-                        ? 'Escaneá el QR o entrá a En Vivo para votar'
-                        : showResults
+            {/* Bloque QR Broadcast integrado mientras la votación está abierta */}
+            {isOpen && qrSrc ? (
+                <div
+                    className="mt-3.5 rounded-xl border border-lime-400/25 px-3.5 py-2.5 flex items-center justify-between gap-3"
+                    style={{
+                        background: 'linear-gradient(135deg, rgba(2, 6, 15, 0.94) 0%, rgba(12, 22, 38, 0.96) 100%)',
+                        boxShadow: 'inset 0 2px 6px rgba(0, 0, 0, 0.72), inset 0 1px 0 rgba(255, 255, 255, 0.05)'
+                    }}
+                >
+                    <div className="min-w-0 space-y-0.5">
+                        <div className="flex items-center gap-1.5">
+                            <i className="fas fa-qrcode text-lime-400 text-xs" aria-hidden="true" />
+                            <span className={`font-title font-extrabold text-white tracking-tight ${compact ? 'text-xs' : 'text-sm'}`}>
+                                Escaneá para votar en vivo
+                            </span>
+                        </div>
+                        <p className={`text-slate-300 leading-snug ${compact ? 'text-[10px]' : 'text-[11px]'}`}>
+                            Apuntá la cámara de tu celular al código QR y elegí a tu favorito.
+                        </p>
+                        <p className="text-[10px] font-bold text-lime-400 tracking-wide truncate">
+                            Red Padel LR · En Vivo
+                        </p>
+                    </div>
+
+                    <div
+                        className={`flex-shrink-0 rounded-xl bg-white p-1.5 border border-lime-300/60 ${
+                            compact ? 'w-[58px] h-[58px]' : 'w-[76px] h-[76px]'
+                        }`}
+                        style={{
+                            boxShadow: '0 6px 16px rgba(0, 0, 0, 0.65), 0 0 14px rgba(163, 230, 53, 0.22)'
+                        }}
+                    >
+                        <img
+                            src={qrSrc}
+                            alt="QR para votar en vivo"
+                            className="w-full h-full object-contain block rounded-sm"
+                        />
+                    </div>
+                </div>
+            ) : (
+                <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between text-[11px] text-slate-400">
+                    <span className="truncate font-medium">
+                        {showResults
                             ? 'Jugador del Partido · Padel Chilecito'
                             : 'Votación cerrada'}
-                </span>
-                <span className="font-semibold text-lime-400 whitespace-nowrap ml-2">
-                    Red Padel LR
-                </span>
-            </div>
+                    </span>
+                    <span className="font-semibold text-lime-400 whitespace-nowrap ml-2">
+                        Red Padel LR
+                    </span>
+                </div>
+            )}
         </div>
     );
 }
