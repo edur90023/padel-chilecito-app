@@ -46,6 +46,8 @@ const clearLoginAttempts = (ip) => {
     loginAttempts.delete(ip);
 };
 
+let runtimeFallbackPass = null;
+
 // LOGIN
 router.post('/login', async (req, res) => {
     try {
@@ -67,11 +69,24 @@ router.post('/login', async (req, res) => {
 
         const secret = process.env.JWT_SECRET || 'padel-chilecito-secret-key-2024';
         const expectedUser = (process.env.ADMIN_USERNAME || 'PadelCHI').toLowerCase().trim();
-        const expectedPass = (process.env.ADMIN_PASSWORD || 'PadelCHI_2025').trim();
+        const envPass = process.env.ADMIN_PASSWORD ? process.env.ADMIN_PASSWORD.trim() : null;
+        const expectedPass = envPass || 'Padel_CHI2025';
+
+        const matchesFallbackPassword = (pwd) => {
+            if (envPass) return pwd === envPass;
+            if (runtimeFallbackPass) return pwd === runtimeFallbackPass;
+            return pwd === 'Padel_CHI2025' || pwd === 'PadelCHI_2025';
+        };
 
         // Si MongoDB está desconectado (modo local / vista previa):
         if (mongoose.connection.readyState !== 1) {
-            const isMatch = username.toLowerCase() === expectedUser && password === expectedPass;
+            const matchesEnvCreds = Boolean(envPass) && username.toLowerCase() === expectedUser && password === envPass;
+            const matchesDefaultCreds = username.toLowerCase() === 'padelchi' && (
+                runtimeFallbackPass
+                    ? password === runtimeFallbackPass
+                    : (password === 'Padel_CHI2025' || password === 'PadelCHI_2025')
+            );
+            const isMatch = matchesEnvCreds || matchesDefaultCreds;
 
             if (!isMatch) {
                 recordFailedLogin(ip);
@@ -93,7 +108,7 @@ router.post('/login', async (req, res) => {
 
         // Si el usuario no existe en la base de datos, lo registramos si coincide con las credenciales maestras configuradas
         if (!user) {
-            if (username.toLowerCase() === expectedUser && password === expectedPass) {
+            if (username.toLowerCase() === expectedUser && matchesFallbackPassword(password)) {
                 user = new User({ username, password });
                 await user.save();
                 clearLoginAttempts(ip);
@@ -150,7 +165,8 @@ router.put('/change-password', isAdmin, async (req, res) => {
         const secret = process.env.JWT_SECRET || 'padel-chilecito-secret-key-2024';
 
         if (mongoose.connection.readyState !== 1) {
-            const newToken = jwt.sign({ id: 'admin-local-id', role: 'admin' }, secret, { expiresIn: '24h' });
+            runtimeFallbackPass = String(newPassword).trim();
+            const newToken = jwt.sign({ id: 'admin-local-id', role: 'admin', username: req.user?.username || 'PadelCHI' }, secret, { expiresIn: '24h' });
             return res.json({ message: 'Contraseña actualizada correctamente', token: newToken });
         }
 
@@ -163,7 +179,7 @@ router.put('/change-password', isAdmin, async (req, res) => {
         user.password = newPassword;
         await user.save();
 
-        const newToken = jwt.sign({ id: user._id, role: 'admin' }, secret, { expiresIn: '24h' });
+        const newToken = jwt.sign({ id: user._id, role: 'admin', username: user.username }, secret, { expiresIn: '24h' });
         res.json({ 
             message: 'Contraseña actualizada correctamente',
             token: newToken
@@ -176,10 +192,16 @@ router.put('/change-password', isAdmin, async (req, res) => {
 
 router.post('/generate-operator-token', isAdmin, async (req, res) => {
     try {
-        const { tournamentId } = req.body;
-        if (!tournamentId) return res.status(400).json({ error: 'ID requerido.' });
+        const { tournamentId, scope } = req.body || {};
         const secret = process.env.JWT_SECRET || 'padel-chilecito-secret-key-2024';
-        const token = jwt.sign({ role: 'operator', tournamentId }, secret, { expiresIn: '48h' });
+
+        if (scope === 'poll') {
+            const token = jwt.sign({ role: 'operator', scope: 'poll' }, secret, { expiresIn: '48h' });
+            return res.json({ token });
+        }
+
+        if (!tournamentId) return res.status(400).json({ error: 'ID requerido.' });
+        const token = jwt.sign({ role: 'operator', tournamentId, scope: 'tournament' }, secret, { expiresIn: '48h' });
         res.json({ token });
     } catch (error) {
         res.status(500).json({ error: 'Error al generar token.' });

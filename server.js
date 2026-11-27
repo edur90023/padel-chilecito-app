@@ -55,6 +55,7 @@ app.use('/api/ranking', require('./server/routes/ranking'));
 app.use('/api/seed', require('./server/routes/seed'));
 app.use('/api/community', require('./server/routes/community'));
 app.use('/api/livestream', require('./server/routes/livestream'));
+app.use('/api/live-poll', require('./server/routes/livePoll'));
 app.use('/api/notifications', require('./server/routes/notifications'));
 app.use('/api/professors', require('./server/routes/professors'));
 app.use('/api/complexes', require('./server/routes/complexes'));

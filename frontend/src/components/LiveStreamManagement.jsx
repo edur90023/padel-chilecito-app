@@ -26,6 +26,9 @@ function LiveStreamManagement() {
     const [showForm, setShowForm] = useState(false);
     const [previewUrl, setPreviewUrl] = useState(null);
     const [pushingLive, setPushingLive] = useState(false);
+    const [pollOperatorLink, setPollOperatorLink] = useState('');
+    const [generatingPollLink, setGeneratingPollLink] = useState(false);
+    const [copiedPollLink, setCopiedPollLink] = useState(false);
 
     useEffect(() => {
         const fetchSettings = async () => {
@@ -169,6 +172,21 @@ function LiveStreamManagement() {
             setError(err.response?.data?.error || 'No se pudo enviar la notificación push.');
         } finally {
             setPushingLive(false);
+        }
+    };
+
+    const handleGeneratePollOperatorLink = async () => {
+        setError('');
+        setGeneratingPollLink(true);
+        try {
+            const response = await axios.post('/auth/generate-operator-token', { scope: 'poll' });
+            const link = `${window.location.origin}/operate?token=${response.data.token}`;
+            setPollOperatorLink(link);
+            setCopiedPollLink(false);
+        } catch (err) {
+            setError(err.response?.data?.error || 'No se pudo generar el enlace de operador para encuestas.');
+        } finally {
+            setGeneratingPollLink(false);
         }
     };
 
@@ -455,8 +473,53 @@ function LiveStreamManagement() {
                 </div>
             )}
 
+            {/* Acceso dedicado para Operador de Encuesta en Vivo & OBS */}
+            <div className="mt-8 p-4 sm:p-5 bg-gray-900/75 border border-lime-500/30 rounded-2xl space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <h4 className="text-base font-bold text-white flex items-center gap-2">
+                            <i className="fas fa-poll text-lime-400"></i>
+                            <span>Acceso Operador — Encuesta en Vivo & OBS</span>
+                        </h4>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                            Genera un enlace directo para que el operador de streaming controle las encuestas y el overlay transparente en OBS.
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        disabled={generatingPollLink}
+                        onClick={handleGeneratePollOperatorLink}
+                        className="px-4 py-2.5 rounded-xl bg-lime-500 hover:bg-lime-400 text-slate-950 font-extrabold text-xs sm:text-sm transition whitespace-nowrap disabled:opacity-50"
+                    >
+                        {generatingPollLink ? 'Generando...' : 'Generar Enlace Operador Encuesta'}
+                    </button>
+                </div>
+
+                {pollOperatorLink && (
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-2 border-t border-gray-800">
+                        <input
+                            type="text"
+                            readOnly
+                            value={pollOperatorLink}
+                            className="flex-1 bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-xs font-mono text-lime-300"
+                        />
+                        <button
+                            type="button"
+                            onClick={() => {
+                                navigator.clipboard.writeText(pollOperatorLink);
+                                setCopiedPollLink(true);
+                                setTimeout(() => setCopiedPollLink(false), 2000);
+                            }}
+                            className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition whitespace-nowrap"
+                        >
+                            {copiedPollLink ? '¡Enlace Copiado!' : 'Copiar Enlace'}
+                        </button>
+                    </div>
+                )}
+            </div>
+
             {/* Guardado Manual / Recordatorio */}
-            <div className="mt-8 pt-4 border-t border-gray-700 flex flex-col sm:flex-row items-center justify-between text-xs text-gray-400 gap-3">
+            <div className="mt-6 pt-4 border-t border-gray-700 flex flex-col sm:flex-row items-center justify-between text-xs text-gray-400 gap-3">
                 <span className="flex items-center gap-1.5">
                     <i className="fas fa-shield-alt text-green-400"></i> Los cambios se sincronizan en tiempo real con la pantalla pública de los usuarios.
                 </span>

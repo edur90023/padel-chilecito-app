@@ -3,10 +3,13 @@ import axios from 'axios';
 
 const AuthContext = createContext(null);
 
-// Helper to decode JWT
+// Helper to decode JWT safely (supports base64url)
 const decodeToken = (token) => {
     try {
-        return JSON.parse(atob(token.split('.')[1]));
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const padded = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, '=');
+        return JSON.parse(atob(padded));
     } catch (e) {
         return null;
     }

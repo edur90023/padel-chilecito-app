@@ -11,23 +11,24 @@ function OperatorPage() {
         const token = searchParams.get('token');
         if (token) {
             try {
-                // Decode token to get tournamentId without verifying (server will verify)
-                const payload = JSON.parse(atob(token.split('.')[1]));
-                if (payload.role === 'operator' && payload.tournamentId) {
-                    // Use the setAuthToken function from AuthContext to set the operator token
+                // Decode token to get role/scope/tournamentId without verifying (server will verify)
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const padded = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, '=');
+                const payload = JSON.parse(atob(padded));
+                if (payload.role === 'operator' && payload.scope === 'poll') {
                     setAuthToken(token);
-                    // Redirect to a new operator-specific view
-                    navigate(`/operator/tournament/${payload.tournamentId}`);
+                    navigate('/operator/encuesta', { replace: true });
+                } else if (payload.role === 'operator' && payload.tournamentId) {
+                    setAuthToken(token);
+                    navigate(`/operator/tournament/${payload.tournamentId}`, { replace: true });
                 } else {
-                    // Invalid token role
                     navigate('/login?error=invalid_token');
                 }
             } catch (e) {
-                // Token is malformed
                 navigate('/login?error=invalid_token');
             }
         } else {
-            // No token present
             navigate('/login?error=no_token');
         }
     }, [searchParams, navigate, setAuthToken]);

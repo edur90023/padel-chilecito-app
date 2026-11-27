@@ -1,5 +1,5 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, NavLink, Navigate, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, NavLink, Navigate, Link, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import axios, { wakeUpServer } from './api/axiosConfig';
 import { useInstallPWA } from './hooks/useInstallPWA';
@@ -21,9 +21,11 @@ const TournamentPublicView = lazy(() => import('./pages/TournamentPublicView'));
 const CommunityPage = lazy(() => import('./pages/CommunityPage'));
 const ProfessorsPage = lazy(() => import('./pages/ProfessorsPage'));
 const LivePage = lazy(() => import('./pages/LivePage'));
+const LivePollOverlayPage = lazy(() => import('./pages/LivePollOverlayPage'));
 const ComplexesPage = lazy(() => import('./pages/ComplexesPage'));
 const OperatorPage = lazy(() => import('./pages/OperatorPage'));
 const OperatorTournamentView = lazy(() => import('./pages/OperatorTournamentView'));
+const OperatorPollView = lazy(() => import('./pages/OperatorPollView'));
 
 import './index.css';
 
@@ -182,11 +184,13 @@ const PublicLayout = () => {
     useEffect(() => {
         const fetchStatus = async () => {
             try {
-                const [liveRes, settingsRes] = await Promise.all([
+                const [liveRes, settingsRes, pollRes] = await Promise.all([
                     axios.get('/livestream').catch(() => ({ data: { isEnabled: false } })),
-                    axios.get('/settings').catch(() => ({ data: { isCommunityEnabled: true, isRankingEnabled: true } }))
+                    axios.get('/settings').catch(() => ({ data: { isCommunityEnabled: true, isRankingEnabled: true } })),
+                    axios.get('/live-poll').catch(() => ({ data: { activePoll: null } }))
                 ]);
-                if (liveRes.data && liveRes.data.isEnabled) {
+                const pollIsOpen = pollRes.data?.activePoll?.status === 'open';
+                if ((liveRes.data && liveRes.data.isEnabled) || pollIsOpen) {
                     setIsLiveEnabled(true);
                 }
                 if (settingsRes.data) {
@@ -398,6 +402,7 @@ const PublicLayout = () => {
                 <Suspense fallback={<PageLoader />}>
                     <Routes>
                         <Route path="/live" element={<LivePage />} />
+                        <Route path="/encuesta" element={<Navigate to="/live?tab=encuesta" replace />} />
                         <Route path="/" element={<Home />} />
                         <Route path="/tournaments" element={<Tournament />} />
                         <Route path="/tournaments/:id" element={<TournamentPublicView />} />
@@ -521,28 +526,43 @@ class ErrorBoundary extends React.Component {
     }
 }
 
-function App() {
-    useEffect(() => {
-        wakeUpServer();
-    }, []);
+function AppRoutesAndShell() {
+    const location = useLocation();
+    const isOverlayRoute = location.pathname === '/overlay-encuesta';
 
+    useEffect(() => {
+        if (!isOverlayRoute) {
+            wakeUpServer();
+        }
+    }, [isOverlayRoute]);
+
+    return (
+        <>
+            <Suspense fallback={isOverlayRoute ? null : <PageLoader />}>
+                <Routes>
+                    <Route path="/overlay-encuesta" element={<LivePollOverlayPage />} />
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/operate" element={<OperatorPage />} />
+                    <Route path="/admin/*" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+                    <Route path="/operator/encuesta" element={<OperatorRoute><OperatorPollView /></OperatorRoute>} />
+                    <Route path="/operator/tournament/:tournamentId" element={<OperatorRoute><OperatorTournamentView /></OperatorRoute>} />
+                    <Route path="/*" element={<PublicLayout />} />
+                </Routes>
+            </Suspense>
+            {!isOverlayRoute && <ServerWakeupBanner />}
+            {!isOverlayRoute && <AutoUpdater />}
+            {!isOverlayRoute && <Analytics />}
+        </>
+    );
+}
+
+function App() {
     return (
         <ErrorBoundary>
             <AuthProvider>
                 <Router>
-                    <Suspense fallback={<PageLoader />}>
-                        <Routes>
-                            <Route path="/login" element={<LoginPage />} />
-                            <Route path="/operate" element={<OperatorPage />} />
-                            <Route path="/admin/*" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-                            <Route path="/operator/tournament/:tournamentId" element={<OperatorRoute><OperatorTournamentView /></OperatorRoute>} />
-                            <Route path="/*" element={<PublicLayout />} />
-                        </Routes>
-                    </Suspense>
+                    <AppRoutesAndShell />
                 </Router>
-                <ServerWakeupBanner />
-                <AutoUpdater />
-                <Analytics />
             </AuthProvider>
         </ErrorBoundary>
     );
