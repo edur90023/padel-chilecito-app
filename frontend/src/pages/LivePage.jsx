@@ -532,16 +532,11 @@ function LivePage() {
                                                     {votingOptionId === option.id ? (
                                                         <span className="text-xs font-bold text-lime-300">Enviando...</span>
                                                     ) : shouldRevealPercentages ? (
-                                                        <div>
-                                                            <span className={`block font-title font-extrabold text-lg sm:text-xl leading-none ${
-                                                                highlightWinner ? 'text-amber-300' : 'text-lime-300'
-                                                            }`}>
-                                                                {pct % 1 === 0 ? `${pct.toFixed(0)}%` : `${pct.toFixed(1)}%`}
-                                                            </span>
-                                                            <span className="text-[11px] text-slate-300">
-                                                                {option.votes} {option.votes === 1 ? 'voto' : 'votos'}
-                                                            </span>
-                                                        </div>
+                                                        <span className={`block font-title font-extrabold text-lg sm:text-xl leading-none ${
+                                                            highlightWinner ? 'text-amber-300' : 'text-lime-300'
+                                                        }`}>
+                                                            {pct % 1 === 0 ? `${pct.toFixed(0)}%` : `${pct.toFixed(1)}%`}
+                                                        </span>
                                                     ) : (
                                                         <span className="px-3.5 py-1.5 rounded-xl bg-lime-500/20 border border-lime-400/50 text-lime-300 text-xs font-bold">
                                                             Votar

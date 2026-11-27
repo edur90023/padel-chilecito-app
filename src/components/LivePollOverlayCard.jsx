@@ -178,10 +178,7 @@ function LivePollOverlayCard({ poll, compact = false, sweepTrigger = 0 }) {
                                     )}
                                 </div>
 
-                                <div className="flex items-baseline gap-2 flex-shrink-0 tabular-nums">
-                                    <span className="text-[11px] font-semibold text-slate-400">
-                                        ({option.votes})
-                                    </span>
+                                <div className="flex items-baseline flex-shrink-0 tabular-nums">
                                     <span
                                         className={`font-title font-extrabold text-sm sm:text-base min-w-[46px] text-right ${
                                             highlightWinner ? 'text-amber-300' : 'text-lime-300'
