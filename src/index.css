@@ -313,3 +313,29 @@ body {
         font-size: 0.9rem;
     }
 }
+
+/* --- ANIMACIONES BROADCAST OBS OVERLAY --- */
+@keyframes obsSweepSheen {
+    0% {
+        transform: translateX(-140%) skewX(-20deg);
+        opacity: 0;
+    }
+    20% {
+        opacity: 0.85;
+    }
+    100% {
+        transform: translateX(260%) skewX(-20deg);
+        opacity: 0;
+    }
+}
+
+.animate-obs-sweep {
+    animation: obsSweepSheen 950ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .animate-obs-sweep {
+        animation: none !important;
+        opacity: 0 !important;
+    }
+}

@@ -340,18 +340,34 @@ function LivePollOperatorPanel() {
                     </div>
                 </div>
 
-                {error && (
-                    <div className="mt-4 p-3 rounded-xl bg-red-950/70 border border-red-600/60 text-red-200 text-sm flex items-center gap-2">
-                        <i className="fas fa-exclamation-circle text-red-400"></i>
-                        <span>{error}</span>
-                    </div>
-                )}
-                {feedback && (
-                    <div className="mt-4 p-3 rounded-xl bg-emerald-950/70 border border-emerald-500/60 text-emerald-200 text-sm flex items-center gap-2">
-                        <i className="fas fa-check-circle text-emerald-400"></i>
-                        <span>{feedback}</span>
-                    </div>
-                )}
+                {/* Espacio fijo reservado para avisos (evita saltos verticales sobre los botones) */}
+                <div
+                    aria-live="polite"
+                    className={`mt-4 h-12 px-3.5 rounded-xl border text-sm flex items-center gap-2.5 transition-colors duration-200 overflow-hidden ${
+                        error
+                            ? 'bg-red-950/70 border-red-600/60 text-red-200'
+                            : feedback
+                                ? 'bg-emerald-950/70 border-emerald-500/60 text-emerald-200'
+                                : 'bg-gray-900/45 border-gray-700/60 text-gray-400'
+                    }`}
+                >
+                    {error ? (
+                        <>
+                            <i className="fas fa-exclamation-circle text-red-400 flex-shrink-0"></i>
+                            <span className="truncate font-medium">{error}</span>
+                        </>
+                    ) : feedback ? (
+                        <>
+                            <i className="fas fa-check-circle text-emerald-400 flex-shrink-0"></i>
+                            <span className="truncate font-medium">{feedback}</span>
+                        </>
+                    ) : (
+                        <>
+                            <i className="fas fa-broadcast-tower text-gray-500 flex-shrink-0 text-xs"></i>
+                            <span className="truncate text-xs">Los avisos de estado aparecerán aquí sin desplazar los botones.</span>
+                        </>
+                    )}
+                </div>
             </div>
 
             {/* Grid Principal: Control Activo + Vista Previa OBS vs Formulario de Creación */}
@@ -693,15 +709,26 @@ function LivePollOperatorPanel() {
                         </div>
 
                         <div
-                            className="rounded-xl border border-gray-700 p-4 min-h-[260px] flex items-center justify-center overflow-hidden"
+                            className="rounded-xl border border-gray-700 p-4 min-h-[290px] flex items-center justify-center overflow-hidden relative"
                             style={{
                                 backgroundImage: 'linear-gradient(45deg, #111827 25%, #162032 25%, #162032 50%, #111827 50%, #111827 75%, #162032 75%, #162032 100%)',
                                 backgroundSize: '20px 20px'
                             }}
                         >
                             {activePoll ? (
-                                <div className={`w-full transition-opacity duration-300 ${activePoll.showOverlay ? 'opacity-100' : 'opacity-45'}`}>
-                                    <LivePollOverlayCard poll={activePoll} compact />
+                                <div
+                                    className={`w-full transition-all duration-500 will-change-transform ${
+                                        activePoll.showOverlay
+                                            ? 'opacity-100 translate-x-0 scale-100'
+                                            : 'opacity-20 -translate-x-6 scale-95'
+                                    }`}
+                                    style={{ transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)' }}
+                                >
+                                    <LivePollOverlayCard
+                                        poll={activePoll}
+                                        compact
+                                        sweepTrigger={activePoll.showOverlay ? (activePoll.updatedAt || 1) : 0}
+                                    />
                                 </div>
                             ) : (
                                 <p className="text-xs text-gray-400 text-center max-w-xs">

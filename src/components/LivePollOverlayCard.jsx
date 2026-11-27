@@ -1,6 +1,6 @@
 import React from 'react';
 
-function LivePollOverlayCard({ poll, compact = false }) {
+function LivePollOverlayCard({ poll, compact = false, sweepTrigger = 0 }) {
     if (!poll) return null;
 
     const options = Array.isArray(poll.options) ? poll.options : [];
@@ -24,6 +24,18 @@ function LivePollOverlayCard({ poll, compact = false }) {
                     : 'border-lime-400/35 bg-[#070c14]/88'
             } ${compact ? 'w-full p-4' : 'w-[470px] max-w-[92vw] p-5'}`}
         >
+            {/* Destello diagonal broadcast al encender el cartel */}
+            {sweepTrigger > 0 && (
+                <div
+                    key={sweepTrigger}
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-y-0 left-0 w-1/2 z-20 animate-obs-sweep"
+                    style={{
+                        background: 'linear-gradient(90deg, transparent 0%, rgba(163, 230, 53, 0.22) 50%, transparent 100%)'
+                    }}
+                />
+            )}
+
             {/* Acento superior sutil */}
             <div
                 className="pointer-events-none absolute inset-x-0 top-0 h-[3px]"

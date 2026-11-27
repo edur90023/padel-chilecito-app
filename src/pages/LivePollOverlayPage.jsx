@@ -1,14 +1,34 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useLivePoll } from '../hooks/useLivePoll';
 import LivePollOverlayCard from '../components/LivePollOverlayCard';
 
-const POSITION_CLASSES = {
-    bl: 'bottom-7 left-7 items-end justify-start',
-    br: 'bottom-7 right-7 items-end justify-end',
-    bc: 'bottom-7 inset-x-7 items-end justify-center',
-    tl: 'top-7 left-7 items-start justify-start',
-    tr: 'top-7 right-7 items-start justify-end'
+const POSITION_CONFIG = {
+    bl: {
+        container: 'bottom-7 left-7 items-end justify-start',
+        hidden: '-translate-x-14 translate-y-2 scale-95 opacity-0',
+        visible: 'translate-x-0 translate-y-0 scale-100 opacity-100'
+    },
+    br: {
+        container: 'bottom-7 right-7 items-end justify-end',
+        hidden: 'translate-x-14 translate-y-2 scale-95 opacity-0',
+        visible: 'translate-x-0 translate-y-0 scale-100 opacity-100'
+    },
+    bc: {
+        container: 'bottom-7 inset-x-7 items-end justify-center',
+        hidden: 'translate-y-14 scale-95 opacity-0',
+        visible: 'translate-y-0 scale-100 opacity-100'
+    },
+    tl: {
+        container: 'top-7 left-7 items-start justify-start',
+        hidden: '-translate-x-14 -translate-y-2 scale-95 opacity-0',
+        visible: 'translate-x-0 translate-y-0 scale-100 opacity-100'
+    },
+    tr: {
+        container: 'top-7 right-7 items-start justify-end',
+        hidden: 'translate-x-14 -translate-y-2 scale-95 opacity-0',
+        visible: 'translate-x-0 translate-y-0 scale-100 opacity-100'
+    }
 };
 
 function LivePollOverlayPage() {
@@ -16,9 +36,11 @@ function LivePollOverlayPage() {
     const { activePoll } = useLivePoll({ skipWakeupBanner: true });
     const [renderPoll, setRenderPoll] = useState(null);
     const [isVisible, setIsVisible] = useState(false);
+    const [sweepTrigger, setSweepTrigger] = useState(0);
+    const wasShowingRef = useRef(false);
 
     const posKey = searchParams.get('pos') || 'bl';
-    const positionClasses = POSITION_CLASSES[posKey] || POSITION_CLASSES.bl;
+    const posCfg = POSITION_CONFIG[posKey] || POSITION_CONFIG.bl;
 
     // Forzar transparencia real del documento para OBS Browser Source
     useEffect(() => {
@@ -57,15 +79,26 @@ function LivePollOverlayPage() {
         };
     }, []);
 
-    // Mantener el último snapshot brevemente durante la animación de salida
+    // Animación direccional de entrada al encender (ON) y repliegue suave al cerrar (OFF)
     useEffect(() => {
         const shouldShow = Boolean(activePoll && activePoll.showOverlay);
         if (shouldShow && activePoll) {
             setRenderPoll(activePoll);
-            const raf = requestAnimationFrame(() => setIsVisible(true));
-            return () => cancelAnimationFrame(raf);
+            if (!wasShowingRef.current) {
+                wasShowingRef.current = true;
+                setSweepTrigger((prev) => prev + 1);
+            }
+            let raf2 = 0;
+            const raf1 = requestAnimationFrame(() => {
+                raf2 = requestAnimationFrame(() => setIsVisible(true));
+            });
+            return () => {
+                cancelAnimationFrame(raf1);
+                if (raf2) cancelAnimationFrame(raf2);
+            };
         }
 
+        wasShowingRef.current = false;
         setIsVisible(false);
         const timer = setTimeout(() => {
             setRenderPoll(null);
@@ -75,16 +108,20 @@ function LivePollOverlayPage() {
 
     return (
         <div className="fixed inset-0 bg-transparent overflow-hidden pointer-events-none select-none">
-            <div className={`fixed ${positionClasses} flex pointer-events-none`}>
+            <div className={`fixed ${posCfg.container} flex pointer-events-none`}>
                 <div
-                    className={`transition-all duration-500 will-change-transform ${
+                    className={`transition-all will-change-transform ${
                         isVisible
-                            ? 'opacity-100 translate-y-0 scale-100'
-                            : 'opacity-0 translate-y-8 scale-95'
+                            ? `duration-500 ${posCfg.visible}`
+                            : `duration-[440ms] ${posCfg.hidden}`
                     }`}
-                    style={{ transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)' }}
+                    style={{
+                        transitionTimingFunction: isVisible
+                            ? 'cubic-bezier(0.16, 1, 0.3, 1)'
+                            : 'cubic-bezier(0.4, 0, 1, 1)'
+                    }}
                 >
-                    {renderPoll && <LivePollOverlayCard poll={renderPoll} />}
+                    {renderPoll && <LivePollOverlayCard poll={renderPoll} sweepTrigger={sweepTrigger} />}
                 </div>
             </div>
         </div>
