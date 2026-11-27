@@ -18,11 +18,15 @@ function LivePollOverlayCard({ poll, compact = false, sweepTrigger = 0 }) {
 
     return (
         <div
-            className={`relative overflow-hidden rounded-2xl border backdrop-blur-xl shadow-[0_22px_50px_-10px_rgba(0,0,0,0.85)] ${
-                showResults
-                    ? 'border-lime-400/50 bg-[#070d16]/92'
-                    : 'border-lime-400/35 bg-[#070c14]/88'
-            } ${compact ? 'w-full p-4' : 'w-[470px] max-w-[92vw] p-5'}`}
+            className={`relative overflow-hidden rounded-2xl border ${
+                showResults ? 'border-amber-400/55' : 'border-lime-400/40'
+            } ${compact ? 'w-full p-4' : 'w-[475px] max-w-[92vw] p-5'}`}
+            style={{
+                background: 'linear-gradient(160deg, rgba(7, 11, 20, 0.97) 0%, rgba(15, 23, 42, 0.96) 55%, rgba(6, 10, 18, 0.98) 100%)',
+                boxShadow: showResults
+                    ? '0 24px 55px -10px rgba(0, 0, 0, 0.92), 0 0 26px rgba(250, 204, 21, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.16)'
+                    : '0 24px 55px -10px rgba(0, 0, 0, 0.92), 0 0 24px rgba(132, 204, 22, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.14)'
+            }}
         >
             {/* Destello diagonal broadcast al encender el cartel */}
             {sweepTrigger > 0 && (
@@ -36,7 +40,7 @@ function LivePollOverlayCard({ poll, compact = false, sweepTrigger = 0 }) {
                 />
             )}
 
-            {/* Acento superior sutil */}
+            {/* Acento superior luminoso */}
             <div
                 className="pointer-events-none absolute inset-x-0 top-0 h-[3px]"
                 style={{
@@ -47,9 +51,14 @@ function LivePollOverlayCard({ poll, compact = false, sweepTrigger = 0 }) {
             />
 
             {/* Cabecera Broadcast con Logo Oficial del Canal */}
-            <div className="flex items-center justify-between gap-3 mb-3.5">
+            <div className="flex items-center justify-between gap-3 mb-3">
                 <div className="flex items-center gap-3 min-w-0">
-                    <div className="relative flex-shrink-0 w-12 h-12 rounded-full bg-black/75 border border-lime-400/50 shadow-[0_0_18px_rgba(132,204,22,0.28)] flex items-center justify-center p-0.5">
+                    <div
+                        className="relative flex-shrink-0 w-12 h-12 rounded-full bg-black border border-lime-400/60 flex items-center justify-center p-0.5"
+                        style={{
+                            boxShadow: '0 4px 14px rgba(0, 0, 0, 0.7), 0 0 16px rgba(132, 204, 22, 0.28)'
+                        }}
+                    >
                         <img
                             src="/live-channel-logo.png"
                             alt="Padel Chilecito EN VIVO"
@@ -61,48 +70,63 @@ function LivePollOverlayCard({ poll, compact = false, sweepTrigger = 0 }) {
                             {isOpen && !showResults && (
                                 <span className="inline-block w-2 h-2 rounded-full bg-red-500 animate-pulse flex-shrink-0" />
                             )}
-                            <span className={`text-[11px] font-extrabold tracking-[0.14em] uppercase whitespace-nowrap ${
-                                showResults ? 'text-amber-300' : 'text-lime-400'
-                            }`}>
+                            <span
+                                className={`text-[11px] font-extrabold tracking-[0.14em] uppercase whitespace-nowrap ${
+                                    showResults ? 'text-amber-300' : 'text-lime-400'
+                                }`}
+                            >
                                 {statusText}
                             </span>
                         </div>
-                        {poll.matchLabel ? (
-                            <p className="text-xs font-semibold text-slate-300 truncate">
-                                {poll.matchLabel}
-                            </p>
-                        ) : (
-                            <p className="text-xs font-semibold text-slate-400 truncate">
-                                Padel Chilecito · Transmisión Oficial
-                            </p>
-                        )}
+                        <p className="text-xs font-semibold text-slate-300 truncate">
+                            {poll.matchLabel ? poll.matchLabel : 'Padel Chilecito · Transmisión Oficial'}
+                        </p>
                     </div>
                 </div>
 
-                <div className="text-right flex-shrink-0">
+                <div
+                    className="text-right flex-shrink-0 px-2.5 py-1.5 rounded-xl border border-white/10"
+                    style={{
+                        background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(5, 9, 18, 0.98) 100%)',
+                        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)'
+                    }}
+                >
                     <span className="block font-title font-extrabold text-xl leading-none text-white tabular-nums">
                         {totalVotes}
                     </span>
-                    <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400 mt-0.5">
+                    <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400 mt-0.5">
                         {totalVotes === 1 ? 'voto' : 'votos'}
                     </span>
                 </div>
             </div>
 
-            {/* Pregunta principal */}
-            <h2
-                className={`font-title font-extrabold text-white tracking-tight leading-snug mb-3.5 ${
-                    compact ? 'text-base' : 'text-lg sm:text-[21px]'
-                }`}
-                style={{ textWrap: 'balance' }}
+            {/* Bloque oscuro de Pregunta Principal para máxima legibilidad */}
+            <div
+                className="rounded-xl border border-white/10 px-3.5 py-2.5 mb-3.5"
+                style={{
+                    background: 'linear-gradient(180deg, rgba(2, 6, 15, 0.92) 0%, rgba(9, 14, 26, 0.95) 100%)',
+                    boxShadow: 'inset 0 2px 6px rgba(0, 0, 0, 0.75)'
+                }}
             >
-                {poll.question}
-            </h2>
+                <h2
+                    className={`font-title font-extrabold text-white tracking-tight leading-snug ${
+                        compact ? 'text-base' : 'text-lg sm:text-[20px]'
+                    }`}
+                    style={{
+                        color: '#FFFFFF',
+                        textShadow: '0 2px 6px rgba(0, 0, 0, 0.9)',
+                        textWrap: 'balance'
+                    }}
+                >
+                    {poll.question}
+                </h2>
+            </div>
 
-            {/* Barras de los 4 Jugadores */}
-            <div className="space-y-2">
+            {/* Opciones con Barras de Porcentaje 3D Modernas */}
+            <div className="space-y-2.5">
                 {options.map((option, idx) => {
                     const pct = Number(option.percentage) || 0;
+                    const ratio = Math.max(0, Math.min(1, pct / 100));
                     const isLeader = leadingIds.includes(option.id) && (Number(option.votes) || 0) > 0;
                     const highlightWinner = showResults && isLeader;
                     const dimLoser = showResults && leadingIds.length > 0 && !isLeader;
@@ -110,32 +134,35 @@ function LivePollOverlayCard({ poll, compact = false, sweepTrigger = 0 }) {
                     return (
                         <div
                             key={option.id || idx}
-                            className={`relative overflow-hidden rounded-xl border transition-opacity duration-300 ${
+                            className={`rounded-xl border px-3 py-2.5 transition-opacity duration-300 ${
                                 highlightWinner
-                                    ? 'border-amber-400/75 bg-amber-500/10 shadow-[0_0_20px_rgba(250,204,21,0.18)]'
-                                    : 'border-white/10 bg-slate-900/75'
-                            } ${dimLoser ? 'opacity-60' : 'opacity-100'}`}
+                                    ? 'border-amber-400/75'
+                                    : 'border-white/10'
+                            } ${dimLoser ? 'opacity-65' : 'opacity-100'}`}
+                            style={{
+                                background: highlightWinner
+                                    ? 'linear-gradient(180deg, rgba(42, 33, 12, 0.96) 0%, rgba(19, 16, 8, 0.98) 100%)'
+                                    : 'linear-gradient(180deg, rgba(20, 29, 48, 0.96) 0%, rgba(10, 15, 27, 0.98) 100%)',
+                                boxShadow: highlightWinner
+                                    ? '0 6px 18px rgba(0, 0, 0, 0.55), 0 0 18px rgba(250, 204, 21, 0.18), inset 0 1px 0 rgba(253, 224, 71, 0.25)'
+                                    : '0 5px 14px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08)'
+                            }}
                         >
-                            {/* Barra de porcentaje animada con transform scaleX (compositor GPU) */}
-                            <div
-                                className="pointer-events-none absolute inset-0 origin-left transition-transform duration-700"
-                                style={{
-                                    transform: `scaleX(${Math.max(0, Math.min(1, pct / 100))})`,
-                                    transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
-                                    background: highlightWinner
-                                        ? 'linear-gradient(90deg, rgba(250,204,21,0.34) 0%, rgba(132,204,22,0.30) 100%)'
-                                        : 'linear-gradient(90deg, rgba(132,204,22,0.28) 0%, rgba(16,185,129,0.16) 100%)'
-                                }}
-                            />
-
-                            <div className="relative z-10 flex items-center justify-between gap-2.5 px-3 py-2.5">
+                            {/* Fila superior: Número, Nombre del Jugador, Votos y Porcentaje */}
+                            <div className="flex items-center justify-between gap-2.5 mb-2">
                                 <div className="flex items-center gap-2.5 min-w-0">
                                     <span
                                         className={`w-6 h-6 rounded-lg font-title font-extrabold text-xs flex items-center justify-center flex-shrink-0 tabular-nums ${
-                                            highlightWinner
-                                                ? 'bg-amber-400 text-slate-950'
-                                                : 'bg-white/10 text-lime-300'
+                                            highlightWinner ? 'text-slate-950' : 'text-lime-300'
                                         }`}
+                                        style={{
+                                            background: highlightWinner
+                                                ? 'linear-gradient(180deg, #fef08a 0%, #eab308 100%)'
+                                                : 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)',
+                                            boxShadow: highlightWinner
+                                                ? '0 2px 6px rgba(234,179,8,0.45), inset 0 1px 0 rgba(255,255,255,0.7)'
+                                                : '0 2px 4px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.12)'
+                                        }}
                                     >
                                         {option.index || idx + 1}
                                     </span>
@@ -152,7 +179,7 @@ function LivePollOverlayCard({ poll, compact = false, sweepTrigger = 0 }) {
                                 </div>
 
                                 <div className="flex items-baseline gap-2 flex-shrink-0 tabular-nums">
-                                    <span className="text-[11px] font-semibold text-slate-300">
+                                    <span className="text-[11px] font-semibold text-slate-400">
                                         ({option.votes})
                                     </span>
                                     <span
@@ -163,6 +190,29 @@ function LivePollOverlayCard({ poll, compact = false, sweepTrigger = 0 }) {
                                         {pct % 1 === 0 ? `${pct.toFixed(0)}%` : `${pct.toFixed(1)}%`}
                                     </span>
                                 </div>
+                            </div>
+
+                            {/* Carril hundido + Barra de porcentaje con relieve 3D */}
+                            <div
+                                className="relative h-3 w-full rounded-full overflow-hidden"
+                                style={{
+                                    background: 'linear-gradient(180deg, #02040a 0%, #0a101d 100%)',
+                                    boxShadow: 'inset 0 2px 5px rgba(0, 0, 0, 0.92), inset 0 -1px 0 rgba(255, 255, 255, 0.08)'
+                                }}
+                            >
+                                <div
+                                    className="h-full w-full rounded-full origin-left transition-transform duration-700"
+                                    style={{
+                                        transform: `scaleX(${ratio})`,
+                                        transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
+                                        background: highlightWinner
+                                            ? 'linear-gradient(180deg, #fef08a 0%, #facc15 40%, #ca8a04 100%)'
+                                            : 'linear-gradient(180deg, #bef264 0%, #84cc16 42%, #15803d 100%)',
+                                        boxShadow: highlightWinner
+                                            ? 'inset 0 1px 1px rgba(255, 255, 255, 0.75), inset 0 -2px 3px rgba(0, 0, 0, 0.45), 0 0 12px rgba(250, 204, 21, 0.55)'
+                                            : 'inset 0 1px 1px rgba(255, 255, 255, 0.55), inset 0 -2px 3px rgba(0, 0, 0, 0.45), 0 0 10px rgba(132, 204, 22, 0.4)'
+                                    }}
+                                />
                             </div>
                         </div>
                     );
@@ -178,7 +228,7 @@ function LivePollOverlayCard({ poll, compact = false, sweepTrigger = 0 }) {
                             ? 'Jugador del Partido · Padel Chilecito'
                             : 'Votación cerrada'}
                 </span>
-                <span className="font-semibold text-lime-400/90 whitespace-nowrap ml-2">
+                <span className="font-semibold text-lime-400 whitespace-nowrap ml-2">
                     Red Padel LR
                 </span>
             </div>

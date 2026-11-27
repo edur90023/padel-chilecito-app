@@ -391,7 +391,13 @@ function LivePage() {
                             <div className="loading-spinner"></div>
                         </div>
                     ) : isPollVisible ? (
-                        <div className="glass-panel rounded-3xl p-5 sm:p-8 border border-lime-400/30 shadow-2xl space-y-6">
+                        <div
+                            className="rounded-3xl p-5 sm:p-8 border border-lime-400/35 shadow-2xl space-y-6"
+                            style={{
+                                background: 'linear-gradient(160deg, rgba(7, 11, 20, 0.97) 0%, rgba(15, 23, 42, 0.96) 55%, rgba(6, 10, 18, 0.98) 100%)',
+                                boxShadow: '0 24px 55px -12px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.12)'
+                            }}
+                        >
                             {/* Cabecera de la votación con logo del canal */}
                             <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-4">
                                 <div className="flex items-center gap-3.5 min-w-0">
@@ -424,31 +430,44 @@ function LivePage() {
                                 </div>
                             </div>
 
-                            {/* Pregunta */}
-                            <h2
-                                className="font-title text-2xl sm:text-3xl font-extrabold text-white text-center leading-tight"
-                                style={{ textWrap: 'balance' }}
+                            {/* Pregunta con fondo oscuro dedicado para máxima legibilidad */}
+                            <div
+                                className="rounded-2xl border border-white/10 px-4 py-3.5"
+                                style={{
+                                    background: 'linear-gradient(180deg, rgba(2, 6, 15, 0.92) 0%, rgba(9, 14, 26, 0.95) 100%)',
+                                    boxShadow: 'inset 0 2px 6px rgba(0, 0, 0, 0.75)'
+                                }}
                             >
-                                {activePoll.question}
-                            </h2>
+                                <h2
+                                    className="font-title text-2xl sm:text-3xl font-extrabold text-white text-center leading-tight"
+                                    style={{
+                                        color: '#FFFFFF',
+                                        textShadow: '0 2px 6px rgba(0, 0, 0, 0.9)',
+                                        textWrap: 'balance'
+                                    }}
+                                >
+                                    {activePoll.question}
+                                </h2>
+                            </div>
 
                             {/* Mensajes de confirmación o error */}
                             {voteFeedback.text && (
                                 <div
                                     className={`p-3.5 rounded-2xl text-sm font-semibold text-center border ${
                                         voteFeedback.type === 'success'
-                                            ? 'bg-emerald-950/70 text-emerald-200 border-emerald-500/50'
-                                            : 'bg-red-950/70 text-red-200 border-red-500/50'
+                                            ? 'bg-emerald-950/85 text-emerald-200 border-emerald-500/50'
+                                            : 'bg-red-950/85 text-red-200 border-red-500/50'
                                     }`}
                                 >
                                     {voteFeedback.text}
                                 </div>
                             )}
 
-                            {/* 4 Botones grandes y táctiles */}
+                            {/* 4 Botones grandes y táctiles con barra de porcentaje 3D */}
                             <div className="space-y-3">
                                 {(activePoll.options || []).map((option, idx) => {
                                     const pct = Number(option.percentage) || 0;
+                                    const ratio = Math.max(0, Math.min(1, pct / 100));
                                     const isChosen = votedOptionId === option.id;
                                     const isLeader = (activePoll.leadingIds || []).includes(option.id) && (Number(option.votes) || 0) > 0;
                                     const highlightWinner = Boolean(activePoll.showResults && isLeader);
@@ -460,44 +479,40 @@ function LivePage() {
                                             type="button"
                                             disabled={!canVote}
                                             onClick={() => handleCastVote(option)}
-                                            className={`relative w-full min-h-[68px] overflow-hidden rounded-2xl border text-left transition-all ${
+                                            className={`relative w-full min-h-[72px] rounded-2xl border text-left transition-all px-4 sm:px-5 py-3.5 ${
                                                 canVote
-                                                    ? 'cursor-pointer hover:border-lime-400/80 hover:bg-slate-800/80 active:scale-[0.985]'
+                                                    ? 'cursor-pointer hover:border-lime-400/80 active:scale-[0.985]'
                                                     : 'cursor-default'
                                             } ${
                                                 isChosen
-                                                    ? 'border-lime-400 bg-lime-500/15 shadow-lg shadow-lime-500/15'
+                                                    ? 'border-lime-400'
                                                     : highlightWinner
-                                                        ? 'border-amber-400/80 bg-amber-500/10'
-                                                        : 'border-white/12 bg-slate-900/75'
+                                                        ? 'border-amber-400/80'
+                                                        : 'border-white/10'
                                             }`}
+                                            style={{
+                                                background: highlightWinner
+                                                    ? 'linear-gradient(180deg, rgba(42, 33, 12, 0.96) 0%, rgba(19, 16, 8, 0.98) 100%)'
+                                                    : isChosen
+                                                        ? 'linear-gradient(180deg, rgba(20, 42, 24, 0.96) 0%, rgba(10, 24, 15, 0.98) 100%)'
+                                                        : 'linear-gradient(180deg, rgba(20, 29, 48, 0.96) 0%, rgba(10, 15, 27, 0.98) 100%)',
+                                                boxShadow: '0 6px 16px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08)'
+                                            }}
                                         >
-                                            {/* Barra animada si ya votó o si se muestran resultados */}
-                                            {shouldRevealPercentages && (
-                                                <div
-                                                    className="pointer-events-none absolute inset-0 origin-left transition-transform duration-700"
-                                                    style={{
-                                                        transform: `scaleX(${Math.max(0, Math.min(1, pct / 100))})`,
-                                                        transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
-                                                        background: highlightWinner
-                                                            ? 'linear-gradient(90deg, rgba(250,204,21,0.30) 0%, rgba(132,204,22,0.22) 100%)'
-                                                            : isChosen
-                                                                ? 'linear-gradient(90deg, rgba(132,204,22,0.32) 0%, rgba(16,185,129,0.20) 100%)'
-                                                                : 'linear-gradient(90deg, rgba(16,185,129,0.20) 0%, rgba(6,182,212,0.12) 100%)'
-                                                    }}
-                                                />
-                                            )}
-
-                                            <div className="relative z-10 flex items-center justify-between gap-3 px-4 sm:px-5 py-4">
+                                            <div className="flex items-center justify-between gap-3">
                                                 <div className="flex items-center gap-3.5 min-w-0">
                                                     <span
                                                         className={`w-9 h-9 rounded-xl font-title font-extrabold text-base flex items-center justify-center flex-shrink-0 tabular-nums ${
-                                                            highlightWinner
-                                                                ? 'bg-amber-400 text-slate-950'
-                                                                : isChosen
-                                                                    ? 'bg-lime-400 text-slate-950'
-                                                                    : 'bg-white/10 text-lime-300'
+                                                            highlightWinner || isChosen ? 'text-slate-950' : 'text-lime-300'
                                                         }`}
+                                                        style={{
+                                                            background: highlightWinner
+                                                                ? 'linear-gradient(180deg, #fef08a 0%, #eab308 100%)'
+                                                                : isChosen
+                                                                    ? 'linear-gradient(180deg, #bef264 0%, #84cc16 100%)'
+                                                                    : 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)',
+                                                            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.25), 0 2px 6px rgba(0,0,0,0.5)'
+                                                        }}
                                                     >
                                                         {option.index || idx + 1}
                                                     </span>
@@ -528,12 +543,37 @@ function LivePage() {
                                                             </span>
                                                         </div>
                                                     ) : (
-                                                        <span className="px-3 py-1.5 rounded-xl bg-lime-500/20 border border-lime-400/40 text-lime-300 text-xs font-bold">
+                                                        <span className="px-3.5 py-1.5 rounded-xl bg-lime-500/20 border border-lime-400/50 text-lime-300 text-xs font-bold">
                                                             Votar
                                                         </span>
                                                     )}
                                                 </div>
                                             </div>
+
+                                            {/* Barra de porcentaje 3D moderna cuando se revelan resultados */}
+                                            {shouldRevealPercentages && (
+                                                <div
+                                                    className="relative mt-3 h-3 w-full rounded-full overflow-hidden"
+                                                    style={{
+                                                        background: 'linear-gradient(180deg, #02040a 0%, #0a101d 100%)',
+                                                        boxShadow: 'inset 0 2px 5px rgba(0, 0, 0, 0.92), inset 0 -1px 0 rgba(255, 255, 255, 0.08)'
+                                                    }}
+                                                >
+                                                    <div
+                                                        className="h-full w-full rounded-full origin-left transition-transform duration-700"
+                                                        style={{
+                                                            transform: `scaleX(${ratio})`,
+                                                            transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
+                                                            background: highlightWinner
+                                                                ? 'linear-gradient(180deg, #fef08a 0%, #facc15 40%, #ca8a04 100%)'
+                                                                : 'linear-gradient(180deg, #bef264 0%, #84cc16 42%, #15803d 100%)',
+                                                            boxShadow: highlightWinner
+                                                                ? 'inset 0 1px 1px rgba(255, 255, 255, 0.75), inset 0 -2px 3px rgba(0, 0, 0, 0.45), 0 0 12px rgba(250, 204, 21, 0.55)'
+                                                                : 'inset 0 1px 1px rgba(255, 255, 255, 0.55), inset 0 -2px 3px rgba(0, 0, 0, 0.45), 0 0 10px rgba(132, 204, 22, 0.4)'
+                                                        }}
+                                                    />
+                                                </div>
+                                            )}
                                         </button>
                                     );
                                 })}
